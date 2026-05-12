@@ -5,7 +5,7 @@ import { parseAsString, parseAsStringEnum, useQueryStates } from "nuqs";
 import { authClient } from "#/lib/auth-client";
 import { useTRPC } from "#/integrations/trpc/react";
 import { Button } from "#/components/ui/button";
-import { toastManager } from "#/components/ui/toast";
+import { toastFromError } from "#/lib/toast-error";
 
 export const Route = createFileRoute("/request/$owner/$repo")({
 	component: RequestPage,
@@ -42,13 +42,7 @@ function RequestPage() {
 	const submit = useMutation(
 		trpc.requests.submit.mutationOptions({
 			onSuccess: () => setSubmitted(true),
-			onError: (e) => {
-				toastManager.add({
-					title: "Submission failed",
-					description: e.message,
-					type: "error",
-				});
-			},
+			onError: (e) => toastFromError(e, { fallbackTitle: "Submission failed" }),
 		}),
 	);
 

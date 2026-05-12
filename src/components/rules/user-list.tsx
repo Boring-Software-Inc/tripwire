@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { UserPill } from "./user-pill";
 import { Button } from "#/components/ui/button";
-import { toastManager } from "#/components/ui/toast";
+import { toastFromError } from "#/lib/toast-error";
 
 interface User {
 	username: string;
@@ -30,10 +30,7 @@ export function UserList({ title, description, users, onAdd, onRemove, isAdding 
 				setSearch("");
 			} catch (err) {
 				setHasError(true);
-				toastManager.add({
-					title: err instanceof Error ? err.message : "User not found",
-					type: "error",
-				});
+				toastFromError(err, { fallbackTitle: "User not found" });
 			}
 		}
 	}

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { toastManager } from "#/components/ui/toast";
+import { toastFromError } from "#/lib/toast-error";
 
 interface PeopleUser {
 	username: string;
@@ -65,10 +65,7 @@ export function PeopleTab({
 			setReason("");
 		} catch (err) {
 			setHasError(true);
-			toastManager.add({
-				title: err instanceof Error ? err.message : "Failed to add user",
-				type: "error",
-			});
+			toastFromError(err, { fallbackTitle: "Failed to add user" });
 		}
 	};
 

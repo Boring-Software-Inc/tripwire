@@ -22,6 +22,7 @@ import { Button } from "#/components/ui/button";
 import { Checkbox } from "#/components/ui/checkbox";
 import { File01Icon } from "#/components/icons/file-01-icon";
 import { FileContentEditor } from "#/components/rules/file-content-editor";
+import { toastFromError } from "#/lib/toast-error";
 import {
 	Dialog,
 	DialogContent,
@@ -114,13 +115,7 @@ function RulesPage() {
 
 	const updateConfig = useMutation(
 		trpc.rules.updateConfig.mutationOptions({
-			onError: (error) => {
-				toastManager.add({
-					title: "Failed to update rule",
-					description: error.message || "Please try again",
-					type: "error",
-				});
-			},
+			onError: (err) => toastFromError(err, { fallbackTitle: "Failed to update rule" }),
 		}),
 	);
 
@@ -427,9 +422,7 @@ function RulesPage() {
 					queryKey: trpc.blacklist.list.queryKey({ repoId: repoId! }),
 				});
 			},
-			onError: (e) => {
-				toastManager.add({ title: "Action failed", description: e.message, type: "error" });
-			},
+			onError: (e) => toastFromError(e, { fallbackTitle: "Action failed" }),
 		}),
 	);
 

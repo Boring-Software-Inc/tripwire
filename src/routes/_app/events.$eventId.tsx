@@ -5,6 +5,7 @@ import { useTRPC } from "#/integrations/trpc/react";
 import { useWorkspace } from "#/lib/workspace-context";
 import { useGitHubUserFormatted } from "#/hooks/use-github-user";
 import { toastManager } from "#/components/ui/toast";
+import { toastFromError } from "#/lib/toast-error";
 
 export const Route = createFileRoute("/_app/events/$eventId")({
 	component: EventDetailPage,
@@ -54,13 +55,7 @@ function EventDetailPage() {
 				description: `@${targetUsername} has been added to the blacklist.`,
 			});
 		},
-		onError: (error) => {
-			toastManager.add({
-				type: "error",
-				title: "Failed to blacklist",
-				description: error.message,
-			});
-		},
+		onError: (err) => toastFromError(err, { fallbackTitle: "Failed to blacklist" }),
 	});
 
 	// Whitelist mutation
@@ -75,13 +70,7 @@ function EventDetailPage() {
 				description: `@${targetUsername} has been added to the whitelist.`,
 			});
 		},
-		onError: (error) => {
-			toastManager.add({
-				type: "error",
-				title: "Failed to whitelist",
-				description: error.message,
-			});
-		},
+		onError: (err) => toastFromError(err, { fallbackTitle: "Failed to whitelist" }),
 	});
 
 	if (isLoading) {
