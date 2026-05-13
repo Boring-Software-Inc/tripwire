@@ -4,6 +4,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChatComposer } from "#/components/ask/chat-composer";
 import { EventGroupCard } from "#/components/home/event-group-card";
+import { toastManager } from "#/components/ui/toast";
 import type { TripwireEvent, EventAction } from "#/types/home";
 import { useAuth } from "#/lib/auth-context";
 import { useWorkspace } from "#/lib/workspace-context";
@@ -165,8 +166,17 @@ function HomeFloatingBar() {
 		if (!trimmedMessage) return;
 		const chatId = crypto.randomUUID();
 
-		await createChat.mutateAsync({ id: chatId, repoId: repo?.id });
-		setPreviewChat({ id: chatId, message: trimmedMessage, processing: true });
+		try {
+			await createChat.mutateAsync({ id: chatId, repoId: repo?.id });
+			setPreviewChat({ id: chatId, message: trimmedMessage, processing: true });
+		} catch (err) {
+			setPreviewChat(null);
+			toastManager.add({
+				type: "error",
+				title: "Failed to start chat",
+				description: err instanceof Error ? err.message : "Please try again.",
+			});
+		}
 	};
 
 	const handleGoToChat = () => {

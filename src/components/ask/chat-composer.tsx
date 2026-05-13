@@ -127,15 +127,23 @@ export function ChatComposer({
 	function selectMention(user: ListedUserMention) {
 		if (!trigger) return;
 
+		const nextText = replaceMentionTrigger(text, trigger);
+		const beforeTrigger = text.slice(0, trigger.start).trimEnd();
+		const afterTrigger = text.slice(trigger.end).trimStart();
+		const nextCursorPosition =
+			beforeTrigger.length > 0 && afterTrigger.length > 0
+				? beforeTrigger.length + 1
+				: beforeTrigger.length;
+
 		setDismissedTriggerKey(null);
 		setMentions((current) => [...current, user]);
-		setText((current) => replaceMentionTrigger(current, trigger));
+		setText(nextText);
 		setHighlightedIndex(0);
 		window.requestAnimationFrame(() => {
 			const input = inputRef.current;
 			if (!input) return;
 			input.focus();
-			const nextPosition = input.value.length;
+			const nextPosition = Math.min(nextCursorPosition, input.value.length);
 			input.setSelectionRange(nextPosition, nextPosition);
 			setCursorPosition(nextPosition);
 		});
@@ -217,6 +225,7 @@ export function ChatComposer({
 								type="button"
 								id={optionId}
 								role="option"
+								tabIndex={-1}
 								aria-selected={index === highlightedIndex}
 								key={optionId}
 								onMouseDown={(event) => {
@@ -285,7 +294,10 @@ export function ChatComposer({
 				/>
 				<button
 					type="button"
-					className="flex size-9 items-center justify-center rounded-[10px] text-tw-text-tertiary transition-colors hover:text-tw-text-secondary"
+					aria-label="Voice input unavailable"
+					title="Voice input unavailable"
+					disabled
+					className="flex size-9 items-center justify-center rounded-[10px] text-tw-text-tertiary transition-colors hover:text-tw-text-secondary disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:text-tw-text-tertiary"
 				>
 					<MicIcon />
 				</button>
