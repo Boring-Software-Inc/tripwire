@@ -1,19 +1,33 @@
+# Dependencies
 node_modules
+/.pnpm-store
+# bunx auto-generates this; we use pnpm as the package manager
+bun.lock
+
+# Env (loaded from monorepo root by @tripwire/env)
+.env
+*.local
+
+# Editor / OS
 .DS_Store
+
+# Build outputs (any package or app)
 dist
 dist-ssr
-*.local
-count.txt
-.env
-.nitro
-.tanstack
-.wrangler
 .output
+.tanstack
+.nitro
 .vinxi
-todos.json
+.wrangler
 .vercel
+.turbo
+
+# Tooling caches
+count.txt
+todos.json
+
+# Tool-managed dirs (not source of truth)
 /.agents
 /.claude
-skills-lock.json
-/.pnpm-store
 /.deepsec
+skills-lock.json
