@@ -17,47 +17,48 @@ when the user actually asks for that information.
 
 ## Repo IDs
 
-Every tool other than get_guide and list_repos takes a repoId (uuid).
-The repo's GitHub full_name (e.g. "vercel/next.js") is in the
-list_repos result alongside the id. Resolve casual names from your
-cached list_repos result. Do NOT guess a repoId.
+Every repo-scoped tool takes a repoId (uuid) at the MCP boundary. The
+repo's GitHub full_name (e.g. "vercel/next.js") is in the list_repos
+result alongside the id. Resolve casual names from your cached
+list_repos result. Do NOT guess a repoId.
 
 ## Tool surface
 
 Read-only:
 - list_repos
-- get_repo_rules({ repoId })            — full rule config including scopeOverride
-- list_lists({ repoId })                — whitelist + blacklist
-- list_events({ repoId, limit })        — newest first
+- get_repo_rules                       — full rule config including scopeOverride
+- list_lists                           — whitelist + blacklist
+- check_lists({ username })            — is this user on either list?
+- list_events({ ... })                 — newest first; filter by username/action/severity
 - get_event({ eventId })
-- lookup_user({ repoId, username })     — reputation + recent events for a GitHub user
-- get_guide({ topic })                  — conceptual docs (event taxonomy, list semantics)
+- lookup_user({ username })            — reputation + recent events for a GitHub user
+- get_guide({ topic })                 — conceptual docs
 
 Lists (mutations):
 - add_to_blacklist / remove_from_blacklist
 - add_to_whitelist / remove_from_whitelist
 
 Rule basics:
-- toggle_rule({ repoId, ruleId, enabled })
-- update_rule_action({ repoId, ruleId, action, thresholdCount? })
+- toggle_rule({ ruleId, enabled })
+- update_rule_action({ ruleId, action, thresholdCount? })
 - copy_rules({ fromRepoId, toRepoId, ruleId? })
 
 Per-rule field setters (each fully typed — no guessing field names):
-- set_min_merged_prs({ repoId, count })
-- set_account_age({ repoId, days })
-- set_max_prs_per_day({ repoId, limit })
-- set_max_files_changed({ repoId, limit })
-- set_repo_activity_minimum({ repoId, minRepos })
-- set_language_requirement({ repoId, language })
+- set_min_merged_prs({ count })
+- set_account_age({ days })
+- set_max_prs_per_day({ limit })
+- set_max_files_changed({ limit })
+- set_repo_activity_minimum({ minRepos })
+- set_language_requirement({ language })
 
 Scope tools — controlling which content types are watched:
-- set_content_scope({ repoId, pullRequests?, issues?, comments? })
+- set_content_scope({ pullRequests?, issues?, comments? })
   Repo-wide default. Omitted keys stay as-is.
-- set_rule_scope({ repoId, ruleId, pullRequests?, issues?, comments? })
+- set_rule_scope({ ruleId, pullRequests?, issues?, comments? })
   Per-rule override that wins over the repo default. Use this when you
   want a single rule (e.g. cryptoAddressDetection) to watch a different
   set of content types than the rest of the pipeline.
-- clear_rule_scope({ repoId, ruleId })
+- clear_rule_scope({ ruleId })
   Remove the override; rule inherits the repo's contentScope again.
 
 Rule ids are constrained by the tool schema (zod enum), so the model
@@ -236,7 +237,6 @@ The github_reputation table is scoped per-(repo, user). Score formula:
 
 Only pipeline_blocked and blacklist_blocked increment totalBlocks.
 pipeline_warned and pipeline_logged are NOT counted as blocks — they're
-informational. This is the post-PR2 contract; older events in the DB may
-predate it and have action=pipeline_blocked with severity=warning.
+informational.
 `.trim(),
 };

@@ -2,13 +2,16 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createMcpHandler } from "mcp-handler";
 import { withMcpAuth } from "better-auth/plugins";
 import { auth } from "#/lib/auth";
-import { registerTripwireTools } from "#/lib/mcp/tools";
-import { SERVER_INSTRUCTIONS } from "#/lib/mcp/instructions";
+import {
+	SERVER_INSTRUCTIONS,
+	registerMcpTools,
+	tripwireTools,
+} from "#/lib/tools";
 
 const handler = withMcpAuth(auth, (req, session) =>
 	createMcpHandler(
 		(server) => {
-			registerTripwireTools(server, session.userId);
+			registerMcpTools(server, session.userId, tripwireTools);
 		},
 		{
 			capabilities: {

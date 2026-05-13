@@ -1,0 +1,29 @@
+import type { AnyToolDefinition } from "./registry";
+import { ruleTools } from "./definitions/rules";
+import { listTools } from "./definitions/lists";
+import { readTools } from "./definitions/reads";
+import { guideTools } from "./definitions/guides";
+
+/**
+ * The full Tripwire tool registry. Each surface (MCP / chat) filters this
+ * down via `surfaces` on each tool. Default is "available in both."
+ */
+export const tripwireTools: readonly AnyToolDefinition[] = [
+	...ruleTools,
+	...listTools,
+	...readTools,
+	...guideTools,
+];
+
+export { SERVER_INSTRUCTIONS } from "./guides-content";
+export { registerMcpTools } from "./mcp-adapter";
+export { createChatTools } from "./chat-adapter";
+export { defineTool, makeSpec } from "./registry";
+export type {
+	AnyToolDefinition,
+	JsonRenderSpec,
+	MutationResult,
+	ToolContext,
+	ToolDefinition,
+	ToolSurface,
+} from "./registry";

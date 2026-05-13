@@ -9,7 +9,7 @@ import { openRouterText } from "@tanstack/ai-openrouter";
 import { webSearchTool } from "@tanstack/ai-openrouter/tools";
 import { useRequest } from "nitro/context";
 import type { RequestLogger } from "evlog";
-import { createTripwireTools } from "#/lib/ai/tools";
+import { createChatTools, tripwireTools } from "#/lib/tools";
 import { createCreditMiddleware } from "#/lib/ai/credit-middleware";
 import {
 	hashArgs,
@@ -221,11 +221,14 @@ export const Route = createFileRoute("/api/chat")({
 					});
 
 					// Create tools with context
-					const tools = createTripwireTools({
-						userId: ctx.user.id,
-						userName: ctx.user.name ?? ctx.user.email ?? "User",
-						repoId: resolvedRepoId,
-					});
+					const tools = createChatTools(
+						{
+							userId: ctx.user.id,
+							userName: ctx.user.name ?? ctx.user.email ?? "User",
+							repoId: resolvedRepoId,
+						},
+						tripwireTools,
+					);
 
 					// Execute approved tool-calls that haven't been executed yet.
 					// When a tool has needsApproval, the client shows an approval UI.
