@@ -69,7 +69,7 @@ export function useRequestNotifications(): void {
 					children: "View",
 					onClick: () => {
 						navigate({
-							to: "/rules",
+							to: "/",
 							search: { tab: "requests" },
 						} as never);
 					},

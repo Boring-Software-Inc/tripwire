@@ -5,6 +5,7 @@ import { useTRPC } from "#/integrations/trpc/react";
 import { authClient } from '@tripwire/auth/client';
 import { Button } from "#/components/ui/button";
 import { TripwireFeatures } from "#/components/landing/tripwire-features";
+import { TripwireLogo } from "#/components/icons/tripwire-logo";
 
 export const Route = createFileRoute("/")({
 	component: LandingPage,
@@ -39,14 +40,45 @@ function LandingPage() {
 
 	return (
 		<div className="[font-synthesis:none] flex w-full min-h-screen flex-col bg-[#191919] antialiased">
+			{/* Header */}
+			<div className="flex items-center justify-between p-4">
+				<div className="flex items-center gap-2">
+					<TripwireLogo className="w-5 h-5 text-white" />
+					<span className="text-md font-medium text-tw-text-secondary font-['Geist',system-ui,sans-serif]">
+						tripwire
+					</span>
+				</div>
+				<div className="flex items-center gap-1.5">
+					{session ? (
+						<>
+							<span className="text-[14px] text-tw-text-secondary">
+								Welcome back
+							</span>
+							<Link
+								to="/home"
+								className="flex items-center h-7 px-2.5 rounded-lg text-[14px] font-medium text-black bg-white shadow-sm hover:bg-white/90 transition-colors"
+							>
+								dashboard
+							</Link>
+						</>
+					) : (
+						<>
+							<span className="text-[14px] text-tw-text-secondary">
+								Already have access?
+							</span>
+							<Link
+								to="/login"
+								className="flex items-center h-7 px-2.5 rounded-lg text-[14px] font-medium text-black bg-white shadow-sm hover:bg-white/90 transition-colors"
+							>
+								login
+							</Link>
+						</>
+					)}
+				</div>
+			</div>
+
 			{/* Hero Section */}
-			<div className="flex w-full h-[70vh] justify-center items-center flex-col gap-10 px-4 relative">
-
-				{/* Header */}
-				<h1 className="text-white font-['Instrument_Sans',system-ui,sans-serif] font-semibold text-xl">
-					tripwire
-				</h1>
-
+			<div className="flex w-full h-[65vh] justify-center items-center flex-col gap-10 px-4 relative">
 				{/* Content */}
 				<div className="flex flex-col items-center gap-4 max-w-xs w-full">
 					<p className="text-white font-medium text-base text-center">
@@ -84,23 +116,6 @@ function LandingPage() {
 						</div>
 					)}
 				</div>
-
-				{/* Login link for existing users */}
-				{session ? (
-					<Link
-						to="/rules"
-						className="text-tw-text-secondary text-sm hover:text-white transition-colors"
-					>
-						Go to dashboard
-					</Link>
-				) : (
-					<Link
-						to="/login"
-						className="text-tw-text-secondary text-sm hover:text-white transition-colors"
-					>
-						Already have access? Log in
-					</Link>
-				)}
 			</div>
 
 			{/* Features Section */}

@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createContext } from "#/integrations/trpc/init";
 import { db } from "@tripwire/db/client";
-import { organizations, repositories, account } from "@tripwire/db";
+import { organizations, repositories, account, member } from "@tripwire/db";
 import { eq, and } from "drizzle-orm";
 import {
 	createAppJwt,
@@ -69,7 +69,7 @@ async function handler({ request }: { request: Request }) {
 		return new Response(null, {
 			status: 302,
 			headers: new Headers([
-				["Location", "/rules"],
+				["Location", "/integrations"],
 				["Set-Cookie", clearStateCookie()],
 			]),
 		});
@@ -77,7 +77,7 @@ async function handler({ request }: { request: Request }) {
 
 	return new Response(null, {
 		status: 302,
-		headers: { Location: "/rules" },
+		headers: { Location: "/home" },
 	});
 }
 
@@ -85,7 +85,7 @@ function redirectToIntegrations(
 	error: "invalid_state" | "installer_mismatch" | "not_authenticated",
 ) {
 	const headers = new Headers([
-		["Location", `/integrations?error=${error}`],
+		["Location", `/integrations?error=${encodeURIComponent(error)}`],
 		["Set-Cookie", clearStateCookie()],
 	]);
 	return new Response(null, { status: 302, headers });
@@ -259,6 +259,13 @@ async function ensureInstallation(
 	// Sanity: repo owner id should match the installation account id.
 	const ghAccount = repos[0].owner;
 
+	// Find the user's first owned Better Auth org to link this installation to
+	const [ownerMembership] = await db
+		.select({ organizationId: member.organizationId })
+		.from(member)
+		.where(and(eq(member.userId, userId), eq(member.role, "owner")))
+		.limit(1);
+
 	// Create org
 	const [org] = await db
 		.insert(organizations)
@@ -269,6 +276,7 @@ async function ensureInstallation(
 			githubAccountType: ghAccount.type ?? "User",
 			avatarUrl: ghAccount.avatar_url,
 			ownerId: userId,
+			betterAuthOrgId: ownerMembership?.organizationId ?? null,
 		})
 		.returning();
 

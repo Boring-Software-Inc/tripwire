@@ -120,7 +120,7 @@ function ConsentPage() {
 				<Button
 					variant="outline"
 					size="sm"
-					onClick={() => navigate({ to: "/rules" })}
+					onClick={() => navigate({ to: "/" })}
 					className="bg-white text-black border-[#CDCDCD] hover:bg-white/90"
 				>
 					Back to Tripwire

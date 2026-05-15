@@ -1,4 +1,5 @@
 import { TripwireLogo } from "../icons/tripwire-logo";
+import { Button } from "#/components/ui/button";
 
 interface EmptyStateProps {
 	title: string;
@@ -22,27 +23,11 @@ export function EmptyState({ title, description, action }: EmptyStateProps) {
 				</p>
 			</div>
 			{action && (
-				<a
-					href={action.href}
-					target="_blank"
-					rel="noopener noreferrer"
-					className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-black text-sm font-medium hover:bg-white/90 transition-colors"
-				>
-					{action.label}
-					<svg
-						className="w-4 h-4"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke="currentColor"
-						strokeWidth={2}
-					>
-						<path
-							strokeLinecap="round"
-							strokeLinejoin="round"
-							d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-						/>
-					</svg>
-				</a>
+				<Button size="sm" variant="outline" asChild className="bg-white text-black border-[#CDCDCD] hover:bg-white/90">
+					<a href={action.href}>
+						{action.label}
+					</a>
+				</Button>
 			)}
 		</div>
 	);

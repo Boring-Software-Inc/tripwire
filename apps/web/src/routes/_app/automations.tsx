@@ -1,12 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { useNavigate } from "@tanstack/react-router";
+import { useWorkspace } from "#/lib/workspace-context";
 
 export const Route = createFileRoute("/_app/automations")({
-	component: () => (
-		<div className="flex items-center justify-center h-full">
-			<div className="text-center">
-				<h2 className="text-xl font-medium text-white mb-2">Automations</h2>
-				<p className="text-tw-text-secondary text-sm">Coming soon</p>
-			</div>
-		</div>
-	),
+	component: Redirect,
 });
+
+function Redirect() {
+	const navigate = useNavigate();
+	const { org, orgs, isLoading } = useWorkspace();
+	useEffect(() => {
+		if (isLoading) return;
+		const target = org || orgs[0]; if (target) navigate({ to: `/${target.slug}/automations`, replace: true });
+	}, [isLoading, org, orgs, navigate]);
+	return null;
+}

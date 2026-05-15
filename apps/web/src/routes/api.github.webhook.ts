@@ -8,7 +8,7 @@ import {
 	handleFakeBountyCatch,
 } from '@tripwire/core';
 import { db } from "@tripwire/db/client";
-import { organizations, repositories, account } from "@tripwire/db";
+import { organizations, repositories, account, member } from "@tripwire/db";
 import { eq, and } from "drizzle-orm";
 
 async function handler({ request }: { request: Request }) {
@@ -224,6 +224,13 @@ async function handleInstallation(payload: {
 
 		console.log("[Install] Existing orgs for this installation:", existingOrgs.length);
 
+		// Find the user's first owned Better Auth org
+		const [ownerMembership] = await db
+			.select({ organizationId: member.organizationId })
+			.from(member)
+			.where(and(eq(member.userId, ownerId), eq(member.role, "owner")))
+			.limit(1);
+
 		let org;
 		if (existingOrgs.length === 0) {
 			console.log("[Install] Creating new org...");
@@ -236,6 +243,7 @@ async function handleInstallation(payload: {
 					githubAccountType: installation.account.type,
 					avatarUrl: installation.account.avatar_url,
 					ownerId,
+					betterAuthOrgId: ownerMembership?.organizationId ?? null,
 				})
 				.returning();
 			org = newOrg;

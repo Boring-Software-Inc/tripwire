@@ -72,7 +72,7 @@ function ChatPage() {
 			<div className="w-full max-w-[560px] flex items-center gap-2 px-3 pt-4 pb-2 shrink-0">
 				<button
 					type="button"
-					onClick={() => navigate({ to: "/home" })}
+					onClick={() => navigate({ to: "/" })}
 					className="flex items-center justify-center size-7 rounded-lg hover:bg-tw-hover transition-colors"
 				>
 					<svg width="14" height="14" viewBox="0 0 14 14" fill="none">

@@ -8,6 +8,7 @@ import {
 	uuid,
 } from "drizzle-orm/pg-core";
 import { user } from "./auth";
+import { organization } from "./orgs";
 
 /**
  * GitHub App installations — one per org/user account.
@@ -28,10 +29,16 @@ export const organizations = pgTable(
 		ownerId: text("owner_id")
 			.notNull()
 			.references(() => user.id, { onDelete: "cascade" }),
+		/** Links this GitHub installation to a Better Auth organization for multi-org scoping */
+		betterAuthOrgId: text("better_auth_org_id")
+			.references(() => organization.id, { onDelete: "set null" }),
 		createdAt: timestamp("created_at").notNull().defaultNow(),
 		updatedAt: timestamp("updated_at").notNull().defaultNow(),
 	},
-	(t) => [index("org_owner_idx").on(t.ownerId)],
+	(t) => [
+		index("org_owner_idx").on(t.ownerId),
+		index("org_ba_org_idx").on(t.betterAuthOrgId),
+	],
 );
 
 /**

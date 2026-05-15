@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Outlet, useRouterState } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { TopNav } from "./top-nav";
+import { WorkspaceRedirect } from "./workspace-redirect";
 import { WorkspaceProvider } from "#/lib/workspace-context";
 import { AuthProvider } from '@tripwire/auth/components';
 import { ChatProvider, useAIChat } from '#/components/chat/chat-context';
@@ -27,6 +28,7 @@ export function AppShell() {
 
 function AppShellInner() {
 	useRequestNotifications();
+	// Handles auto-redirects: no org in URL → default workspace, "_" placeholder → first repo
 
 	const { isOpen, toggle, close, sendMessage, isLoading, isQuotaExhausted, newChat } = useAIChat();
 	const [inputValue, setInputValue] = useState("");
@@ -34,7 +36,7 @@ function AppShellInner() {
 
 	const routerState = useRouterState();
 	const currentPath = routerState.location.pathname;
-	const isHomePage = currentPath === "/home" || currentPath === "/";
+	const isHomePage = currentPath === "/home" || currentPath === "/" || currentPath.endsWith("/home");
 	const isChatRoute = currentPath.startsWith("/chat/");
 
 	const showSidePanel = !isHomePage && !isChatRoute && isOpen;
@@ -54,6 +56,7 @@ function AppShellInner() {
 
 	return (
 		<div className="h-screen flex flex-col overflow-hidden bg-tw-bg tw-root antialiased">
+			<WorkspaceRedirect />
 			<TopNav askOpen={isOpen} onToggleAsk={toggle} />
 			<div className={`flex-1 min-h-0 flex gap-2 ${isChatRoute ? "" : "px-2 pb-2"}`}>
 				<div

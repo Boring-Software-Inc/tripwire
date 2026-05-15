@@ -14,7 +14,7 @@ function LoginPage() {
 	// Redirect to /rules if already logged in
 	useEffect(() => {
 		if (!isPending && session) {
-			navigate({ to: "/rules" });
+			navigate({ to: "/" });
 		}
 	}, [session, isPending, navigate]);
 

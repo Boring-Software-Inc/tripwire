@@ -12,6 +12,7 @@ import {
 import { Menu, MenuTrigger, MenuPopup, MenuItem, MenuSeparator } from "#/components/ui/menu";
 import { useAuth } from '@tripwire/auth/components';
 import { useWorkspace } from "#/lib/workspace-context";
+import { OrgRepoSwitcher } from "./org-repo-switcher";
 import { useTRPC } from "#/integrations/trpc/react";
 import { useEventsUnread } from "#/lib/use-events-unread";
 import { authClient } from '@tripwire/auth/client';
@@ -26,12 +27,12 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-	{ key: "home", path: "/home", label: "Home", Icon: HomeNavIcon },
-	{ key: "rules", path: "/rules", label: "Rules", Icon: RulesNavIcon, badgeKey: "rules" },
-	{ key: "insights", path: "/insights", label: "Insights", Icon: InsightsNavIcon, badgeKey: "insights" },
-	{ key: "automations", path: "/automations", label: "Workflows", Icon: WorkflowsNavIcon },
-	{ key: "events", path: "/events", label: "Events", Icon: EventsNavIcon, badgeKey: "events" },
-	{ key: "integrations", path: "/integrations", label: "Integrations", Icon: IntegrationsNavIcon },
+	{ key: "home", path: "home", label: "Home", Icon: HomeNavIcon },
+	{ key: "rules", path: "rules", label: "Rules", Icon: RulesNavIcon, badgeKey: "rules" },
+	{ key: "insights", path: "insights", label: "Insights", Icon: InsightsNavIcon, badgeKey: "insights" },
+	{ key: "automations", path: "automations", label: "Workflows", Icon: WorkflowsNavIcon },
+	{ key: "events", path: "events", label: "Events", Icon: EventsNavIcon, badgeKey: "events" },
+	{ key: "integrations", path: "integrations", label: "Integrations", Icon: IntegrationsNavIcon },
 ];
 
 interface TopNavProps {
@@ -41,7 +42,7 @@ interface TopNavProps {
 
 export function TopNav({ askOpen, onToggleAsk }: TopNavProps) {
 	const { user } = useAuth();
-	const { repo } = useWorkspace();
+	const { org, repo } = useWorkspace();
 	const { data: customer } = useCustomer();
 	const isPro = customer?.subscriptions?.some((s: { planId: string; status: string }) => s.planId === "pro" && s.status === "active");
 	const trpc = useTRPC();
@@ -93,14 +94,20 @@ export function TopNav({ askOpen, onToggleAsk }: TopNavProps) {
 
 	// Determine which nav item is active based on current path
 	const getIsActive = (item: NavItem) => {
-		if (item.path === "/home") {
-			return currentPath === "/home" || currentPath === "/";
+		if (item.path === "home") {
+			return currentPath === "/" || currentPath.endsWith("/home");
 		}
-		return currentPath.startsWith(item.path);
+		return currentPath.endsWith(`/${item.path}`) || currentPath.includes(`/${item.path}/`);
+	};
+
+	// Build a workspace-aware nav path
+	const getNavPath = (page: string) => {
+		if (org) return `/${org.slug}/${page}`;
+		return `/${page}`;
 	};
 
 	const navigate = useNavigate();
-	const isHomePage = currentPath === "/home" || currentPath === "/";
+	const isHomePage = currentPath === "/home" || currentPath === "/" || currentPath.endsWith("/home");
 	const isChatRoute = currentPath.startsWith("/chat/");
 	const showAskButton = !isHomePage && !isChatRoute;
 
@@ -163,7 +170,7 @@ export function TopNav({ askOpen, onToggleAsk }: TopNavProps) {
 						return (
 							<Link
 								key={item.key}
-								to={item.path}
+								to={getNavPath(item.path)}
 								className={`group flex items-center justify-center h-8 rounded-lg px-3 gap-1.5 transition-colors ${
 									isActive ? "bg-tw-card" : "hover:bg-tw-hover"
 								}`}
@@ -196,8 +203,9 @@ export function TopNav({ askOpen, onToggleAsk }: TopNavProps) {
 				</nav>
 			</div>
 
-			{/* Right side: Ask button + settings */}
+			{/* Right side: Org/repo switcher + Ask button */}
 			<div className="flex items-center gap-1">
+				<OrgRepoSwitcher />
 				{showAskButton && onToggleAsk ? (
 					<button
 						onClick={onToggleAsk}
