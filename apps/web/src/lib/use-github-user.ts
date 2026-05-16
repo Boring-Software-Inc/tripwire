@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { fetchPublicProfile } from "@tripwire/github";
+import { fetchPublicProfile } from "@tripwire/github/public";
 import { qk } from "#/lib/query-keys";
 
 export interface GitHubUserProfile {
