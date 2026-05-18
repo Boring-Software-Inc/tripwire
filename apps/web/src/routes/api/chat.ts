@@ -193,6 +193,7 @@ export const Route = createFileRoute("/api/chat")({
 
 					if (!quota?.allowed) {
 						const code = quota?.preview?.scenario ?? "usage_limit";
+						if (quotaLockId) void releaseQuotaLock(quotaLockId);
 						return jsonError(429, {
 							error: "quota_exhausted",
 							code,

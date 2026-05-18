@@ -453,12 +453,16 @@ export async function runFilterPipeline(
 
 	// 3. Check blacklist before whitelist so legacy conflicting rows still
 	// honor the product rule that blacklisted users are blocked.
+	const senderLoginKey = ctx.senderLogin.toLowerCase();
 	const blacklistAll = await db
 		.select()
 		.from(blacklistEntries)
 		.where(eq(blacklistEntries.repoId, repo.id));
 
-	if (blacklistAll.some((b) => b.githubUserId === ctx.senderId)) {
+	if (blacklistAll.some((b) =>
+		b.githubUserId === ctx.senderId
+		|| (b.githubUserId == null && b.githubUsername.toLowerCase() === senderLoginKey)
+	)) {
 		return {
 			allowed: false,
 			outcome: "blacklist_blocked",
@@ -471,13 +475,17 @@ export async function runFilterPipeline(
 	}
 
 	// 4. Check whitelist by immutable GitHub user id so username changes or
-	// later username reuse cannot move trust between accounts.
+	// later username reuse cannot move trust between accounts. Legacy rows
+	// without ids keep their old username semantics until they are backfilled.
 	const whitelistAll = await db
 		.select()
 		.from(whitelistEntries)
 		.where(eq(whitelistEntries.repoId, repo.id));
 
-	if (whitelistAll.some((w) => w.githubUserId === ctx.senderId)) {
+	if (whitelistAll.some((w) =>
+		w.githubUserId === ctx.senderId
+		|| (w.githubUserId == null && w.githubUsername.toLowerCase() === senderLoginKey)
+	)) {
 		return {
 			allowed: true,
 			outcome: "whitelist_bypass",

@@ -22,7 +22,7 @@ export const whitelistEntries = pgTable(
 			.notNull()
 			.references(() => repositories.id, { onDelete: "cascade" }),
 		githubUsername: text("github_username").notNull(),
-		githubUserId: integer("github_user_id").notNull(),
+		githubUserId: integer("github_user_id"),
 		avatarUrl: text("avatar_url"),
 		addedById: text("added_by_id").references(() => user.id, { onDelete: "set null" }),
 		createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -33,7 +33,9 @@ export const whitelistEntries = pgTable(
 			t.repoId,
 			sql`lower(${t.githubUsername})`,
 		),
-		uniqueIndex("whitelist_repo_user_id_uniq").on(t.repoId, t.githubUserId),
+		uniqueIndex("whitelist_repo_user_id_uniq")
+			.on(t.repoId, t.githubUserId)
+			.where(sql`${t.githubUserId} is not null`),
 	],
 );
 
@@ -48,7 +50,7 @@ export const blacklistEntries = pgTable(
 			.notNull()
 			.references(() => repositories.id, { onDelete: "cascade" }),
 		githubUsername: text("github_username").notNull(),
-		githubUserId: integer("github_user_id").notNull(),
+		githubUserId: integer("github_user_id"),
 		avatarUrl: text("avatar_url"),
 		addedById: text("added_by_id").references(() => user.id, { onDelete: "set null" }),
 		createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -59,6 +61,8 @@ export const blacklistEntries = pgTable(
 			t.repoId,
 			sql`lower(${t.githubUsername})`,
 		),
-		uniqueIndex("blacklist_repo_user_id_uniq").on(t.repoId, t.githubUserId),
+		uniqueIndex("blacklist_repo_user_id_uniq")
+			.on(t.repoId, t.githubUserId)
+			.where(sql`${t.githubUserId} is not null`),
 	],
 );

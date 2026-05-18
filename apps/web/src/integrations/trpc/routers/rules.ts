@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, or, sql } from "drizzle-orm";
 import { authedProcedure } from "../init";
 import { assertRepoOwner } from "@tripwire/core";
 import { db } from "@tripwire/db/client";
@@ -432,7 +432,9 @@ export const rulesRouter = {
 				const blockedUserIds = new Set([
 					...importedBlacklistIds,
 					...existingBlacklist.map((entry) => entry.githubUserId)
-						.filter((githubUserId) => importedWhitelistIds.has(githubUserId)),
+						.filter((githubUserId): githubUserId is number =>
+							githubUserId != null && importedWhitelistIds.has(githubUserId)
+						),
 				]);
 				const whitelist = importedWhitelistUsers.filter(
 					(user) =>
@@ -483,7 +485,10 @@ export const rulesRouter = {
 							.where(
 								and(
 									eq(whitelistEntries.repoId, input.repoId),
-									sql`lower(${whitelistEntries.githubUsername}) = ${user.login.toLowerCase()}`,
+									or(
+										eq(whitelistEntries.githubUserId, user.id),
+										sql`lower(${whitelistEntries.githubUsername}) = ${user.login.toLowerCase()}`,
+									),
 								),
 							);
 					}
