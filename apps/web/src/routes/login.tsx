@@ -51,6 +51,7 @@ function LoginPage() {
 function sanitizeRedirect(value: unknown): string | undefined {
 	if (typeof value !== "string") return undefined;
 	if (!value.startsWith("/") || value.startsWith("//")) return undefined;
+	if (value === "/login" || value === "/login/") return undefined;
 	return value;
 }
 

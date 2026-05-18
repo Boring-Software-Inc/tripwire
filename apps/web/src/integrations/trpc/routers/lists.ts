@@ -151,19 +151,31 @@ export const whitelistRouter = {
 				repoId: z.string().uuid(),
 				githubUsername: z.string().min(1).refine(isGitHubUsername, "Invalid GitHub username"),
 			}),
-		)
-		.mutation(async ({ input, ctx }) => {
-			await assertRepoOwner(ctx.user.id, input.repoId);
-			const [deleted] = await db.transaction(async (tx) => {
-				await lockListMembership(tx, input.repoId, input.githubUsername);
-				return tx
-					.delete(whitelistEntries)
-					.where(
-						and(
-							eq(whitelistEntries.repoId, input.repoId),
-							sql`lower(${whitelistEntries.githubUsername}) = ${input.githubUsername.toLowerCase()}`,
-						),
-					)
+			)
+			.mutation(async ({ input, ctx }) => {
+				await assertRepoOwner(ctx.user.id, input.repoId);
+				let ghUser: Awaited<ReturnType<typeof validateGitHubUser>> | null = null;
+				try {
+					ghUser = await validateGitHubUser(input.githubUsername);
+				} catch {
+					// Keep legacy username-only removals working if the account was
+					// renamed or deleted before the row could be backfilled.
+				}
+				const [deleted] = await db.transaction(async (tx) => {
+					await lockListMembership(tx, input.repoId, input.githubUsername);
+					return tx
+						.delete(whitelistEntries)
+						.where(
+							and(
+								eq(whitelistEntries.repoId, input.repoId),
+								ghUser
+									? or(
+										eq(whitelistEntries.githubUserId, ghUser.id),
+										sql`lower(${whitelistEntries.githubUsername}) = ${input.githubUsername.toLowerCase()}`,
+									)
+									: sql`lower(${whitelistEntries.githubUsername}) = ${input.githubUsername.toLowerCase()}`,
+							),
+						)
 					.returning({
 						githubUsername: whitelistEntries.githubUsername,
 						githubUserId: whitelistEntries.githubUserId,
@@ -303,19 +315,31 @@ export const blacklistRouter = {
 				repoId: z.string().uuid(),
 				githubUsername: z.string().min(1).refine(isGitHubUsername, "Invalid GitHub username"),
 			}),
-		)
-		.mutation(async ({ input, ctx }) => {
-			await assertRepoOwner(ctx.user.id, input.repoId);
-			const [deleted] = await db.transaction(async (tx) => {
-				await lockListMembership(tx, input.repoId, input.githubUsername);
-				return tx
-					.delete(blacklistEntries)
-					.where(
-						and(
-							eq(blacklistEntries.repoId, input.repoId),
-							sql`lower(${blacklistEntries.githubUsername}) = ${input.githubUsername.toLowerCase()}`,
-						),
-					)
+			)
+			.mutation(async ({ input, ctx }) => {
+				await assertRepoOwner(ctx.user.id, input.repoId);
+				let ghUser: Awaited<ReturnType<typeof validateGitHubUser>> | null = null;
+				try {
+					ghUser = await validateGitHubUser(input.githubUsername);
+				} catch {
+					// Keep legacy username-only removals working if the account was
+					// renamed or deleted before the row could be backfilled.
+				}
+				const [deleted] = await db.transaction(async (tx) => {
+					await lockListMembership(tx, input.repoId, input.githubUsername);
+					return tx
+						.delete(blacklistEntries)
+						.where(
+							and(
+								eq(blacklistEntries.repoId, input.repoId),
+								ghUser
+									? or(
+										eq(blacklistEntries.githubUserId, ghUser.id),
+										sql`lower(${blacklistEntries.githubUsername}) = ${input.githubUsername.toLowerCase()}`,
+									)
+									: sql`lower(${blacklistEntries.githubUsername}) = ${input.githubUsername.toLowerCase()}`,
+							),
+						)
 					.returning({
 						githubUsername: blacklistEntries.githubUsername,
 						githubUserId: blacklistEntries.githubUserId,

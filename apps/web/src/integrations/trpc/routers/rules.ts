@@ -2,6 +2,7 @@ import { z } from "zod";
 import { and, eq, or, sql } from "drizzle-orm";
 import { authedProcedure } from "../init";
 import { assertRepoOwner } from "@tripwire/core";
+import { trpcError } from "../error";
 import { db } from "@tripwire/db/client";
 import {
 	ruleConfigs,
@@ -94,9 +95,19 @@ async function resolveListUsers(
 	token: string,
 	usernames: string[],
 ): Promise<Array<{ login: string; id: number; avatarUrl: string | null }>> {
+	const invalidUsernames = usernames.filter((username) => !isGitHubUsername(username));
+	if (invalidUsernames.length > 0) {
+		throw trpcError({
+			code: "rules.invalid_usernames",
+			status: 400,
+			message: "Rule config import contains invalid GitHub usernames.",
+			fix: "Remove or correct the invalid whitelist/blacklist usernames and import again.",
+			internal: { usernames: invalidUsernames },
+		});
+	}
+
 	const users = [];
 	for (const username of usernames) {
-		if (!isGitHubUsername(username)) continue;
 		const ghUser = await getUser(token, username) as {
 			login: string;
 			id: number;

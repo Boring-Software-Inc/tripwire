@@ -8,7 +8,7 @@ import {
 	handleFakeBountyCatch,
 } from "@tripwire/core";
 import { db } from "@tripwire/db/client";
-import { organizations, repositories } from "@tripwire/db";
+import { events, organizations, repositories } from "@tripwire/db";
 import { and, eq } from "drizzle-orm";
 import {
 	handleInstallation,
@@ -143,10 +143,26 @@ async function handler({ request }: { request: Request }) {
 			case "issue_comment": {
 				if (payload.sender?.type === "Bot") break;
 				if (payload.action === "created") {
+					const commentId = payload.comment?.id;
+					const issueNumber = payload.issue?.number;
+					if (!Number.isSafeInteger(commentId) || !Number.isSafeInteger(issueNumber)) {
+						break;
+					}
+
+					const repoId = await findRepoIdForInstallation(repo.id, installationId);
+					if (repoId && await hasProcessedIssueComment(repoId, issueNumber, commentId)) {
+						console.log("[Webhook] Duplicate issue_comment delivery skipped:", {
+							repoId,
+							commentId,
+							issueNumber,
+						});
+						break;
+					}
+
 					await handleComment(
 						ctx,
-						payload.comment.id,
-						payload.issue.number,
+						commentId,
+						issueNumber,
 						payload.comment.body ?? undefined,
 					);
 				}
@@ -195,6 +211,42 @@ async function readLimitedBody(request: Request): Promise<string> {
 	}
 
 	return new TextDecoder().decode(body);
+}
+
+async function findRepoIdForInstallation(githubRepoId: number, installationId: number) {
+	const [row] = await db
+		.select({ id: repositories.id })
+		.from(repositories)
+		.innerJoin(organizations, eq(repositories.orgId, organizations.id))
+		.where(
+			and(
+				eq(repositories.githubRepoId, githubRepoId),
+				eq(organizations.githubInstallationId, installationId),
+			),
+		)
+		.limit(1);
+
+	return row?.id;
+}
+
+async function hasProcessedIssueComment(
+	repoId: string,
+	issueNumber: number,
+	commentId: number,
+): Promise<boolean> {
+	const [existing] = await db
+		.select({ id: events.id })
+		.from(events)
+		.where(
+			and(
+				eq(events.repoId, repoId),
+				eq(events.contentType, "comment"),
+				eq(events.githubRef, `#${issueNumber}/comment/${commentId}`),
+			),
+		)
+		.limit(1);
+
+	return Boolean(existing);
 }
 
 export const Route = createFileRoute("/api/github/webhook")({

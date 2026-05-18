@@ -7,7 +7,8 @@ import { encodeGitHubUsername, normalizeGitHubUsername } from "./username";
 
 /** Get a user's public profile */
 export async function getUser(token: string, username: string) {
-	return githubApi(`/users/${encodeGitHubUsername(username)}`, token);
+	const login = normalizeGitHubUsername(username);
+	return githubApi(`/users/${encodeGitHubUsername(login)}`, token);
 }
 
 /** Search a user's merged PRs count */

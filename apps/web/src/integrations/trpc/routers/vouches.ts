@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { and, desc, eq, sql, type SQL } from "drizzle-orm";
+import { and, desc, eq, isNull, or, sql, type SQL } from "drizzle-orm";
 import { adminProcedure, publicProcedure } from "../init";
 import { trpcError } from "../error";
 import { db } from "@tripwire/db/client";
@@ -29,6 +29,20 @@ async function resolvePublicGitHubUser(username: string) {
 	return ghUser;
 }
 
+function vouchIdentityKey() {
+	return sql<string>`coalesce(${globalVouches.githubUserId}::text, lower(${globalVouches.githubUsername}))`;
+}
+
+function matchesResolvedVouchUser(ghUser: { id: number; login: string }) {
+	return or(
+		eq(globalVouches.githubUserId, ghUser.id),
+		and(
+			isNull(globalVouches.githubUserId),
+			sql`lower(${globalVouches.githubUsername}) = ${ghUser.login.toLowerCase()}`,
+		),
+	);
+}
+
 export const vouchesRouter = {
 	/**
 	 * Public: list globally vouched users with their vouch counts.
@@ -54,34 +68,36 @@ export const vouchesRouter = {
 				? sql`${sql.join(conditions, sql` and `)}`
 				: undefined;
 
-			// Aggregate by user to get vouch counts
-			const rows = await db
-				.select({
-					githubUsername: sql<string>`(array_agg(${globalVouches.githubUsername} order by ${globalVouches.createdAt} desc))[1]`,
-					githubUserId: globalVouches.githubUserId,
-					avatarUrl: sql<string | null>`(array_agg(${globalVouches.avatarUrl} order by ${globalVouches.createdAt} desc))[1]`,
-					vouchCount: sql<number>`count(*)::int`,
-					firstVouchedAt: sql<string>`min(${globalVouches.createdAt})`,
+				// Aggregate by user to get vouch counts
+				const identityKey = vouchIdentityKey();
+				const rows = await db
+					.select({
+						identityKey,
+						githubUsername: sql<string>`(array_agg(${globalVouches.githubUsername} order by ${globalVouches.createdAt} desc))[1]`,
+						githubUserId: sql<number | null>`(array_agg(${globalVouches.githubUserId} order by ${globalVouches.createdAt} desc))[1]`,
+						avatarUrl: sql<string | null>`(array_agg(${globalVouches.avatarUrl} order by ${globalVouches.createdAt} desc))[1]`,
+						vouchCount: sql<number>`count(*)::int`,
+						firstVouchedAt: sql<string>`min(${globalVouches.createdAt})`,
 					lastVouchedAt: sql<string>`max(${globalVouches.createdAt})`,
 				})
-				.from(globalVouches)
-				.where(whereClause)
-				.groupBy(
-					globalVouches.githubUserId,
-				)
-				.orderBy(desc(sql`count(*)`))
+					.from(globalVouches)
+					.where(whereClause)
+					.groupBy(
+						identityKey,
+					)
+					.orderBy(desc(sql`count(*)`))
 				.limit(input.limit)
 				.offset(input.offset);
 
-			const [countResult] = await db
-				.select({ count: sql<number>`count(distinct ${globalVouches.githubUserId})::int` })
-				.from(globalVouches)
-				.where(whereClause);
+				const [countResult] = await db
+					.select({ count: sql<number>`count(distinct ${vouchIdentityKey()})::int` })
+					.from(globalVouches)
+					.where(whereClause);
 
-			return {
-				users: rows,
-				total: countResult?.count ?? 0,
-			};
+				return {
+					users: rows.map(({ identityKey: _identityKey, ...row }) => row),
+					total: countResult?.count ?? 0,
+				};
 		}),
 
 	/** Public: check if a specific user is globally vouched */
@@ -94,9 +110,9 @@ export const vouchesRouter = {
 			}
 
 			const rows = await db
-				.select({ id: globalVouches.id })
-				.from(globalVouches)
-				.where(eq(globalVouches.githubUserId, ghUser.id));
+					.select({ id: globalVouches.id })
+					.from(globalVouches)
+					.where(matchesResolvedVouchUser(ghUser));
 
 			return {
 				isVouched: rows.length > 0,
@@ -138,13 +154,13 @@ export const vouchesRouter = {
 			const ghUser = await resolvePublicGitHubUser(input.githubUsername);
 
 			const deleted = await db
-				.delete(globalVouches)
-				.where(
-					and(
-						eq(globalVouches.githubUserId, ghUser.id),
-						eq(globalVouches.vouchedById, ctx.user.id),
-					),
-				)
+					.delete(globalVouches)
+					.where(
+						and(
+							matchesResolvedVouchUser(ghUser),
+							eq(globalVouches.vouchedById, ctx.user.id),
+						),
+					)
 				.returning();
 
 			return { removed: deleted.length > 0 };
@@ -218,10 +234,10 @@ export const vouchesRouter = {
 
 			// Check if already vouched
 			const [alreadyVouched] = await db
-				.select()
-				.from(globalVouches)
-				.where(eq(globalVouches.githubUserId, ghUser.id))
-				.limit(1);
+					.select()
+					.from(globalVouches)
+					.where(matchesResolvedVouchUser(ghUser))
+					.limit(1);
 
 			if (alreadyVouched) {
 				throw trpcError({

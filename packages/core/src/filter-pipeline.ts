@@ -717,14 +717,14 @@ export async function runFilterPipeline(
 			action,
 			reason: `Unable to verify ${ruleName} for @${ctx.senderLogin}: ${message}`,
 		});
-		if (action === "block" || action === "threshold") {
-			const reason = `Tripwire could not verify ${ruleName} for @${ctx.senderLogin}; holding for review.`;
-			const v: Violation = {
-				rule: ruleName,
-				reason,
-				action,
-				outcome: "blocked",
-			};
+			if (action === "block" || action === "threshold") {
+				const reason = `Tripwire could not verify ${ruleName} for @${ctx.senderLogin}; holding for review.`;
+				const v: Violation = {
+					rule: ruleName,
+					reason,
+					action,
+					outcome: "warned",
+				};
 			if (
 				!firstViolation ||
 				SEVERITY[v.outcome] > SEVERITY[firstViolation.outcome]

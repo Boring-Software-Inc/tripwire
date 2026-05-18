@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, or, sql } from "drizzle-orm";
 import { authedProcedure, publicProcedure } from "../init";
 import { assertRepoOwner, assertRequestOwner } from "@tripwire/core";
 import { trpcError } from "../error";
@@ -112,12 +112,18 @@ export const requestsRouter = {
 				.select()
 				.from(contributorRequests)
 				.where(
-					and(
-						eq(contributorRequests.repoId, repo.id),
-						eq(contributorRequests.githubUsername, ghUser.login),
-						eq(contributorRequests.kind, input.kind),
-						eq(contributorRequests.status, "pending"),
-					),
+						and(
+							eq(contributorRequests.repoId, repo.id),
+							or(
+								eq(contributorRequests.githubUserId, ghUser.id),
+								and(
+									isNull(contributorRequests.githubUserId),
+									eq(contributorRequests.githubUsername, ghUser.login),
+								),
+							),
+							eq(contributorRequests.kind, input.kind),
+							eq(contributorRequests.status, "pending"),
+						),
 				)
 				.limit(1);
 

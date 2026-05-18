@@ -74,34 +74,30 @@ export async function trackCreditUsage({
 		costCents: cents,
 	});
 
-	try {
-		if (quotaLockId) {
-			await autumn.balances.finalize({
-				lockId: quotaLockId,
-				action: cents === 0 ? "release" : "confirm",
-				...(cents > 0 ? { overrideValue: cents } : {}),
-				properties: {
-					model: modelId,
-					repoId,
-					promptTokens,
-					completionTokens,
-				},
-			});
-		} else if (cents > 0) {
-			await autumn.track({
-				customerId,
-				featureId: "ai_credits",
-				value: cents,
-				properties: {
-					model: modelId,
-					repoId,
-					promptTokens,
-					completionTokens,
-				},
-			});
-		}
-	} catch (err) {
-		console.error("[billing] Failed to track usage:", err);
+	if (quotaLockId) {
+		await autumn.balances.finalize({
+			lockId: quotaLockId,
+			action: cents === 0 ? "release" : "confirm",
+			...(cents > 0 ? { overrideValue: cents } : {}),
+			properties: {
+				model: modelId,
+				repoId,
+				promptTokens,
+				completionTokens,
+			},
+		});
+	} else if (cents > 0) {
+		await autumn.track({
+			customerId,
+			featureId: "ai_credits",
+			value: cents,
+			properties: {
+				model: modelId,
+				repoId,
+				promptTokens,
+				completionTokens,
+			},
+		});
 	}
 }
 

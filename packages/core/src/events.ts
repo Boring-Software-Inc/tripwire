@@ -120,6 +120,13 @@ async function updateReputation(options: LogEventOptions) {
 
 	try {
 		await db.transaction(async (tx) => {
+			await tx.execute(sql`
+				select pg_advisory_xact_lock(
+					hashtext(${options.repoId}),
+					hashtext(${username})
+				)
+			`);
+
 			const [existing] = await tx
 				.select({ id: githubReputation.id })
 				.from(githubReputation)

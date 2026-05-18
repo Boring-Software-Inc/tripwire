@@ -31,6 +31,14 @@ function normalizeOrganizationRole(role: string | string[]) {
 	return singleRole;
 }
 
+function rejectGenericOwnerRole(role: string) {
+	if (role === "owner") {
+		throw new APIError("BAD_REQUEST", {
+			message: "Use the explicit ownership transfer flow to assign an organization owner.",
+		});
+	}
+}
+
 export const auth = betterAuth({
 	baseURL: env.BETTER_AUTH_URL,
 	secret: env.BETTER_AUTH_SECRET,
@@ -116,20 +124,24 @@ export const auth = betterAuth({
 					// or if explicitly triggered by the user
 				},
 
-				beforeUpdateMemberRole: async ({ newRole }) => {
-					// Better Auth passes the target user to this hook, not the caller.
-					// Keep caller authorization in Better Auth's own endpoint checks and
-					// only normalize Tripwire's supported single-role model here.
-					return { data: { role: normalizeOrganizationRole(newRole) } };
-				},
-				beforeCreateInvitation: async ({ invitation }) => {
-					return {
-						data: {
-							...invitation,
-							role: normalizeOrganizationRole(invitation.role),
-						},
-					};
-				},
+					beforeUpdateMemberRole: async ({ newRole }) => {
+						// Better Auth passes the target user to this hook, not the caller.
+						// Keep caller authorization in Better Auth's own endpoint checks and
+						// only normalize Tripwire's supported single-role model here.
+						const role = normalizeOrganizationRole(newRole);
+						rejectGenericOwnerRole(role);
+						return { data: { role } };
+					},
+					beforeCreateInvitation: async ({ invitation }) => {
+						const role = normalizeOrganizationRole(invitation.role);
+						rejectGenericOwnerRole(role);
+						return {
+							data: {
+								...invitation,
+								role,
+							},
+						};
+					},
 			},
 		}),
 		autumnPlugin({

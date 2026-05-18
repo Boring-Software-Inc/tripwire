@@ -58,13 +58,13 @@ function EventDetailPage() {
 	// Blacklist mutation
 	const blacklistMutation = useMutation({
 		...trpc.blacklist.add.mutationOptions(),
-		onSuccess: () => {
+		onSuccess: (_data, variables) => {
 			setActionStatus("blacklisted");
 			if (repoId) invalidateListCaches(queryClient, repoId);
 			toastManager.add({
 				type: "success",
 				title: "User blacklisted",
-				description: `@${targetUsername} has been added to the blacklist.`,
+				description: `@${variables.githubUsername} has been added to the blacklist.`,
 			});
 		},
 		onError: (err) => toastFromError(err, { fallbackTitle: "Failed to blacklist" }),
@@ -73,13 +73,13 @@ function EventDetailPage() {
 	// Whitelist mutation
 	const whitelistMutation = useMutation({
 		...trpc.whitelist.add.mutationOptions(),
-		onSuccess: () => {
+		onSuccess: (_data, variables) => {
 			setActionStatus("safe");
 			if (repoId) invalidateListCaches(queryClient, repoId);
 			toastManager.add({
 				type: "success",
 				title: "User whitelisted",
-				description: `@${targetUsername} has been added to the whitelist.`,
+				description: `@${variables.githubUsername} has been added to the whitelist.`,
 			});
 		},
 		onError: (err) => toastFromError(err, { fallbackTitle: "Failed to whitelist" }),
@@ -117,8 +117,8 @@ function EventDetailPage() {
 				? "#67E19F"
 				: "#D1BC00";
 
-	const username = displayEvent?.targetGithubUsername ?? "unknown";
-	const canModerateTarget = displayEvent?.targetGithubUsername != null;
+	const canModerateTarget = targetUsername != null;
+	const targetDisplayUsername = targetUsername ?? "unknown";
 	const user = githubUser.data;
 
 	return (
@@ -165,7 +165,7 @@ function EventDetailPage() {
 					</h1>
 					<p className="text-[16px] leading-[24px] text-[#EEEEEE80] m-0 max-w-[560px]">
 						{displayEvent?.description ||
-							`Tripwire flagged activity from @${username}`}
+							`Tripwire flagged activity from @${targetDisplayUsername}`}
 					</p>
 					<div className="flex items-center flex-wrap gap-3 mt-1 text-[13px] text-tw-text-tertiary">
 						{(() => {
@@ -241,35 +241,37 @@ function EventDetailPage() {
 								variant={isAlreadyActioned(displayEvent?.action) ? "default" : "primary"}
 								onClick={() => {
 									const repoId = displayEvent?.repo?.id || repo?.id;
-									if (repoId && canModerateTarget) {
+									if (repoId && canModerateTarget && targetUsername) {
 										blacklistMutation.mutate({
 											repoId,
-											githubUsername: username,
+											githubUsername: targetUsername,
 										});
 									}
 								}}
-								disabled={blacklistMutation.isPending || isAlreadyBlacklisted}
+								disabled={!canModerateTarget || blacklistMutation.isPending || isAlreadyBlacklisted}
 							>
 								<ShieldIcon />
-								{isAlreadyBlacklisted
-									? `@${username} is blacklisted`
-									: blacklistMutation.isPending
+								{!canModerateTarget
+									? "No target user"
+									: isAlreadyBlacklisted
+										? `@${targetDisplayUsername} is blacklisted`
+										: blacklistMutation.isPending
 										? "Adding..."
-										: `Blacklist @${username}`}
+											: `Blacklist @${targetDisplayUsername}`}
 							</ActionPill>
 							{/* Whitelist option */}
 							<ActionPill
 								variant="ghost"
 								onClick={() => {
 									const repoId = displayEvent?.repo?.id || repo?.id;
-									if (repoId && canModerateTarget) {
+									if (repoId && canModerateTarget && targetUsername) {
 										whitelistMutation.mutate({
 											repoId,
-											githubUsername: username,
+											githubUsername: targetUsername,
 										});
 									}
 								}}
-								disabled={whitelistMutation.isPending}
+								disabled={!canModerateTarget || whitelistMutation.isPending}
 							>
 								<UserPlusIcon />
 								{whitelistMutation.isPending ? "Adding..." : "Add to whitelist"}
@@ -281,7 +283,7 @@ function EventDetailPage() {
 								<>
 									<ShieldIcon />
 									<span className="text-tw-text-primary">
-										@{username} has been blacklisted
+										@{targetDisplayUsername} has been blacklisted
 									</span>
 								</>
 							)}
@@ -289,7 +291,7 @@ function EventDetailPage() {
 								<>
 									<UserPlusIcon />
 									<span className="text-tw-text-primary">
-										@{username} added to whitelist
+										@{targetDisplayUsername} added to whitelist
 									</span>
 								</>
 							)}
@@ -304,12 +306,12 @@ function EventDetailPage() {
 							<OutlineCard>
 								<div className="flex items-center gap-2 px-0.5 py-0.5">
 									<img
-										src={user?.avatar || `https://github.com/${username}.png`}
+										src={user?.avatar || (targetUsername ? `https://github.com/${targetUsername}.png` : undefined)}
 										className="w-[22px] h-[22px] rounded-full shrink-0"
 										alt=""
 									/>
 									<span className="text-[14px] leading-5 text-tw-text-primary whitespace-nowrap">
-										@{username}
+										@{targetDisplayUsername}
 									</span>
 									<span className="text-[13px] text-tw-text-tertiary whitespace-nowrap">
 										opened this {displayEvent?.contentType || "issue"}{" "}
@@ -358,7 +360,7 @@ function EventDetailPage() {
 						<div className="flex items-center gap-3">
 							<div className="relative shrink-0">
 								<img
-									src={user?.avatar || `https://github.com/${username}.png`}
+									src={user?.avatar || (targetUsername ? `https://github.com/${targetUsername}.png` : undefined)}
 									className="w-12 h-12 rounded-full"
 									alt=""
 								/>
@@ -371,13 +373,19 @@ function EventDetailPage() {
 							</div>
 							<div className="flex-1 min-w-0">
 								<div className="flex items-center gap-2">
-									<Link
-										to="/users/$username"
-										params={{ username }}
-										className="text-[15px] leading-5 text-tw-text-primary font-medium hover:text-tw-accent transition-colors"
-									>
-										@{username}
-									</Link>
+									{targetUsername ? (
+										<Link
+											to="/users/$username"
+											params={{ username: targetUsername }}
+											className="text-[15px] leading-5 text-tw-text-primary font-medium hover:text-tw-accent transition-colors"
+										>
+											@{targetUsername}
+										</Link>
+									) : (
+										<span className="text-[15px] leading-5 text-tw-text-primary font-medium">
+											@{targetDisplayUsername}
+										</span>
+									)}
 									{user?.location && (
 										<>
 											<span className="text-[11px] text-tw-text-tertiary">·</span>
@@ -397,14 +405,16 @@ function EventDetailPage() {
 									)}
 								</div>
 							</div>
-							<a
-								href={`https://github.com/${username}`}
-								target="_blank"
-								rel="noopener noreferrer"
-								className="shrink-0 text-[12px] text-tw-text-secondary hover:text-tw-text-primary transition-colors rounded-md px-2 py-1 hover:bg-tw-inner"
-							>
-								View profile →
-							</a>
+							{targetUsername && (
+								<a
+									href={`https://github.com/${targetUsername}`}
+									target="_blank"
+									rel="noopener noreferrer"
+									className="shrink-0 text-[12px] text-tw-text-secondary hover:text-tw-text-primary transition-colors rounded-md px-2 py-1 hover:bg-tw-inner"
+								>
+									View profile →
+								</a>
+							)}
 						</div>
 
 						{/* Contributor score */}
@@ -485,7 +495,7 @@ function EventDetailPage() {
 							time={formatRelativeTime(displayEvent?.createdAt)}
 							kind="opened"
 							label={`${displayEvent?.contentType || "Content"} received`}
-							detail={`From @${username}`}
+							detail={`From @${targetDisplayUsername}`}
 						/>
 						<TimelineRow
 							time={formatRelativeTime(displayEvent?.createdAt)}

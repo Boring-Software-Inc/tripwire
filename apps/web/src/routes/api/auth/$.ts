@@ -39,6 +39,7 @@ async function handleMcpGetSession(request: Request) {
 
 function jsonNullSession() {
   return Response.json(null, {
+    status: 401,
     headers: {
       'WWW-Authenticate': 'Bearer',
       'Cache-Control': 'no-store',

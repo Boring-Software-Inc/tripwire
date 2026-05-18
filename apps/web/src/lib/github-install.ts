@@ -90,25 +90,40 @@ async function fetchInstallationRepos(
 	installationId: number,
 ): Promise<InstallationRepo[] | null> {
 	const token = await getInstallationToken(installationId);
-	const reposRes = await fetch(
-		"https://api.github.com/installation/repositories?per_page=100",
-		{
-			headers: {
-				Authorization: `token ${token}`,
-				Accept: "application/vnd.github.v3+json",
-			},
-		},
-	);
+	const repos: InstallationRepo[] = [];
+	const perPage = 100;
+	let page = 1;
+	let hasNextPage = true;
 
-	if (!reposRes.ok) {
-		console.error("[Callback] Failed to fetch repos:", reposRes.status);
-		return null;
+	while (hasNextPage) {
+		const reposRes = await fetch(
+			`https://api.github.com/installation/repositories?per_page=${perPage}&page=${page}`,
+			{
+				headers: {
+					Authorization: `token ${token}`,
+					Accept: "application/vnd.github.v3+json",
+				},
+			},
+		);
+
+		if (!reposRes.ok) {
+			console.error("[Callback] Failed to fetch repos:", reposRes.status);
+			return null;
+		}
+
+		const { repositories: pageRepos } = (await reposRes.json()) as {
+			repositories?: InstallationRepo[];
+		};
+		const currentRepos = pageRepos ?? [];
+		repos.push(...currentRepos);
+
+		const linkHeader = reposRes.headers.get("Link");
+		const hasLinkNext = linkHeader?.includes('rel="next"') ?? false;
+		hasNextPage = linkHeader ? hasLinkNext : currentRepos.length === perPage;
+		page += 1;
 	}
 
-	const { repositories: repos } = (await reposRes.json()) as {
-		repositories?: InstallationRepo[];
-	};
-	return repos ?? [];
+	return repos;
 }
 
 async function upsertInstallationRepo(
@@ -160,7 +175,7 @@ export async function ensureInstallation(
 		.from(organizations)
 		.where(eq(organizations.githubInstallationId, installationId));
 
-	if (existing) return existing.ownerId === userId ? "ok" : "installer_mismatch";
+	if (existing && existing.ownerId !== userId) return "installer_mismatch";
 
 	const meta = await fetchInstallationMeta(installationId);
 	if (!meta) return "installer_mismatch";
@@ -212,6 +227,7 @@ export async function ensureInstallation(
 	if (existingAccountOrg && existingAccountOrg.ownerId !== userId) {
 		return "installer_mismatch";
 	}
+	const existingOrg = existingAccountOrg ?? existing ?? null;
 
 	const [ownerMembership] = await db
 		.select({ organizationId: member.organizationId })
@@ -219,18 +235,19 @@ export async function ensureInstallation(
 		.where(and(eq(member.userId, userId), eq(member.role, "owner")))
 		.limit(1);
 
-	const [org] = existingAccountOrg
+	const [org] = existingOrg
 		? await db
 			.update(organizations)
 			.set({
 				githubInstallationId: installationId,
+				githubAccountId: meta.accountId,
 				githubAccountLogin: meta.accountLogin,
 				githubAccountType: meta.accountType,
 				avatarUrl: meta.avatarUrl,
-				betterAuthOrgId: ownerMembership?.organizationId ?? existingAccountOrg.betterAuthOrgId,
+				betterAuthOrgId: ownerMembership?.organizationId ?? existingOrg.betterAuthOrgId,
 				updatedAt: new Date(),
 			})
-			.where(eq(organizations.id, existingAccountOrg.id))
+			.where(eq(organizations.id, existingOrg.id))
 			.returning()
 		: await db
 			.insert(organizations)

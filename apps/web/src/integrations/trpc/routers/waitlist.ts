@@ -27,15 +27,12 @@ export const waitlistRouter = createTRPCRouter({
 			try {
 				await db.insert(waitlist).values({ email });
 				return { success: true };
-			} catch (err) {
-				// Return the same success envelope for duplicate emails so the
-				// endpoint cannot be used as a waitlist membership oracle.
-				if (
-					err instanceof Error &&
-					err.message.includes("unique constraint")
-				) {
-					return { success: true };
-				}
+				} catch (err) {
+					// Return the same success envelope for duplicate emails so the
+					// endpoint cannot be used as a waitlist membership oracle.
+					if ((err as { code?: string } | null)?.code === "23505") {
+						return { success: true };
+					}
 				throw err;
 			}
 		}),

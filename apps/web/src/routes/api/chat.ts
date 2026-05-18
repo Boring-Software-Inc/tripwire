@@ -288,18 +288,30 @@ export const Route = createFileRoute("/api/chat")({
 						system: systemPrompt,
 						stopWhen: stepCountIs(MAX_CHAT_ITERATIONS),
 						maxOutputTokens: MAX_CHAT_OUTPUT_TOKENS,
-						abortSignal: request.signal,
-						onFinish: async ({ totalUsage }) => {
-							await trackCreditUsage({
-								customerId: user.id,
-								modelId: aiModel,
-								userName: user.name ?? undefined,
-								userEmail: user.email ?? undefined,
-								repoId: resolvedRepoId,
-								quotaLockId,
-								usage: totalUsage,
-							});
-						},
+							abortSignal: request.signal,
+							onFinish: async ({ totalUsage }) => {
+								try {
+									await trackCreditUsage({
+										customerId: user.id,
+										modelId: aiModel,
+										userName: user.name ?? undefined,
+										userEmail: user.email ?? undefined,
+										repoId: resolvedRepoId,
+										quotaLockId,
+										usage: totalUsage,
+									});
+								} catch (error) {
+									logCreditUsageError({
+										customerId: user.id,
+										modelId: aiModel,
+										userName: user.name ?? undefined,
+										userEmail: user.email ?? undefined,
+										repoId: resolvedRepoId,
+										error,
+									});
+									throw error;
+								}
+							},
 						onError: ({ error }) => {
 							if (quotaLockId) void releaseQuotaLock(quotaLockId);
 							logCreditUsageError({

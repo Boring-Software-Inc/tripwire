@@ -290,19 +290,31 @@ const removeFromBlacklist = defineTool({
 	needsApproval: true,
 	mutates: true,
 	inputSchema: z.object({ username: z.string().min(1).refine(isGitHubUsername, "Invalid GitHub username") }),
-	handler: async ({ username }, ctx) => {
-		const repoId = requireRepoId(ctx);
-		await assertRepoOwner(ctx.userId, repoId);
-		const deleted = await db.transaction(async (tx) => {
-			await lockListMembership(tx, repoId, username);
-			return tx
-				.delete(blacklistEntries)
-				.where(
-					and(
-						eq(blacklistEntries.repoId, repoId),
-						usernameEq(blacklistEntries.githubUsername, username),
-					),
-				)
+		handler: async ({ username }, ctx) => {
+			const repoId = requireRepoId(ctx);
+			await assertRepoOwner(ctx.userId, repoId);
+			const token = await getTokenForRepo(repoId);
+			let ghUser: Awaited<ReturnType<typeof fetchGitHubUser>> | null = null;
+			try {
+				ghUser = await fetchGitHubUser(username, token ?? undefined);
+			} catch {
+				// Legacy rows may reference a username that was renamed/deleted.
+			}
+			const deleted = await db.transaction(async (tx) => {
+				await lockListMembership(tx, repoId, username);
+				return tx
+					.delete(blacklistEntries)
+					.where(
+						and(
+							eq(blacklistEntries.repoId, repoId),
+							ghUser
+								? or(
+									eq(blacklistEntries.githubUserId, ghUser.id),
+									usernameEq(blacklistEntries.githubUsername, username),
+								)
+								: usernameEq(blacklistEntries.githubUsername, username),
+						),
+					)
 				.returning();
 		});
 
@@ -313,14 +325,15 @@ const removeFromBlacklist = defineTool({
 			};
 		}
 
-		await logEvent({
-			repoId,
-			action: "blacklist_removed",
-			severity: "info",
-			description: `@${username} removed from blacklist`,
-			targetGithubUsername: username,
-			metadata: { removedBy: ctx.userName ?? null, viaTool: true },
-		});
+			await logEvent({
+				repoId,
+				action: "blacklist_removed",
+				severity: "info",
+				description: `@${deleted[0]?.githubUsername ?? username} removed from blacklist`,
+				targetGithubUsername: deleted[0]?.githubUsername ?? username,
+				targetGithubUserId: deleted[0]?.githubUserId ?? undefined,
+				metadata: { removedBy: ctx.userName ?? null, viaTool: true },
+			});
 
 		return {
 			ok: true,
@@ -420,19 +433,31 @@ const removeFromWhitelist = defineTool({
 	needsApproval: true,
 	mutates: true,
 	inputSchema: z.object({ username: z.string().min(1).refine(isGitHubUsername, "Invalid GitHub username") }),
-	handler: async ({ username }, ctx) => {
-		const repoId = requireRepoId(ctx);
-		await assertRepoOwner(ctx.userId, repoId);
-		const deleted = await db.transaction(async (tx) => {
-			await lockListMembership(tx, repoId, username);
-			return tx
-				.delete(whitelistEntries)
-				.where(
-					and(
-						eq(whitelistEntries.repoId, repoId),
-						usernameEq(whitelistEntries.githubUsername, username),
-					),
-				)
+		handler: async ({ username }, ctx) => {
+			const repoId = requireRepoId(ctx);
+			await assertRepoOwner(ctx.userId, repoId);
+			const token = await getTokenForRepo(repoId);
+			let ghUser: Awaited<ReturnType<typeof fetchGitHubUser>> | null = null;
+			try {
+				ghUser = await fetchGitHubUser(username, token ?? undefined);
+			} catch {
+				// Legacy rows may reference a username that was renamed/deleted.
+			}
+			const deleted = await db.transaction(async (tx) => {
+				await lockListMembership(tx, repoId, username);
+				return tx
+					.delete(whitelistEntries)
+					.where(
+						and(
+							eq(whitelistEntries.repoId, repoId),
+							ghUser
+								? or(
+									eq(whitelistEntries.githubUserId, ghUser.id),
+									usernameEq(whitelistEntries.githubUsername, username),
+								)
+								: usernameEq(whitelistEntries.githubUsername, username),
+						),
+					)
 				.returning();
 		});
 
@@ -443,14 +468,15 @@ const removeFromWhitelist = defineTool({
 			};
 		}
 
-		await logEvent({
-			repoId,
-			action: "whitelist_removed",
-			severity: "info",
-			description: `@${username} removed from whitelist`,
-			targetGithubUsername: username,
-			metadata: { removedBy: ctx.userName ?? null, viaTool: true },
-		});
+			await logEvent({
+				repoId,
+				action: "whitelist_removed",
+				severity: "info",
+				description: `@${deleted[0]?.githubUsername ?? username} removed from whitelist`,
+				targetGithubUsername: deleted[0]?.githubUsername ?? username,
+				targetGithubUserId: deleted[0]?.githubUserId ?? undefined,
+				metadata: { removedBy: ctx.userName ?? null, viaTool: true },
+			});
 
 		return {
 			ok: true,
