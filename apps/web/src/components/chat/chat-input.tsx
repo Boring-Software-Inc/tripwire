@@ -1,4 +1,4 @@
-import { useId, useMemo, useRef, useState, type KeyboardEvent, type ChangeEvent, type ReactNode } from "react";
+import { useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ChangeEvent, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useWorkspace } from "#/lib/workspace-context";
 import { useTRPC } from "#/integrations/trpc/react";
@@ -18,7 +18,7 @@ interface ChatInputProps {
 	placeholder?: string;
 	actions?: ReactNode;
 	className?: string;
-	style?: React.CSSProperties;
+	style?: CSSProperties;
 }
 
 export function ChatInput({
@@ -110,19 +110,24 @@ export function ChatInput({
 				e.preventDefault();
 				return;
 			}
-			if (e.key === "ArrowDown") {
+
+			const hasSuggestions = mentionCount > 0 && mentionItems.length > 0;
+
+			if (e.key === "ArrowDown" && hasSuggestions) {
 				setMentionIdx((i) => Math.min(i + 1, mentionCount - 1));
 				e.preventDefault();
 				return;
 			}
-			if (e.key === "ArrowUp") {
+			if (e.key === "ArrowUp" && hasSuggestions) {
 				setMentionIdx((i) => Math.max(i - 1, 0));
 				e.preventDefault();
 				return;
 			}
-			if (e.key === "Enter" || e.key === "Tab") {
+			if ((e.key === "Enter" || e.key === "Tab") && hasSuggestions) {
+				const selectedMention = mentionItems[mentionIdx];
+				if (!selectedMention) return;
 				e.preventDefault();
-				if (mentionItems[mentionIdx]) selectMention(mentionItems[mentionIdx].githubUsername);
+				selectMention(selectedMention.githubUsername);
 				return;
 			}
 		}
