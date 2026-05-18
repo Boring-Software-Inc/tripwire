@@ -6,7 +6,7 @@ import {
 	streamText,
 } from "ai";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
-import { useRequest } from "nitro/context";
+import { useRequest as getNitroRequest } from "nitro/context";
 import type { RequestLogger } from "evlog";
 import { createChatTools, tripwireTools } from "@tripwire/tools";
 import { logCreditUsageError, trackCreditUsage } from "@tripwire/ai/credit-middleware";
@@ -24,7 +24,7 @@ import {
 
 function getRequestLog(): RequestLogger | undefined {
 	try {
-		const req = useRequest() as { context?: { log?: RequestLogger } } | undefined;
+		const req = getNitroRequest() as { context?: { log?: RequestLogger } } | undefined;
 		return req?.context?.log;
 	} catch {
 		return undefined;

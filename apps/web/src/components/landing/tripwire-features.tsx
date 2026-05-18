@@ -605,22 +605,20 @@ function RequireProfileReadme() {
   );
 }
 
-function AllowBlock() {
-  const [users, setUsers] = useState([
-    { name: "t3dotgg", side: "allow" },
-    { name: "ripgrim", side: "allow" },
-    { name: "cody-labs-ai", side: "block" },
-    { name: "huangwei0903", side: "block" },
-  ]);
+type AllowBlockUser = { name: string; side: string };
 
-  const toggle = (name: string) =>
-    setUsers((p) =>
-      p.map((u) =>
-        u.name === name ? { ...u, side: u.side === "allow" ? "block" : "allow" } : u
-      )
-    );
-
-  const Col = ({ label, side }: { label: string; side: string }) => (
+function AllowBlockColumn({
+  label,
+  side,
+  users,
+  onToggle,
+}: {
+  label: string;
+  side: string;
+  users: AllowBlockUser[];
+  onToggle: (name: string) => void;
+}) {
+  return (
     <div className="flex-1 flex flex-col gap-1">
       <span className="font-mono text-[9px] tracking-wider uppercase text-white/15 mb-0.5">
         {label}
@@ -635,11 +633,11 @@ function AllowBlock() {
               initial={{ opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.96 }}
-              onClick={() => toggle(u.name)}
+              onClick={() => onToggle(u.name)}
               className="flex items-center gap-1.5 py-1 px-2 rounded cursor-pointer bg-transparent font-mono text-[11px] text-white/35 text-left outline-none border border-[#2a2a2a] hover:border-[#3a3a3a] active:scale-[0.97] transition-[border-color] duration-150"
             >
               <span
-                className={`w-1 h-1 rounded-sm ${side === "allow" ? "bg-white/25" : "bg-white/10"}`}
+                className={`size-1 rounded-sm ${side === "allow" ? "bg-white/25" : "bg-white/10"}`}
               />
               {u.name}
             </motion.button>
@@ -647,12 +645,28 @@ function AllowBlock() {
       </AnimatePresence>
     </div>
   );
+}
+
+function AllowBlock() {
+  const [users, setUsers] = useState<AllowBlockUser[]>([
+    { name: "t3dotgg", side: "allow" },
+    { name: "ripgrim", side: "allow" },
+    { name: "cody-labs-ai", side: "block" },
+    { name: "huangwei0903", side: "block" },
+  ]);
+
+  const toggle = (name: string) =>
+    setUsers((p) =>
+      p.map((u) =>
+        u.name === name ? { ...u, side: u.side === "allow" ? "block" : "allow" } : u
+      )
+    );
 
   return (
     <div className="flex gap-4">
-      <Col label="allowed" side="allow" />
+      <AllowBlockColumn label="allowed" side="allow" users={users} onToggle={toggle} />
       <div className="w-px bg-[#262525] self-stretch" />
-      <Col label="blocked" side="block" />
+      <AllowBlockColumn label="blocked" side="block" users={users} onToggle={toggle} />
     </div>
   );
 }

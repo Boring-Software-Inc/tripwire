@@ -1,6 +1,6 @@
 import {
 	createContext,
-	useContext,
+	use,
 	type ReactNode,
 } from "react";
 import { useNavigate } from "@tanstack/react-router";
@@ -23,7 +23,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 	if (isPending) {
 		return (
 			<div className="flex h-screen w-full items-center justify-center bg-[#191919]">
-				<div className="h-5 w-5 animate-spin rounded-full border-2 border-tw-accent border-t-transparent" />
+				<div className="size-5 animate-spin rounded-full border-2 border-tw-accent border-t-transparent" />
 			</div>
 		);
 	}
@@ -41,7 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 }
 
 export function useAuth() {
-	const ctx = useContext(AuthContext);
+	const ctx = use(AuthContext);
 	if (!ctx) {
 		throw new Error("useAuth must be used within AuthProvider");
 	}

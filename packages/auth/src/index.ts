@@ -42,20 +42,23 @@ export const auth = betterAuth({
 					.from(member)
 					.where(and(eq(member.userId, user.id), eq(member.role, "owner")));
 
-				for (const { orgId } of ownedOrgs) {
-					const [otherMembers] = await db
-						.select({ total: count() })
-						.from(member)
-						.where(and(
-							eq(member.organizationId, orgId),
-							ne(member.userId, user.id),
-						));
+				const otherMemberTotals = await Promise.all(
+					ownedOrgs.map(async ({ orgId }) => {
+						const [row] = await db
+							.select({ total: count() })
+							.from(member)
+							.where(and(
+								eq(member.organizationId, orgId),
+								ne(member.userId, user.id),
+							));
+						return row?.total ?? 0;
+					}),
+				);
 
-					if (otherMembers && otherMembers.total > 0) {
-						throw new APIError("BAD_REQUEST", {
-							message: "Transfer ownership of your organization before deleting your account.",
-						});
-					}
+				if (otherMemberTotals.some((total) => total > 0)) {
+					throw new APIError("BAD_REQUEST", {
+						message: "Transfer ownership of your organization before deleting your account.",
+					});
 				}
 
 				// Uninstall GitHub App from all Tripwire orgs owned by this user
@@ -73,16 +76,18 @@ export const auth = betterAuth({
 				}
 
 				// Delete better-auth orgs where this user is the sole owner
-				for (const { orgId } of ownedOrgs) {
-					try {
-						await auth.api.deleteOrganization({
-							headers: new Headers(),
-							body: { organizationId: orgId },
-						});
-					} catch (err) {
-						console.error(`[auth] Failed to delete org ${orgId}:`, err);
-					}
-				}
+				await Promise.all(
+					ownedOrgs.map(async ({ orgId }) => {
+						try {
+							await auth.api.deleteOrganization({
+								headers: new Headers(),
+								body: { organizationId: orgId },
+							});
+						} catch (err) {
+							console.error(`[auth] Failed to delete org ${orgId}:`, err);
+						}
+					}),
+				);
 			},
 		},
 	},

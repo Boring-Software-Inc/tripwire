@@ -5,7 +5,7 @@
  * Uses tokenlens for live provider pricing via the OpenRouter catalog.
  */
 
-import { useRequest } from "nitro/context";
+import { useRequest as getNitroRequest } from "nitro/context";
 import { createLogger, type RequestLogger } from "evlog";
 import { computeCostCents } from "./credit-schema";
 import { autumn } from "@tripwire/auth/autumn";
@@ -149,7 +149,7 @@ function logAi({
 	error?: unknown;
 }) {
 	try {
-		const req = useRequest() as
+		const req = getNitroRequest() as
 			| {
 					context?: {
 						log?: RequestLogger;
