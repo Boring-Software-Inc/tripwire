@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState, type KeyboardEvent } from "react";
+import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { EventGroupCard } from "#/components/home/event-group-card";
@@ -8,6 +8,7 @@ import { useAuth } from '@tripwire/auth/components';
 import { useWorkspace, useWorkspacePath } from "#/lib/workspace-context";
 import { useTRPC } from "#/integrations/trpc/react";
 import { TripwireLogo } from "#/components/icons/tripwire-logo";
+import { ChatInput } from "#/components/chat/chat-input";
 
 export const Route = createFileRoute("/_app/$orgHandle/home")({
 	component: HomePage,
@@ -240,13 +241,6 @@ function HomeFloatingBar() {
 		setPreviewChat({ id: chatId, message, processing: true });
 	};
 
-	const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-		if (e.key === "Enter" && !e.shiftKey) {
-			e.preventDefault();
-			handleSubmit();
-		}
-	};
-
 	const handleGoToChat = () => {
 		if (!previewChat) return;
 		// Store initial message in sessionStorage (cleared on read, doesn't survive refresh)
@@ -292,39 +286,17 @@ function HomeFloatingBar() {
 			</AnimatePresence>
 
 			{/* Input bar */}
-			<div
-				className="flex flex-col items-start gap-0 rounded-2xl bg-tw-card p-1.5 w-full"
+			<ChatInput
+				value={inputValue}
+				onChange={setInputValue}
+				onSubmit={handleSubmit}
+				isLoading={createChat.isPending}
+				className="flex flex-col items-start gap-0 rounded-2xl bg-tw-card p-1.5 w-full relative"
 				style={{
 					boxShadow: "0 8px 24px #00000040, 0 1px 2px #0000001a",
 				}}
-			>
-				<div className="flex items-center w-full gap-1.5">
-					<input
-						type="text"
-						placeholder="Ask anything..."
-						value={inputValue}
-						onChange={(e) => setInputValue(e.target.value)}
-						onKeyDown={handleKeyDown}
-						disabled={createChat.isPending}
-						className="flex-1 h-9 bg-tw-inner rounded-[10px] px-2.5 text-[14px] text-tw-text-primary placeholder:text-tw-text-tertiary outline-none disabled:opacity-50"
-					/>
-					<button
-						type="button"
-						className="flex items-center justify-center size-9 rounded-[10px] text-tw-text-tertiary hover:text-tw-text-secondary transition-colors"
-					>
-						<svg
-							width="16"
-							height="16"
-							viewBox="0 0 16 16"
-							fill="currentColor"
-						>
-							<path d="M8 1a2 2 0 0 0-2 2v4a2 2 0 1 0 4 0V3a2 2 0 0 0-2-2Z" />
-							<path d="M4.5 7A.75.75 0 0 0 3 7a5.001 5.001 0 0 0 4.25 4.944V13.5h-1.5a.75.75 0 0 0 0 1.5h4.5a.75.75 0 0 0 0-1.5h-1.5v-1.556A5.001 5.001 0 0 0 13 7a.75.75 0 0 0-1.5 0 3.5 3.5 0 1 1-7 0Z" />
-						</svg>
-					</button>
-				</div>
-				<div className="flex items-center justify-between w-full pt-1.5">
-					<div className="flex items-center gap-1">
+				actions={
+					<>
 						<button
 							type="button"
 							className="flex items-center gap-1 h-7 px-2 rounded-lg text-tw-text-tertiary hover:text-tw-text-secondary hover:bg-tw-hover transition-colors"
@@ -358,27 +330,9 @@ function HomeFloatingBar() {
 								<IntegrationChip fill="#000000" kind="github" />
 							</span>
 						</button>
-					</div>
-					<button
-						type="button"
-						onClick={handleSubmit}
-						disabled={!inputValue.trim() || createChat.isPending}
-						className="flex items-center self-stretch px-1.5 rounded-[10px] justify-center gap-1 bg-[#363639] hover:bg-[#404044] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-					>
-						<span className="text-[14px] leading-none text-center text-tw-text-primary px-0.5">
-							{createChat.isPending ? "..." : "Go"}
-						</span>
-						<span
-							className="flex items-center h-4 rounded-sm justify-center pt-[3px] pb-0 bg-[#222222] px-1"
-							style={{ boxShadow: "#0000001A 0px 1px 1px" }}
-						>
-							<span className="text-[11px] text-center text-tw-text-tertiary leading-none">
-								{"\u21B5"}
-							</span>
-						</span>
-					</button>
-				</div>
-			</div>
+					</>
+				}
+			/>
 		</div>
 	);
 }
