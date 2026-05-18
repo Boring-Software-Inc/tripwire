@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChatComposer } from "#/components/ask/chat-composer";
+import { ChatComposer } from "#/components/chat/chat-composer";
 import { EventGroupCard } from "#/components/home/event-group-card";
 import { toastManager } from "#/components/ui/toast";
 import type { TripwireEvent, EventAction } from "#/types/home";

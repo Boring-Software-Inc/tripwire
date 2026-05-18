@@ -10,7 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 import { CloseIcon } from "#/components/icons/close-icon";
 import { MicIcon, PlusIcon } from "#/components/icons/nav-icons";
 import { useTRPC } from "#/integrations/trpc/react";
-import { cn } from "#/lib/utils";
+import { cn } from "@tripwire/ui/utils";
 import { useWorkspace } from "#/lib/workspace-context";
 import {
 	buildListedUserSuggestions,

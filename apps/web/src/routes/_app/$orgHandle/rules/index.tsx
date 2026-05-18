@@ -347,13 +347,15 @@ function RulesPage() {
 
 	const [searchQuery, setSearchQuery] = useState("");
 
-	// Clear the file param when navigating away from the files tab
-	const [, setFileParam] = useQueryState("file");
+	// Clear the file param when navigating away from the files tab (avoid calling nuqs
+	// setters when already cleared — that can churn the router indefinitely).
+	const [fileParam, setFileParam] = useQueryState("file");
 	useEffect(() => {
-		if (tab !== "files") {
-			setFileParam(null);
-		}
-	}, [tab, setFileParam]);
+		if (tab === "files") return;
+		if (fileParam == null || fileParam === "") return;
+		void setFileParam(null);
+	}, [tab, fileParam, setFileParam]);
+
 
 	const [{ rule: configureRule, configure: configureFlag }, setConfigureParams] = useQueryStates({
 		rule: parseAsString,

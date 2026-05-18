@@ -48,7 +48,6 @@ import { Route as AppOrgHandleInsightsRouteImport } from './routes/_app/$orgHand
 import { Route as AppOrgHandleHomeRouteImport } from './routes/_app/$orgHandle/home'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceSplatRouteImport } from './routes/[.well-known]/oauth-protected-resource/$'
 import { Route as Char91DotwellKnownChar93OauthAuthorizationServerSplatRouteImport } from './routes/[.well-known]/oauth-authorization-server/$'
-import { Route as AppOrgHandleRulesRouteRouteImport } from './routes/_app/$orgHandle/rules/route'
 import { Route as AppOrgHandleRulesIndexRouteImport } from './routes/_app/$orgHandle/rules/index'
 import { Route as AppOrgHandleEventsIndexRouteImport } from './routes/_app/$orgHandle/events/index'
 import { Route as AppOrgHandleAutomationsIndexRouteImport } from './routes/_app/$orgHandle/automations/index'
@@ -257,15 +256,10 @@ const Char91DotwellKnownChar93OauthAuthorizationServerSplatRoute =
     path: '/$',
     getParentRoute: () => Char91DotwellKnownChar93OauthAuthorizationServerRoute,
   } as any)
-const AppOrgHandleRulesRouteRoute = AppOrgHandleRulesRouteRouteImport.update({
-  id: '/rules',
-  path: '/rules',
-  getParentRoute: () => AppOrgHandleRoute,
-} as any)
 const AppOrgHandleRulesIndexRoute = AppOrgHandleRulesIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AppOrgHandleRulesRouteRoute,
+  id: '/rules/',
+  path: '/rules/',
+  getParentRoute: () => AppOrgHandleRoute,
 } as any)
 const AppOrgHandleEventsIndexRoute = AppOrgHandleEventsIndexRouteImport.update({
   id: '/events/',
@@ -298,15 +292,15 @@ const AppOrgHandleAutomationsAutomationIdRoute =
   } as any)
 const AppOrgHandleRulesCustomIndexRoute =
   AppOrgHandleRulesCustomIndexRouteImport.update({
-    id: '/custom/',
-    path: '/custom/',
-    getParentRoute: () => AppOrgHandleRulesRouteRoute,
+    id: '/rules/custom/',
+    path: '/rules/custom/',
+    getParentRoute: () => AppOrgHandleRoute,
   } as any)
 const AppOrgHandleRulesCustomRuleIdRoute =
   AppOrgHandleRulesCustomRuleIdRouteImport.update({
-    id: '/custom/$ruleId',
-    path: '/custom/$ruleId',
-    getParentRoute: () => AppOrgHandleRulesRouteRoute,
+    id: '/rules/custom/$ruleId',
+    path: '/rules/custom/$ruleId',
+    getParentRoute: () => AppOrgHandleRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -326,7 +320,6 @@ export interface FileRoutesByFullPath {
   '/api/chat': typeof ApiChatRoute
   '/api/mcp': typeof ApiMcpRoute
   '/oauth/consent': typeof OauthConsentRoute
-  '/$orgHandle/rules': typeof AppOrgHandleRulesRouteRouteWithChildren
   '/.well-known/oauth-authorization-server/$': typeof Char91DotwellKnownChar93OauthAuthorizationServerSplatRoute
   '/.well-known/oauth-protected-resource/$': typeof Char91DotwellKnownChar93OauthProtectedResourceSplatRoute
   '/$orgHandle/home': typeof AppOrgHandleHomeRoute
@@ -425,7 +418,6 @@ export interface FileRoutesById {
   '/api/chat': typeof ApiChatRoute
   '/api/mcp': typeof ApiMcpRoute
   '/oauth/consent': typeof OauthConsentRoute
-  '/_app/$orgHandle/rules': typeof AppOrgHandleRulesRouteRouteWithChildren
   '/.well-known/oauth-authorization-server/$': typeof Char91DotwellKnownChar93OauthAuthorizationServerSplatRoute
   '/.well-known/oauth-protected-resource/$': typeof Char91DotwellKnownChar93OauthProtectedResourceSplatRoute
   '/_app/$orgHandle/home': typeof AppOrgHandleHomeRoute
@@ -476,7 +468,6 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/mcp'
     | '/oauth/consent'
-    | '/$orgHandle/rules'
     | '/.well-known/oauth-authorization-server/$'
     | '/.well-known/oauth-protected-resource/$'
     | '/$orgHandle/home'
@@ -574,7 +565,6 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/mcp'
     | '/oauth/consent'
-    | '/_app/$orgHandle/rules'
     | '/.well-known/oauth-authorization-server/$'
     | '/.well-known/oauth-protected-resource/$'
     | '/_app/$orgHandle/home'
@@ -903,19 +893,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotwellKnownChar93OauthAuthorizationServerSplatRouteImport
       parentRoute: typeof Char91DotwellKnownChar93OauthAuthorizationServerRoute
     }
-    '/_app/$orgHandle/rules': {
-      id: '/_app/$orgHandle/rules'
-      path: '/rules'
-      fullPath: '/$orgHandle/rules'
-      preLoaderRoute: typeof AppOrgHandleRulesRouteRouteImport
-      parentRoute: typeof AppOrgHandleRoute
-    }
     '/_app/$orgHandle/rules/': {
       id: '/_app/$orgHandle/rules/'
-      path: '/'
+      path: '/rules'
       fullPath: '/$orgHandle/rules/'
       preLoaderRoute: typeof AppOrgHandleRulesIndexRouteImport
-      parentRoute: typeof AppOrgHandleRulesRouteRoute
+      parentRoute: typeof AppOrgHandleRoute
     }
     '/_app/$orgHandle/events/': {
       id: '/_app/$orgHandle/events/'
@@ -954,41 +937,22 @@ declare module '@tanstack/react-router' {
     }
     '/_app/$orgHandle/rules/custom/': {
       id: '/_app/$orgHandle/rules/custom/'
-      path: '/custom'
+      path: '/rules/custom'
       fullPath: '/$orgHandle/rules/custom/'
       preLoaderRoute: typeof AppOrgHandleRulesCustomIndexRouteImport
-      parentRoute: typeof AppOrgHandleRulesRouteRoute
+      parentRoute: typeof AppOrgHandleRoute
     }
     '/_app/$orgHandle/rules/custom/$ruleId': {
       id: '/_app/$orgHandle/rules/custom/$ruleId'
-      path: '/custom/$ruleId'
+      path: '/rules/custom/$ruleId'
       fullPath: '/$orgHandle/rules/custom/$ruleId'
       preLoaderRoute: typeof AppOrgHandleRulesCustomRuleIdRouteImport
-      parentRoute: typeof AppOrgHandleRulesRouteRoute
+      parentRoute: typeof AppOrgHandleRoute
     }
   }
 }
 
-interface AppOrgHandleRulesRouteRouteChildren {
-  AppOrgHandleRulesIndexRoute: typeof AppOrgHandleRulesIndexRoute
-  AppOrgHandleRulesCustomRuleIdRoute: typeof AppOrgHandleRulesCustomRuleIdRoute
-  AppOrgHandleRulesCustomIndexRoute: typeof AppOrgHandleRulesCustomIndexRoute
-}
-
-const AppOrgHandleRulesRouteRouteChildren: AppOrgHandleRulesRouteRouteChildren =
-  {
-    AppOrgHandleRulesIndexRoute: AppOrgHandleRulesIndexRoute,
-    AppOrgHandleRulesCustomRuleIdRoute: AppOrgHandleRulesCustomRuleIdRoute,
-    AppOrgHandleRulesCustomIndexRoute: AppOrgHandleRulesCustomIndexRoute,
-  }
-
-const AppOrgHandleRulesRouteRouteWithChildren =
-  AppOrgHandleRulesRouteRoute._addFileChildren(
-    AppOrgHandleRulesRouteRouteChildren,
-  )
-
 interface AppOrgHandleRouteChildren {
-  AppOrgHandleRulesRouteRoute: typeof AppOrgHandleRulesRouteRouteWithChildren
   AppOrgHandleHomeRoute: typeof AppOrgHandleHomeRoute
   AppOrgHandleInsightsRoute: typeof AppOrgHandleInsightsRoute
   AppOrgHandleIntegrationsRoute: typeof AppOrgHandleIntegrationsRoute
@@ -997,10 +961,12 @@ interface AppOrgHandleRouteChildren {
   AppOrgHandleEventsEventIdRoute: typeof AppOrgHandleEventsEventIdRoute
   AppOrgHandleAutomationsIndexRoute: typeof AppOrgHandleAutomationsIndexRoute
   AppOrgHandleEventsIndexRoute: typeof AppOrgHandleEventsIndexRoute
+  AppOrgHandleRulesIndexRoute: typeof AppOrgHandleRulesIndexRoute
+  AppOrgHandleRulesCustomRuleIdRoute: typeof AppOrgHandleRulesCustomRuleIdRoute
+  AppOrgHandleRulesCustomIndexRoute: typeof AppOrgHandleRulesCustomIndexRoute
 }
 
 const AppOrgHandleRouteChildren: AppOrgHandleRouteChildren = {
-  AppOrgHandleRulesRouteRoute: AppOrgHandleRulesRouteRouteWithChildren,
   AppOrgHandleHomeRoute: AppOrgHandleHomeRoute,
   AppOrgHandleInsightsRoute: AppOrgHandleInsightsRoute,
   AppOrgHandleIntegrationsRoute: AppOrgHandleIntegrationsRoute,
@@ -1010,6 +976,9 @@ const AppOrgHandleRouteChildren: AppOrgHandleRouteChildren = {
   AppOrgHandleEventsEventIdRoute: AppOrgHandleEventsEventIdRoute,
   AppOrgHandleAutomationsIndexRoute: AppOrgHandleAutomationsIndexRoute,
   AppOrgHandleEventsIndexRoute: AppOrgHandleEventsIndexRoute,
+  AppOrgHandleRulesIndexRoute: AppOrgHandleRulesIndexRoute,
+  AppOrgHandleRulesCustomRuleIdRoute: AppOrgHandleRulesCustomRuleIdRoute,
+  AppOrgHandleRulesCustomIndexRoute: AppOrgHandleRulesCustomIndexRoute,
 }
 
 const AppOrgHandleRouteWithChildren = AppOrgHandleRoute._addFileChildren(
