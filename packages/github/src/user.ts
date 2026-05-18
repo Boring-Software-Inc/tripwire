@@ -3,10 +3,11 @@
  */
 
 import { githubApi } from "./app";
+import { encodeGitHubUsername, normalizeGitHubUsername } from "./username";
 
 /** Get a user's public profile */
 export async function getUser(token: string, username: string) {
-	return githubApi(`/users/${username}`, token);
+	return githubApi(`/users/${encodeGitHubUsername(username)}`, token);
 }
 
 /** Search a user's merged PRs count */
@@ -14,8 +15,10 @@ export async function getMergedPrCount(
 	token: string,
 	username: string,
 ): Promise<number> {
+	const login = normalizeGitHubUsername(username);
+	const q = encodeURIComponent(`author:${login} type:pr is:merged`);
 	const result = await githubApi(
-		`/search/issues?q=author:${username}+type:pr+is:merged&per_page=1`,
+		`/search/issues?q=${q}&per_page=1`,
 		token,
 	);
 	return result.total_count;
@@ -26,8 +29,10 @@ export async function getClosedPrCount(
 	token: string,
 	username: string,
 ): Promise<number> {
+	const login = normalizeGitHubUsername(username);
+	const q = encodeURIComponent(`author:${login} type:pr is:closed`);
 	const result = await githubApi(
-		`/search/issues?q=author:${username}+type:pr+is:closed&per_page=1`,
+		`/search/issues?q=${q}&per_page=1`,
 		token,
 	);
 	return result.total_count;
@@ -38,7 +43,8 @@ export async function getPublicNonForkRepoCount(
 	token: string,
 	username: string,
 ): Promise<number> {
-	const q = encodeURIComponent(`user:${username} fork:false is:public`);
+	const login = normalizeGitHubUsername(username);
+	const q = encodeURIComponent(`user:${login} fork:false is:public`);
 	const result = await githubApi(`/search/repositories?q=${q}&per_page=1`, token);
 	return (result as { total_count: number }).total_count;
 }
@@ -48,7 +54,8 @@ export async function getPublicForkRepoCount(
 	token: string,
 	username: string,
 ): Promise<number> {
-	const q = encodeURIComponent(`user:${username} fork:true is:public`);
+	const login = normalizeGitHubUsername(username);
+	const q = encodeURIComponent(`user:${login} fork:true is:public`);
 	const result = await githubApi(`/search/repositories?q=${q}&per_page=1`, token);
 	return (result as { total_count: number }).total_count;
 }
@@ -59,7 +66,8 @@ export async function getContextRepoPrCount(
 	username: string,
 	repoFullName: string,
 ): Promise<number> {
-	const q = encodeURIComponent(`author:${username} type:pr repo:${repoFullName}`);
+	const login = normalizeGitHubUsername(username);
+	const q = encodeURIComponent(`author:${login} type:pr repo:${repoFullName}`);
 	const result = await githubApi(`/search/issues?q=${q}&per_page=1`, token);
 	return (result as { total_count: number }).total_count;
 }
@@ -70,9 +78,11 @@ export async function countUserPrsToday(
 	username: string,
 	repoFullName: string,
 ): Promise<number> {
+	const login = normalizeGitHubUsername(username);
 	const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+	const q = encodeURIComponent(`author:${login} type:pr repo:${repoFullName} created:>=${today}`);
 	const result = await githubApi(
-		`/search/issues?q=author:${username}+type:pr+repo:${repoFullName}+created:>=${today}&per_page=1`,
+		`/search/issues?q=${q}&per_page=1`,
 		token,
 	);
 	return result.total_count;
@@ -94,7 +104,7 @@ export async function getUserPublicRepoCount(
 	token: string,
 	username: string,
 ): Promise<number> {
-	const user = await githubApi(`/users/${username}`, token);
+	const user = await githubApi(`/users/${encodeGitHubUsername(username)}`, token);
 	return user.public_repos;
 }
 
@@ -134,7 +144,8 @@ export async function hasProfileReadme(
 	username: string,
 ): Promise<boolean> {
 	try {
-		await githubApi(`/repos/${username}/${username}/readme`, token);
+		const login = encodeGitHubUsername(username);
+		await githubApi(`/repos/${login}/${login}/readme`, token);
 		return true;
 	} catch {
 		return false;
@@ -164,6 +175,7 @@ export async function fetchUserGraphQL(
 	token: string,
 	username: string,
 ): Promise<GitHubUserGraphQL | null> {
+	const login = normalizeGitHubUsername(username);
 	const query = `query($login: String!) {
 		user(login: $login) {
 			hasSponsorsListing
@@ -198,7 +210,7 @@ export async function fetchUserGraphQL(
 				Authorization: `Bearer ${token}`,
 				"Content-Type": "application/json",
 			},
-			body: JSON.stringify({ query, variables: { login: username } }),
+			body: JSON.stringify({ query, variables: { login } }),
 		});
 
 		if (!res.ok) return null;
@@ -248,7 +260,8 @@ export async function fetchUserAchievements(
 	username: string,
 ): Promise<GitHubAchievement[]> {
 	try {
-		const res = await fetch(`https://github.com/${username}?tab=achievements`, {
+		const login = encodeGitHubUsername(username);
+		const res = await fetch(`https://github.com/${login}?tab=achievements`, {
 			headers: { "User-Agent": "Tripwire" },
 		});
 		if (!res.ok) return [];
@@ -304,6 +317,7 @@ export async function fetchUserContributions(
 	token: string,
 	username: string,
 ): Promise<{ contributions: ContributionsData; pinned: PinnedRepo[] } | null> {
+	const login = normalizeGitHubUsername(username);
 	const query = `query($login: String!) {
 		user(login: $login) {
 			contributionsCollection {
@@ -340,7 +354,7 @@ export async function fetchUserContributions(
 				Authorization: `Bearer ${token}`,
 				"Content-Type": "application/json",
 			},
-			body: JSON.stringify({ query, variables: { login: username } }),
+			body: JSON.stringify({ query, variables: { login } }),
 		});
 
 		if (!res.ok) return null;

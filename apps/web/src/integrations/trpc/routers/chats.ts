@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { eq, and, desc } from "drizzle-orm";
-import { authedProcedure } from "../init";
+import { assertRepoOwner, authedProcedure } from "../init";
 import { db } from "@tripwire/db/client";
 import { conversations } from "@tripwire/db";
 import type { TRPCRouterRecord } from "@trpc/server";
@@ -15,6 +15,9 @@ export const chatsRouter = {
 			}),
 		)
 		.mutation(async ({ input, ctx }) => {
+			if (input.repoId) {
+				await assertRepoOwner(ctx.user.id, input.repoId);
+			}
 			const [conv] = await db
 				.insert(conversations)
 				.values({
@@ -53,6 +56,9 @@ export const chatsRouter = {
 			}),
 		)
 		.mutation(async ({ input, ctx }) => {
+			if (input.repoId) {
+				await assertRepoOwner(ctx.user.id, input.repoId);
+			}
 			// Merge with whatever's in DB so server-side tool outputs survive a
 			// later save from the client that's still using its stale state.
 			const [existing] = await db

@@ -36,6 +36,8 @@ const ACTION_COLORS: Record<RuleAction, { active: string; chip: string }> = {
 	threshold: { active: "text-tw-accent", chip: "bg-tw-inner text-tw-text-primary" },
 };
 
+const ACTION_OPTIONS = ["block", "warn", "log", "threshold"] as const;
+
 interface NumericConfig {
 	value: number;
 	label: string;
@@ -180,7 +182,7 @@ export function RuleCardGrid({
 					<div className="flex items-center gap-2" data-action-select>
 						{onActionChange && actionEditing ? (
 							<div className="flex items-center gap-1">
-								{(["block", "warn", "log"] as const).map((a) => (
+								{ACTION_OPTIONS.map((a) => (
 									<button
 										key={a}
 										type="button"
@@ -319,7 +321,7 @@ export function RuleCardGrid({
 									Action level
 								</label>
 								<div className="flex flex-wrap items-center gap-1">
-									{(["block", "warn", "log"] as const).map((a) => (
+									{ACTION_OPTIONS.map((a) => (
 										<button
 											key={a}
 											type="button"

@@ -1,11 +1,33 @@
 import { z } from "zod";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql, type SQL } from "drizzle-orm";
 import { adminProcedure, publicProcedure } from "../init";
 import { trpcError } from "../error";
 import { db } from "@tripwire/db/client";
 import { globalVouches, vouchRequests, account } from "@tripwire/db";
+import { fetchPublicUser } from "@tripwire/github";
 
 import type { TRPCRouterRecord } from "@trpc/server";
+
+const githubUsernameSchema = z
+	.string()
+	.trim()
+	.min(1)
+	.max(39)
+	.regex(/^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$/, "Invalid GitHub username");
+
+async function resolvePublicGitHubUser(username: string) {
+	const ghUser = await fetchPublicUser(username);
+	if (!ghUser) {
+		throw trpcError({
+			code: "github.user_not_found",
+			status: 404,
+			message: `GitHub user "${username}" not found`,
+			fix: "Double-check the username spelling and try again.",
+			internal: { username },
+		});
+	}
+	return ghUser;
+}
 
 export const vouchesRouter = {
 	/**
@@ -21,7 +43,7 @@ export const vouchesRouter = {
 			}),
 		)
 		.query(async ({ input }) => {
-			const conditions = [];
+			const conditions: SQL[] = [];
 			if (input.search) {
 				conditions.push(
 					sql`lower(${globalVouches.githubUsername}) like ${`%${input.search.toLowerCase()}%`}`,
@@ -35,9 +57,9 @@ export const vouchesRouter = {
 			// Aggregate by user to get vouch counts
 			const rows = await db
 				.select({
-					githubUsername: globalVouches.githubUsername,
+					githubUsername: sql<string>`(array_agg(${globalVouches.githubUsername} order by ${globalVouches.createdAt} desc))[1]`,
 					githubUserId: globalVouches.githubUserId,
-					avatarUrl: globalVouches.avatarUrl,
+					avatarUrl: sql<string | null>`(array_agg(${globalVouches.avatarUrl} order by ${globalVouches.createdAt} desc))[1]`,
 					vouchCount: sql<number>`count(*)::int`,
 					firstVouchedAt: sql<string>`min(${globalVouches.createdAt})`,
 					lastVouchedAt: sql<string>`max(${globalVouches.createdAt})`,
@@ -45,16 +67,14 @@ export const vouchesRouter = {
 				.from(globalVouches)
 				.where(whereClause)
 				.groupBy(
-					globalVouches.githubUsername,
 					globalVouches.githubUserId,
-					globalVouches.avatarUrl,
 				)
 				.orderBy(desc(sql`count(*)`))
 				.limit(input.limit)
 				.offset(input.offset);
 
 			const [countResult] = await db
-				.select({ count: sql<number>`count(distinct lower(${globalVouches.githubUsername}))::int` })
+				.select({ count: sql<number>`count(distinct ${globalVouches.githubUserId})::int` })
 				.from(globalVouches)
 				.where(whereClause);
 
@@ -66,24 +86,21 @@ export const vouchesRouter = {
 
 	/** Public: check if a specific user is globally vouched */
 	check: publicProcedure
-		.input(z.object({ username: z.string().min(1) }))
+		.input(z.object({ username: githubUsernameSchema }))
 		.query(async ({ input }) => {
+			const ghUser = await fetchPublicUser(input.username);
+			if (!ghUser) {
+				return { isVouched: false, vouchCount: 0 };
+			}
+
 			const rows = await db
-				.select({
-					vouchedByName: globalVouches.vouchedByName,
-					reason: globalVouches.reason,
-					createdAt: globalVouches.createdAt,
-				})
+				.select({ id: globalVouches.id })
 				.from(globalVouches)
-				.where(
-					sql`lower(${globalVouches.githubUsername}) = ${input.username.toLowerCase()}`,
-				)
-				.orderBy(desc(globalVouches.createdAt));
+				.where(eq(globalVouches.githubUserId, ghUser.id));
 
 			return {
 				isVouched: rows.length > 0,
 				vouchCount: rows.length,
-				vouches: rows,
 			};
 		}),
 
@@ -91,19 +108,19 @@ export const vouchesRouter = {
 	add: adminProcedure
 		.input(
 			z.object({
-				githubUsername: z.string().min(1),
-				githubUserId: z.number().int().optional(),
-				avatarUrl: z.string().optional(),
+				githubUsername: githubUsernameSchema,
 				reason: z.string().max(500).optional(),
 			}),
 		)
 		.mutation(async ({ input, ctx }) => {
+			const ghUser = await resolvePublicGitHubUser(input.githubUsername);
+
 			const [entry] = await db
 				.insert(globalVouches)
 				.values({
-					githubUsername: input.githubUsername,
-					githubUserId: input.githubUserId ?? null,
-					avatarUrl: input.avatarUrl ?? null,
+					githubUsername: ghUser.login,
+					githubUserId: ghUser.id,
+					avatarUrl: ghUser.avatar_url,
 					vouchedById: ctx.user.id,
 					vouchedByName: ctx.user.name ?? ctx.user.email ?? null,
 					reason: input.reason ?? null,
@@ -116,12 +133,17 @@ export const vouchesRouter = {
 
 	/** Admin: revoke your vouch for a user */
 	remove: adminProcedure
-		.input(z.object({ githubUsername: z.string().min(1) }))
+		.input(z.object({ githubUsername: githubUsernameSchema }))
 		.mutation(async ({ input, ctx }) => {
+			const ghUser = await resolvePublicGitHubUser(input.githubUsername);
+
 			const deleted = await db
 				.delete(globalVouches)
 				.where(
-					sql`lower(${globalVouches.githubUsername}) = ${input.githubUsername.toLowerCase()} and ${globalVouches.vouchedById} = ${ctx.user.id}`,
+					and(
+						eq(globalVouches.githubUserId, ghUser.id),
+						eq(globalVouches.vouchedById, ctx.user.id),
+					),
 				)
 				.returning();
 
@@ -179,7 +201,7 @@ export const vouchesRouter = {
 				.from(vouchRequests)
 				.where(
 					and(
-						sql`lower(${vouchRequests.githubUsername}) = ${ghUser.login.toLowerCase()}`,
+						eq(vouchRequests.githubUserId, ghUser.id),
 						eq(vouchRequests.status, "pending"),
 					),
 				)
@@ -198,7 +220,7 @@ export const vouchesRouter = {
 			const [alreadyVouched] = await db
 				.select()
 				.from(globalVouches)
-				.where(sql`lower(${globalVouches.githubUsername}) = ${ghUser.login.toLowerCase()}`)
+				.where(eq(globalVouches.githubUserId, ghUser.id))
 				.limit(1);
 
 			if (alreadyVouched) {
@@ -230,7 +252,7 @@ export const vouchesRouter = {
 			}).optional(),
 		)
 		.query(async ({ input }) => {
-			const conds = [];
+			const conds: SQL[] = [];
 			if (input?.status) conds.push(eq(vouchRequests.status, input.status));
 			return db
 				.select()
@@ -262,29 +284,44 @@ export const vouchesRouter = {
 
 			const nextStatus = input.decision === "approve" ? "approved" : "denied";
 
-			await db
-				.update(vouchRequests)
-				.set({
-					status: nextStatus,
-					decidedById: ctx.user.id,
-					decidedAt: new Date(),
-				})
-				.where(eq(vouchRequests.id, input.requestId));
-
-			// If approved, create the global vouch
-			if (input.decision === "approve") {
-				await db
-					.insert(globalVouches)
-					.values({
-						githubUsername: req.githubUsername,
-						githubUserId: req.githubUserId,
-						avatarUrl: req.avatarUrl,
-						vouchedById: ctx.user.id,
-						vouchedByName: ctx.user.name ?? ctx.user.email ?? null,
-						reason: req.reason,
+			await db.transaction(async (tx) => {
+				const updated = await tx
+					.update(vouchRequests)
+					.set({
+						status: nextStatus,
+						decidedById: ctx.user.id,
+						decidedAt: new Date(),
 					})
-					.onConflictDoNothing();
-			}
+					.where(
+						and(
+							eq(vouchRequests.id, input.requestId),
+							eq(vouchRequests.status, "pending"),
+						),
+					)
+					.returning();
+
+				if (updated.length === 0) {
+					throw trpcError({
+						code: "vouches.request_not_pending",
+						status: 409,
+						message: "This request has already been decided.",
+					});
+				}
+
+				if (input.decision === "approve") {
+					await tx
+						.insert(globalVouches)
+						.values({
+							githubUsername: req.githubUsername,
+							githubUserId: req.githubUserId,
+							avatarUrl: req.avatarUrl,
+							vouchedById: ctx.user.id,
+							vouchedByName: ctx.user.name ?? ctx.user.email ?? null,
+							reason: req.reason,
+						})
+						.onConflictDoNothing();
+				}
+			});
 
 			return { status: nextStatus };
 		}),

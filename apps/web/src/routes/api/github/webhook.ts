@@ -8,12 +8,14 @@ import {
 	handleFakeBountyCatch,
 } from "@tripwire/core";
 import { db } from "@tripwire/db/client";
-import { repositories } from "@tripwire/db";
-import { eq } from "drizzle-orm";
+import { organizations, repositories } from "@tripwire/db";
+import { and, eq } from "drizzle-orm";
 import {
 	handleInstallation,
 	handleInstallationRepositories,
 } from "#/lib/github-webhook";
+
+const WEBHOOK_BODY_LIMIT_BYTES = 5 * 1024 * 1024;
 
 async function handler({ request }: { request: Request }) {
 	const secret = process.env.GITHUB_WEBHOOK_SECRET;
@@ -22,19 +24,34 @@ async function handler({ request }: { request: Request }) {
 		return new Response("Server misconfigured", { status: 500 });
 	}
 
-	const body = await request.text();
 	const signature = request.headers.get("x-hub-signature-256");
+	if (!signature) {
+		return new Response("Invalid signature", { status: 401 });
+	}
+
+	let body: string;
+	try {
+		body = await readLimitedBody(request);
+	} catch {
+		return new Response("Payload too large", { status: 413 });
+	}
+
 	const valid = await verifyWebhookSignature(body, signature, secret);
 	if (!valid) {
 		return new Response("Invalid signature", { status: 401 });
 	}
 
 	const event = request.headers.get("x-github-event");
-	const payload = JSON.parse(body);
+	let payload: any;
+	try {
+		payload = JSON.parse(body);
+	} catch {
+		return new Response("Invalid JSON", { status: 400 });
+	}
 	console.log("[Webhook] Event:", event, "| Action:", payload.action);
 
 	const installationId = payload.installation?.id;
-	if (!installationId) {
+	if (!Number.isSafeInteger(installationId) || installationId <= 0) {
 		return new Response("No installation", { status: 200 });
 	}
 
@@ -75,7 +92,13 @@ async function handler({ request }: { request: Request }) {
 					const [repoRow] = await db
 						.select({ id: repositories.id })
 						.from(repositories)
-						.where(eq(repositories.githubRepoId, repo.id));
+						.innerJoin(organizations, eq(repositories.orgId, organizations.id))
+						.where(
+							and(
+								eq(repositories.githubRepoId, repo.id),
+								eq(organizations.githubInstallationId, installationId),
+							),
+						);
 
 					if (repoRow) {
 						const bountyHit = await checkFakeBountyReference(repoRow.id, prContent);
@@ -135,6 +158,43 @@ async function handler({ request }: { request: Request }) {
 	}
 
 	return new Response("OK", { status: 200 });
+}
+
+async function readLimitedBody(request: Request): Promise<string> {
+	const contentLength = request.headers.get("content-length");
+	if (contentLength) {
+		const parsedLength = Number(contentLength);
+		if (!Number.isFinite(parsedLength) || parsedLength > WEBHOOK_BODY_LIMIT_BYTES) {
+			throw new Error("Webhook payload too large");
+		}
+	}
+
+	if (!request.body) return "";
+
+	const reader = request.body.getReader();
+	const chunks: Uint8Array[] = [];
+	let total = 0;
+
+	while (true) {
+		const { done, value } = await reader.read();
+		if (done) break;
+		if (!value) continue;
+
+		total += value.byteLength;
+		if (total > WEBHOOK_BODY_LIMIT_BYTES) {
+			throw new Error("Webhook payload too large");
+		}
+		chunks.push(value);
+	}
+
+	const body = new Uint8Array(total);
+	let offset = 0;
+	for (const chunk of chunks) {
+		body.set(chunk, offset);
+		offset += chunk.byteLength;
+	}
+
+	return new TextDecoder().decode(body);
 }
 
 export const Route = createFileRoute("/api/github/webhook")({

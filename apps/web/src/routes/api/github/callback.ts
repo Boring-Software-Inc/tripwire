@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createContext } from "#/integrations/trpc/init";
-import { INSTALL_STATE_COOKIE, verifyInstallState } from "@tripwire/github";
+import { INSTALL_STATE_COOKIE, consumeInstallState } from "@tripwire/github";
 import { ensureInstallation } from "#/lib/github-install";
 
 type CallbackError = "invalid_state" | "installer_mismatch" | "not_authenticated";
@@ -20,17 +20,23 @@ async function handler({ request }: { request: Request }) {
 		if (!queryState || !cookieState || queryState !== cookieState) {
 			return redirectToIntegrations("invalid_state");
 		}
-		if (!verifyInstallState(queryState, ctx.user.id)) {
+
+		const parsedInstallationId = Number(installationId);
+		if (!Number.isSafeInteger(parsedInstallationId) || parsedInstallationId <= 0) {
+			return redirectToIntegrations("invalid_state");
+		}
+		if (!(await consumeInstallState(queryState, ctx.user.id))) {
 			return redirectToIntegrations("invalid_state");
 		}
 
 		try {
-			const result = await ensureInstallation(Number(installationId), ctx.user.id);
+			const result = await ensureInstallation(parsedInstallationId, ctx.user.id);
 			if (result === "installer_mismatch") {
 				return redirectToIntegrations("installer_mismatch");
 			}
 		} catch (err) {
 			console.error("[Callback] Failed to ensure installation:", err);
+			return redirectToIntegrations("installer_mismatch");
 		}
 
 		return new Response(null, {

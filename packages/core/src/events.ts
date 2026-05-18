@@ -1,6 +1,6 @@
 import { db } from "@tripwire/db/client";
 import { events, githubReputation, type EventAction, type EventSeverity, type EventContentType } from "@tripwire/db";
-import { sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 
 interface LogEventOptions {
 	repoId: string;
@@ -119,19 +119,34 @@ async function updateReputation(options: LogEventOptions) {
 	const isNearMiss = options.action === "rule_near_miss";
 
 	try {
-		await db
-			.insert(githubReputation)
-			.values({
-				githubUsername: username,
-				githubUserId: options.targetGithubUserId ?? null,
-				totalBlocks: isBlock ? 1 : 0,
-				totalAllows: isAllow ? 1 : 0,
-				totalNearMisses: isNearMiss ? 1 : 0,
-				score: isAllow ? 1 : isBlock ? -3 : -1,
-			})
-			.onConflictDoUpdate({
-				target: githubReputation.githubUsername,
-				set: {
+		await db.transaction(async (tx) => {
+			const [existing] = await tx
+				.select({ id: githubReputation.id })
+				.from(githubReputation)
+				.where(
+					and(
+						eq(githubReputation.repoId, options.repoId),
+						sql`lower(${githubReputation.githubUsername}) = ${username}`,
+					),
+				)
+				.limit(1);
+
+			if (!existing) {
+				await tx.insert(githubReputation).values({
+					repoId: options.repoId,
+					githubUsername: username,
+					githubUserId: options.targetGithubUserId ?? null,
+					totalBlocks: isBlock ? 1 : 0,
+					totalAllows: isAllow ? 1 : 0,
+					totalNearMisses: isNearMiss ? 1 : 0,
+					score: isAllow ? 1 : isBlock ? -3 : -1,
+				});
+				return;
+			}
+
+			await tx
+				.update(githubReputation)
+				.set({
 					totalBlocks: isBlock
 						? sql`${githubReputation.totalBlocks} + 1`
 						: githubReputation.totalBlocks,
@@ -145,8 +160,9 @@ async function updateReputation(options: LogEventOptions) {
 					githubUserId: options.targetGithubUserId ?? sql`${githubReputation.githubUserId}`,
 					lastSeenAt: new Date(),
 					updatedAt: new Date(),
-				},
-			});
+				})
+				.where(eq(githubReputation.id, existing.id));
+		});
 	} catch (err) {
 		console.error("[Events] Failed to update reputation:", err);
 	}

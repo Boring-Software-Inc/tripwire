@@ -24,9 +24,15 @@ import {
 	hasProfileReadme,
 	fetchUserGraphQL,
 	fetchUserAchievements,
+	isGitHubUsername,
 } from "@tripwire/github";
 
 import type { TRPCRouterRecord } from "@trpc/server";
+
+const githubUsernameSchema = z
+	.string()
+	.trim()
+	.refine(isGitHubUsername, "Invalid GitHub username");
 
 async function getTokenForRepo(repoId: string): Promise<string | null> {
 	try {
@@ -56,7 +62,7 @@ export const reputationRouter = {
 		.input(
 			z.object({
 				repoId: z.string().uuid(),
-				username: z.string().min(1),
+				username: githubUsernameSchema,
 			}),
 		)
 		.query(async ({ ctx, input }) => {
@@ -199,7 +205,7 @@ export const reputationRouter = {
 		.input(
 			z.object({
 				repoId: z.string().uuid(),
-				username: z.string().min(1),
+				username: githubUsernameSchema,
 				githubUserId: z.number().int().optional(),
 				reason: z.string().optional(),
 			}),
@@ -219,9 +225,10 @@ export const reputationRouter = {
 	getProfile: authedProcedure
 		.input(z.object({
 			repoId: z.string().uuid(),
-			username: z.string().min(1),
+			username: githubUsernameSchema,
 		}))
-		.query(async ({ input }) => {
+		.query(async ({ ctx, input }) => {
+			await assertRepoOwner(ctx.user.id, input.repoId);
 			const token = await getTokenForRepo(input.repoId);
 			if (!token) return null;
 

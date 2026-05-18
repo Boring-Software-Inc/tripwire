@@ -5,11 +5,13 @@ import {
 	stepCountIs,
 	streamText,
 } from "ai";
+import { randomUUID } from "node:crypto";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { useRequest } from "nitro/context";
 import type { RequestLogger } from "evlog";
 import { createChatTools, tripwireTools } from "@tripwire/tools";
 import { logCreditUsageError, trackCreditUsage } from "@tripwire/ai/credit-middleware";
+import { computeCostCents } from "@tripwire/ai/credit-schema";
 import { buildSystemPrompt } from "@tripwire/ai";
 import { createContext, assertRepoOwner } from "#/integrations/trpc/init";
 import { autumn } from "@tripwire/auth/autumn";
@@ -21,6 +23,14 @@ import {
 	mergeClientMessagesWithStored,
 	sanitizeMessages,
 } from "#/lib/chat-server";
+import { checkRateLimit } from "@tripwire/ratelimit";
+
+const MAX_CHAT_INPUT_CHARS = 40_000;
+const MAX_CHAT_ITERATIONS = 6;
+const MAX_CHAT_OUTPUT_TOKENS = 1_024;
+const TOKEN_ESTIMATE_CHARS = 4;
+const CHAT_PROMPT_TOKEN_BUFFER = 8_000;
+const MIN_CHAT_RESERVATION_CENTS = 100;
 
 function getRequestLog(): RequestLogger | undefined {
 	try {
@@ -55,13 +65,24 @@ function jsonError(status: number, body: Record<string, unknown>, extraHeaders?:
 	});
 }
 
-async function checkQuota(userId: string) {
+async function checkQuota(
+	userId: string,
+	lockId: string,
+	requiredBalance: number,
+) {
+	const checkParams = {
+		customerId: userId,
+		featureId: "ai_credits",
+		requiredBalance,
+		withPreview: true,
+		lock: {
+			lockId,
+			enabled: true as const,
+			expiresAt: Date.now() + 10 * 60 * 1000,
+		},
+	};
 	try {
-		return await autumn.check({
-			customerId: userId,
-			featureId: "ai_credits",
-			withPreview: true,
-		});
+		return await autumn.check(checkParams);
 	} catch (checkErr: any) {
 		const isNotFound = checkErr?.statusCode === 404
 			|| checkErr?.code === "customer_not_found"
@@ -69,11 +90,27 @@ async function checkQuota(userId: string) {
 			|| String(checkErr?.message).includes("not found");
 		if (!isNotFound) throw checkErr;
 		await autumn.customers.getOrCreate({ customerId: userId });
-		return autumn.check({
-			customerId: userId,
-			featureId: "ai_credits",
-			withPreview: true,
-		});
+		return autumn.check(checkParams);
+	}
+}
+
+async function estimateReservedCreditCents(modelId: string, rawMessages: unknown) {
+	const serialized = JSON.stringify(rawMessages ?? []);
+	const estimatedPromptTokens = Math.ceil(serialized.length / TOKEN_ESTIMATE_CHARS) + CHAT_PROMPT_TOKEN_BUFFER;
+	const estimatedCompletionTokens = MAX_CHAT_ITERATIONS * MAX_CHAT_OUTPUT_TOKENS;
+	const estimatedCost = await computeCostCents(
+		modelId,
+		estimatedPromptTokens,
+		estimatedCompletionTokens,
+	);
+	return Math.max(MIN_CHAT_RESERVATION_CENTS, estimatedCost);
+}
+
+async function releaseQuotaLock(lockId: string) {
+	try {
+		await autumn.balances.finalize({ lockId, action: "release" });
+	} catch (err) {
+		console.error("[chat] Failed to release quota lock:", err);
 	}
 }
 
@@ -84,33 +121,21 @@ export const Route = createFileRoute("/api/chat")({
 				const ctx = await createContext({ headers: request.headers });
 				if (!ctx.user) return jsonError(401, { error: "Unauthorized" });
 				const user = ctx.user;
+				let quotaLockId: string | undefined;
 
 				try {
-					let quota: any;
-					try {
-						quota = await checkQuota(user.id);
-					} catch (checkErr) {
-						// Autumn down/misconfigured: fail closed rather than grant free credits.
-						console.error("[Tripwire] Autumn check failed, denying request:", checkErr);
-						return jsonError(429, {
-							error: "quota_check_failed",
-							code: "quota_check_failed",
-							message: "Could not verify your AI credits. Try again shortly.",
+					const { messages: rawMessages, repoId, conversationId, currentPage } = await request.json();
+					await checkRateLimit("chat", `user:${user.id}`);
+
+					const serializedMessages = JSON.stringify(rawMessages ?? []);
+					if (!Array.isArray(rawMessages) || serializedMessages.length > MAX_CHAT_INPUT_CHARS) {
+						return jsonError(400, {
+							error: "chat_input_too_large",
+							message: "Chat input is too large. Start a new thread or shorten the request.",
 						});
 					}
 
-					if (!quota?.allowed) {
-						const code = quota?.code ?? "usage_limit";
-						return jsonError(429, {
-							error: "quota_exhausted",
-							code,
-							message: code === "usage_limit"
-								? "You've used all your AI credits this month."
-								: "AI chat is not included in your current plan.",
-						}, { "X-Quota-Code": code });
-					}
-
-					const { messages: rawMessages, repoId, conversationId, currentPage } = await request.json();
+					const aiModel = process.env.TRIPWIRE_AI_MODEL || "openai/gpt-5.4";
 
 					// If the client supplied a conversationId AND a row already exists for it,
 					// verify the row belongs to this user. Without this check the endpoint
@@ -150,6 +175,33 @@ export const Route = createFileRoute("/api/chat")({
 						return jsonError(403, { error: "repo_not_accessible" });
 					}
 
+					quotaLockId = `chat:${user.id}:${randomUUID()}`;
+					let quota: any;
+					try {
+						const reservedCredits = await estimateReservedCreditCents(aiModel, rawMessages);
+						quota = await checkQuota(user.id, quotaLockId, reservedCredits);
+					} catch (checkErr) {
+						// Autumn down/misconfigured: fail closed rather than grant free credits.
+						console.error("[Tripwire] Autumn check failed, denying request:", checkErr);
+						if (quotaLockId) void releaseQuotaLock(quotaLockId);
+						return jsonError(429, {
+							error: "quota_check_failed",
+							code: "quota_check_failed",
+							message: "Could not verify your AI credits. Try again shortly.",
+						});
+					}
+
+					if (!quota?.allowed) {
+						const code = quota?.preview?.scenario ?? "usage_limit";
+						return jsonError(429, {
+							error: "quota_exhausted",
+							code,
+							message: code === "usage_limit"
+								? "You've used all your AI credits this month."
+								: "AI chat is not included in your current plan.",
+						}, { "X-Quota-Code": code });
+					}
+
 					const [repo] = await db
 						.select()
 						.from(repositories)
@@ -161,8 +213,6 @@ export const Route = createFileRoute("/api/chat")({
 						userName: user.name ?? user.email ?? "User",
 						currentPage: currentPage ?? "/home",
 					});
-
-					const aiModel = process.env.TRIPWIRE_AI_MODEL || "openai/gpt-5.4";
 
 					getRequestLog()?.set({
 						ai: {
@@ -235,7 +285,8 @@ export const Route = createFileRoute("/api/chat")({
 						messages: modelMessages,
 						tools,
 						system: systemPrompt,
-						stopWhen: stepCountIs(10),
+						stopWhen: stepCountIs(MAX_CHAT_ITERATIONS),
+						maxOutputTokens: MAX_CHAT_OUTPUT_TOKENS,
 						abortSignal: request.signal,
 						onFinish: async ({ totalUsage }) => {
 							await trackCreditUsage({
@@ -244,10 +295,12 @@ export const Route = createFileRoute("/api/chat")({
 								userName: user.name ?? undefined,
 								userEmail: user.email ?? undefined,
 								repoId: resolvedRepoId,
+								quotaLockId,
 								usage: totalUsage,
 							});
 						},
 						onError: ({ error }) => {
+							if (quotaLockId) void releaseQuotaLock(quotaLockId);
 							logCreditUsageError({
 								customerId: user.id,
 								modelId: aiModel,
@@ -264,10 +317,10 @@ export const Route = createFileRoute("/api/chat")({
 
 					return result.toUIMessageStreamResponse({
 						originalMessages: messages,
-						messageMetadata: ({ part }) => {
-							if (part.type === "finish") {
-								return { usage: part.usage, modelId: aiModel };
-							}
+							messageMetadata: ({ part }) => {
+								if (part.type === "finish") {
+									return { usage: part.totalUsage, modelId: aiModel };
+								}
 							return undefined;
 						},
 						onFinish: async ({ messages: finishedMessages }) => {
@@ -297,6 +350,7 @@ export const Route = createFileRoute("/api/chat")({
 						consumeSseStream: consumeStream,
 					});
 				} catch (error: any) {
+					if (quotaLockId) void releaseQuotaLock(quotaLockId);
 					const errMsg = error?.error?.message || error?.message || "Unknown error";
 					const provider = error?.error?.metadata?.provider_name;
 					const raw = error?.error?.metadata?.raw;

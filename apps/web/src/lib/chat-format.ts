@@ -5,7 +5,9 @@ import type { ActionResultData } from "#/types/chat";
 export function getPartKey(part: MessagePart, messageId: string, index?: number): string {
 	const mid = messageId || "msg";
 	if (part.type === "tool-result") {
-		return `${mid}-tool-result-${part.toolCallId ?? part.id ?? index ?? 0}`;
+		const id = (part as { toolCallId?: string; id?: string }).toolCallId
+			?? (part as { id?: string }).id;
+		return `${mid}-tool-result-${id ?? index ?? 0}`;
 	}
 	if (isToolPart(part)) {
 		return `${mid}-tool-call-${getToolCallId(part) ?? index ?? 0}`;
@@ -142,7 +144,36 @@ interface ApprovalText {
 	noLabel: string;
 }
 
-export function getApprovalText(toolName: string, username?: string): ApprovalText {
+const RULE_LABELS: Record<string, string> = {
+	aiSlopDetection: "AI slop detection",
+	languageRequirement: "language requirement",
+	minMergedPrs: "minimum merged PRs",
+	accountAge: "account age",
+	maxPrsPerDay: "max PRs per day",
+	maxFilesChanged: "max files changed",
+	repoActivityMinimum: "repo activity minimum",
+	requireProfileReadme: "profile README requirement",
+	cryptoAddressDetection: "crypto address detection",
+	vouchedUsersOnly: "vouched users only",
+	aiHoneypot: "AI honeypot",
+	autoWhitelistGlobalVouches: "global vouch auto-whitelist",
+};
+
+function getRuleLabel(ruleId: unknown) {
+	return typeof ruleId === "string"
+		? RULE_LABELS[ruleId] ?? ruleId
+		: "rule";
+}
+
+function formatBoolean(value: unknown, enabledLabel: string, disabledLabel: string) {
+	return value === true ? enabledLabel : disabledLabel;
+}
+
+export function getApprovalText(toolName: string, args: Record<string, unknown> = {}): ApprovalText {
+	const username = typeof args.username === "string" ? args.username : undefined;
+	const reason = typeof args.reason === "string" && args.reason.trim().length > 0
+		? args.reason.trim()
+		: undefined;
 	switch (toolName) {
 		case "add_to_blacklist":
 			return {
@@ -180,9 +211,89 @@ export function getApprovalText(toolName: string, username?: string): ApprovalTe
 				yesLabel: "Yes, move to blacklist",
 				noLabel: "Cancel",
 			};
+		case "reset_contributor_score":
+			return {
+				text: reason
+					? `Reset @${username}'s contributor score? Reason: ${reason}`
+					: `Reset @${username}'s contributor score? This clears accumulated Tripwire reputation totals for this repo.`,
+				yesLabel: "Yes, reset score",
+				noLabel: "Cancel",
+			};
+		case "toggle_rule":
+			return {
+				text: `${formatBoolean(args.enabled, "Enable", "Disable")} ${getRuleLabel(args.ruleId)}?`,
+				yesLabel: "Yes, update rule",
+				noLabel: "Cancel",
+			};
+		case "update_rule_action":
+			return {
+				text: `Change ${getRuleLabel(args.ruleId)} action to ${String(args.action ?? "the selected action")}?`,
+				yesLabel: "Yes, change action",
+				noLabel: "Cancel",
+			};
+		case "set_min_merged_prs":
+			return {
+				text: `Set minimum merged PRs to ${String(args.count ?? "the selected count")}?`,
+				yesLabel: "Yes, set threshold",
+				noLabel: "Cancel",
+			};
+		case "set_account_age":
+			return {
+				text: `Set account age threshold to ${String(args.days ?? "the selected days")} days?`,
+				yesLabel: "Yes, set threshold",
+				noLabel: "Cancel",
+			};
+		case "set_max_prs_per_day":
+			return {
+				text: `Set max PRs per day to ${String(args.limit ?? "the selected limit")}?`,
+				yesLabel: "Yes, set limit",
+				noLabel: "Cancel",
+			};
+		case "set_max_files_changed":
+			return {
+				text: `Set max files changed to ${String(args.limit ?? "the selected limit")}?`,
+				yesLabel: "Yes, set limit",
+				noLabel: "Cancel",
+			};
+		case "set_repo_activity_minimum":
+			return {
+				text: `Set repo activity minimum to ${String(args.minRepos ?? "the selected minimum")} repos?`,
+				yesLabel: "Yes, set minimum",
+				noLabel: "Cancel",
+			};
+		case "set_language_requirement":
+			return {
+				text: `Set required contribution language to ${String(args.language ?? "the selected language")}?`,
+				yesLabel: "Yes, set language",
+				noLabel: "Cancel",
+			};
+		case "set_content_scope":
+			return {
+				text: `Update watched content types? PRs: ${String(args.pullRequests)}, issues: ${String(args.issues)}, comments: ${String(args.comments)}.`,
+				yesLabel: "Yes, update scope",
+				noLabel: "Cancel",
+			};
+		case "set_rule_scope":
+			return {
+				text: `Limit ${getRuleLabel(args.ruleId)} to ${String(args.scope ?? "the selected scope")}?`,
+				yesLabel: "Yes, set scope",
+				noLabel: "Cancel",
+			};
+		case "clear_rule_scope":
+			return {
+				text: `Clear the file scope for ${getRuleLabel(args.ruleId)}?`,
+				yesLabel: "Yes, clear scope",
+				noLabel: "Cancel",
+			};
+		case "copy_rules":
+			return {
+				text: `Copy rules from ${String(args.sourceRepoId ?? "the selected source repo")}?`,
+				yesLabel: "Yes, copy rules",
+				noLabel: "Cancel",
+			};
 		default:
 			return {
-				text: `Approve ${toolName}?`,
+				text: `Approve ${formatToolName(toolName)} with the details below?`,
 				yesLabel: "Approve",
 				noLabel: "Deny",
 			};
@@ -210,6 +321,8 @@ export function getBatchApprovalText(action: string): BatchApprovalText {
 			return { prefix: "Move", suffix: "to the whitelist", consequence: "They will be unblocked and bypass all rule checks.", buttonLabel: "move" };
 		case "move_to_blacklist":
 			return { prefix: "Move", suffix: "to the blacklist", consequence: "They will be blocked from all future contributions.", buttonLabel: "move" };
+		case "reset_contributor_score":
+			return { prefix: "Reset contributor scores for", suffix: "", consequence: "This clears accumulated Tripwire reputation totals for this repo.", buttonLabel: "reset scores" };
 		default:
 			return { prefix: "Approve", suffix: "", consequence: null, buttonLabel: "approve" };
 	}

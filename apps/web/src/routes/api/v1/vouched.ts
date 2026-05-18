@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { desc, sql } from "drizzle-orm";
+import { desc, sql, type SQL } from "drizzle-orm";
 import { db } from "@tripwire/db/client";
 import { globalVouches } from "@tripwire/db";
 import { verifyApiKey, hasScope } from "@tripwire/core";
@@ -39,7 +39,7 @@ async function handler({ request }: { request: Request }) {
 	const offset = parseInt(url.searchParams.get("offset") ?? "0", 10);
 	const search = url.searchParams.get("search") ?? undefined;
 
-	const conditions = [];
+	const conditions: SQL[] = [];
 	if (search) {
 		conditions.push(
 			sql`lower(${globalVouches.githubUsername}) like ${`%${search.toLowerCase()}%`}`,
@@ -52,9 +52,9 @@ async function handler({ request }: { request: Request }) {
 	const [users, countResult] = await Promise.all([
 		db
 			.select({
-				githubUsername: globalVouches.githubUsername,
+				githubUsername: sql<string>`(array_agg(${globalVouches.githubUsername} order by ${globalVouches.createdAt} desc))[1]`,
 				githubUserId: globalVouches.githubUserId,
-				avatarUrl: globalVouches.avatarUrl,
+				avatarUrl: sql<string | null>`(array_agg(${globalVouches.avatarUrl} order by ${globalVouches.createdAt} desc))[1]`,
 				vouchCount: sql<number>`count(*)::int`,
 				firstVouchedAt: sql<string>`min(${globalVouches.createdAt})`,
 				lastVouchedAt: sql<string>`max(${globalVouches.createdAt})`,
@@ -62,16 +62,14 @@ async function handler({ request }: { request: Request }) {
 			.from(globalVouches)
 			.where(whereClause)
 			.groupBy(
-				globalVouches.githubUsername,
 				globalVouches.githubUserId,
-				globalVouches.avatarUrl,
 			)
 			.orderBy(desc(sql`count(*)`))
 			.limit(limit)
 			.offset(offset),
 		db
 			.select({
-				count: sql<number>`count(distinct lower(${globalVouches.githubUsername}))::int`,
+				count: sql<number>`count(distinct ${globalVouches.githubUserId})::int`,
 			})
 			.from(globalVouches)
 			.where(whereClause),

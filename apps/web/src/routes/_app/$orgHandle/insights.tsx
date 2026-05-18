@@ -77,21 +77,28 @@ function InsightsPage() {
 	// Transform trend data from tRPC into chart format
 	const trendRows = trendsQuery.data ?? [];
 
-	// Build a full list of the last 8 months so empty months show as 0
-	const allMonths: string[] = [];
+	// Build a full list of the last 8 months so empty months show as 0.
+	// Use a stable year-month key internally because the API returns month
+	// labels without the year, which collides across years and does not match
+	// the chart labels.
+	const allMonths: Array<{ key: string; label: string }> = [];
 	const now = new Date();
 	for (let i = 7; i >= 0; i--) {
 		const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-		allMonths.push(d.toLocaleDateString("en-US", { month: "short", year: "2-digit" }));
+		allMonths.push({
+			key: getMonthKey(d.getFullYear(), d.getMonth() + 1),
+			label: d.toLocaleDateString("en-US", { month: "short", year: "2-digit" }),
+		});
 	}
 
 	// Group event data by month
 	const monthMap = new Map<string, { spam: number; prCreated: number; prMerged: number }>();
 	for (const month of allMonths) {
-		monthMap.set(month, { spam: 0, prCreated: 0, prMerged: 0 });
+		monthMap.set(month.key, { spam: 0, prCreated: 0, prMerged: 0 });
 	}
 	for (const row of trendRows) {
-		const existing = monthMap.get(row.month) ?? { spam: 0, prCreated: 0, prMerged: 0 };
+		const monthKey = getMonthKey(row.year, row.monthNum);
+		const existing = monthMap.get(monthKey) ?? { spam: 0, prCreated: 0, prMerged: 0 };
 		if (row.action === "pr_closed" || row.action === "issue_deleted" || row.action === "comment_deleted") {
 			existing.spam += row.count;
 		}
@@ -101,25 +108,26 @@ function InsightsPage() {
 		if (row.action === "bot_blacklisted") {
 			existing.prMerged += row.count;
 		}
-		monthMap.set(row.month, existing);
+		monthMap.set(monthKey, existing);
 	}
 
 	const spamTrendData = allMonths.map((month) => ({
-		month,
-		spam: monthMap.get(month)?.spam ?? 0,
+		month: month.label,
+		spam: monthMap.get(month.key)?.spam ?? 0,
 	}));
 
 	const blacklistTrendData = allMonths.map((month) => ({
-		month,
-		created: monthMap.get(month)?.prCreated ?? 0,
-		merged: monthMap.get(month)?.prMerged ?? 0,
+		month: month.label,
+		created: monthMap.get(month.key)?.prCreated ?? 0,
+		merged: monthMap.get(month.key)?.prMerged ?? 0,
 	}));
 
 	// Cumulative bot count
 	let cumBots = 0;
-	const totalBotsData = Array.from(monthMap.entries()).map(([month, d]) => {
+	const totalBotsData = allMonths.map((month) => {
+		const d = monthMap.get(month.key) ?? { prMerged: 0 };
 		cumBots += d.prMerged;
-		return { month, bots: cumBots };
+		return { month: month.label, bots: cumBots };
 	});
 
 	// Show empty state if no repos are connected
@@ -229,4 +237,8 @@ function InsightsPage() {
 			</div>
 		</div>
 	);
+}
+
+function getMonthKey(year: number, month: number): string {
+	return `${year}-${String(month).padStart(2, "0")}`;
 }

@@ -11,6 +11,7 @@ import {
 	runToolForChat,
 	tripwireTools,
 } from '@tripwire/tools';
+import { checkRateLimit } from "@tripwire/ratelimit";
 
 /**
  * Direct tool invocation — runs a chat tool's handler + chatRender without
@@ -75,6 +76,8 @@ export const Route = createFileRoute("/api/tools/run")({
 				}
 
 				try {
+					await checkRateLimit("directTool", `${ctx.user.id}:${tool.name}`);
+
 					const spec = await runToolForChat(tool, parsed.data, {
 						userId: ctx.user.id,
 						userName: ctx.user.name ?? ctx.user.email ?? undefined,
@@ -86,9 +89,10 @@ export const Route = createFileRoute("/api/tools/run")({
 					});
 				} catch (error) {
 					const message = error instanceof Error ? error.message : String(error);
+					const status = getHttpStatus(error);
 					return new Response(
 						JSON.stringify({ ok: false, error: message }),
-						{ status: 500, headers: { "Content-Type": "application/json" } },
+						{ status, headers: { "Content-Type": "application/json" } },
 					);
 				}
 			},
@@ -118,4 +122,12 @@ function jsonError(status: number, message: string) {
 		status,
 		headers: { "Content-Type": "application/json" },
 	});
+}
+
+function getHttpStatus(error: unknown): number {
+	const statusCode = (error as { statusCode?: unknown })?.statusCode;
+	if (typeof statusCode === "number" && statusCode >= 400 && statusCode <= 599) {
+		return statusCode;
+	}
+	return 500;
 }

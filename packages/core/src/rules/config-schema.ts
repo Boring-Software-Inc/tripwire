@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DEFAULT_RULE_CONFIG } from "@tripwire/db";
 
 const ruleActionSchema = z.enum(["block", "warn", "log", "threshold"]);
 
@@ -21,6 +22,25 @@ const ruleBaseSchema = z.object({
 const honeypotPhraseSchema = z.object({
 	kind: z.enum(["codeword", "marker", "natural", "tag"]),
 	phrase: z.string().min(1),
+});
+
+const rulesMdSchema = z.object({
+	autoSync: z.boolean().default(DEFAULT_RULE_CONFIG.repoFiles.rulesMd.autoSync),
+	customContent: z.string().default(DEFAULT_RULE_CONFIG.repoFiles.rulesMd.customContent),
+});
+
+const prTemplateSchema = z.object({
+	autoSync: z.boolean().default(DEFAULT_RULE_CONFIG.repoFiles.prTemplate.autoSync),
+	honeypotEnabled: z.boolean().default(DEFAULT_RULE_CONFIG.repoFiles.prTemplate.honeypotEnabled),
+	honeypotPhrases: z.array(honeypotPhraseSchema).default(DEFAULT_RULE_CONFIG.repoFiles.prTemplate.honeypotPhrases),
+	customContent: z.string().default(DEFAULT_RULE_CONFIG.repoFiles.prTemplate.customContent),
+});
+
+const agentsMdSchema = z.object({
+	autoSync: z.boolean().default(DEFAULT_RULE_CONFIG.repoFiles.agentsMd.autoSync),
+	honeypotEnabled: z.boolean().default(DEFAULT_RULE_CONFIG.repoFiles.agentsMd.honeypotEnabled),
+	honeypotPhrases: z.array(honeypotPhraseSchema).default(DEFAULT_RULE_CONFIG.repoFiles.agentsMd.honeypotPhrases),
+	customContent: z.string().default(DEFAULT_RULE_CONFIG.repoFiles.agentsMd.customContent),
 });
 
 export const ruleConfigSchema = z.object({
@@ -49,21 +69,8 @@ export const ruleConfigSchema = z.object({
 		comments: z.boolean(),
 	}),
 	repoFiles: z.object({
-		rulesMd: z.object({
-			autoSync: z.boolean(),
-			customContent: z.string(),
-		}),
-		prTemplate: z.object({
-			autoSync: z.boolean(),
-			honeypotEnabled: z.boolean(),
-			honeypotPhrases: z.array(honeypotPhraseSchema),
-			customContent: z.string(),
-		}),
-		agentsMd: z.object({
-			autoSync: z.boolean(),
-			honeypotEnabled: z.boolean(),
-			honeypotPhrases: z.array(honeypotPhraseSchema),
-			customContent: z.string(),
-		}),
+		rulesMd: rulesMdSchema.default(DEFAULT_RULE_CONFIG.repoFiles.rulesMd),
+		prTemplate: prTemplateSchema.default(DEFAULT_RULE_CONFIG.repoFiles.prTemplate),
+		agentsMd: agentsMdSchema.default(DEFAULT_RULE_CONFIG.repoFiles.agentsMd),
 	}),
 });

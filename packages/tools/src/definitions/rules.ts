@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@tripwire/db/client";
 import {
@@ -10,7 +10,7 @@ import {
 	ruleConfigs,
 } from "@tripwire/db";
 import { assertRepoOwner } from '@tripwire/core';
-import { ruleConfigSchema } from '@tripwire/core';
+import { normalizeRuleConfig, ruleConfigSchema } from '@tripwire/core';
 import { logEvent } from '@tripwire/core';
 import {
 	type AnyToolDefinition,
@@ -26,6 +26,14 @@ import {
 } from "../helpers";
 
 const ruleIdEnum = z.enum(RULE_KEYS);
+
+type DbTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+async function lockRuleConfig(tx: DbTx, repoId: string) {
+	await tx.execute(sql`
+		select pg_advisory_xact_lock(hashtext(${repoId}))
+	`);
+}
 
 const getRepoRules = defineTool({
 	name: "get_repo_rules",
@@ -347,33 +355,43 @@ const copyRules = defineTool({
 			.where(eq(repositories.id, toRepoId));
 
 		const sourceConfig = await loadRuleConfig(fromRepoId);
-		const targetConfig = await loadRuleConfig(toRepoId);
-		const nextConfig: RuleConfig = ruleId
-			? {
-					...targetConfig,
-					[ruleId]: structuredClone(sourceConfig[ruleId]),
-				}
-			: structuredClone(sourceConfig);
+		const copyResult = await db.transaction(async (tx) => {
+			await lockRuleConfig(tx, toRepoId);
 
-		const parsed = ruleConfigSchema.safeParse(nextConfig);
-		if (!parsed.success) {
-			return {
-				ok: false,
-				message: `Invalid rule config after copy: ${parsed.error.message}`,
-			};
-		}
-
-		const [existing] = await db
-			.select({ id: ruleConfigs.id })
-			.from(ruleConfigs)
-			.where(eq(ruleConfigs.repoId, toRepoId));
-		if (existing) {
-			await db
-				.update(ruleConfigs)
-				.set({ config: parsed.data, updatedAt: new Date() })
+			const [targetRow] = await tx
+				.select()
+				.from(ruleConfigs)
 				.where(eq(ruleConfigs.repoId, toRepoId));
-		} else {
-			await db.insert(ruleConfigs).values({ repoId: toRepoId, config: parsed.data });
+			const targetConfig = normalizeRuleConfig(targetRow?.config ?? DEFAULT_RULE_CONFIG);
+			const nextConfig: RuleConfig = ruleId
+				? {
+						...targetConfig,
+						[ruleId]: structuredClone(sourceConfig[ruleId]),
+					}
+				: structuredClone(sourceConfig);
+
+			const parsed = ruleConfigSchema.safeParse(nextConfig);
+			if (!parsed.success) {
+				return {
+					ok: false as const,
+					message: `Invalid rule config after copy: ${parsed.error.message}`,
+				};
+			}
+
+			const normalized = normalizeRuleConfig(parsed.data);
+			await tx
+				.insert(ruleConfigs)
+				.values({ repoId: toRepoId, config: normalized })
+				.onConflictDoUpdate({
+					target: ruleConfigs.repoId,
+					set: { config: normalized, updatedAt: new Date() },
+				});
+
+			return { ok: true as const };
+		});
+
+		if (!copyResult.ok) {
+			return copyResult;
 		}
 
 		const summary = ruleId
@@ -405,8 +423,6 @@ const copyRules = defineTool({
 		};
 	},
 });
-
-void DEFAULT_RULE_CONFIG;
 
 export const ruleTools: AnyToolDefinition[] = [
 	getRepoRules,

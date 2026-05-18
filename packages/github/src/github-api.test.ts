@@ -46,11 +46,12 @@ describe("github-api new functions", () => {
 			expect(mockFetch).toHaveBeenCalledTimes(1);
 
 			const callUrl = mockFetch.mock.calls[0][0] as string;
+			const query = new URL(callUrl).searchParams.get("q") ?? "";
 			expect(callUrl).toContain("/search/issues");
-			expect(callUrl).toContain("author:testuser");
-			expect(callUrl).toContain("type:pr");
-			expect(callUrl).toContain("repo:owner/repo");
-			expect(callUrl).toContain("created:>=");
+			expect(query).toContain("author:testuser");
+			expect(query).toContain("type:pr");
+			expect(query).toContain("repo:owner/repo");
+			expect(query).toContain("created:>=");
 		});
 
 		it("should return 0 when no PRs found", async () => {
@@ -115,6 +116,15 @@ describe("github-api new functions", () => {
 			const count = await getUserPublicRepoCount("test-token", "newuser");
 
 			expect(count).toBe(0);
+		});
+
+		it("should reject path-like usernames before fetching", async () => {
+			const mockFetch = vi.fn();
+			global.fetch = mockFetch;
+
+			const { getUserPublicRepoCount } = await import("./github-api");
+			await expect(getUserPublicRepoCount("test-token", "../installation/repositories")).rejects.toThrow("Invalid GitHub username");
+			expect(mockFetch).not.toHaveBeenCalled();
 		});
 	});
 

@@ -7,6 +7,8 @@
  * installation token isn't available.
  */
 
+import { encodeGitHubUsername } from "./username";
+
 export interface PublicGitHubUser {
 	login: string;
 	id: number;
@@ -55,13 +57,23 @@ async function githubPublic<T>(path: string): Promise<T | null> {
 
 /** Fetch a public GitHub user profile. */
 export async function fetchPublicUser(username: string): Promise<PublicGitHubUser | null> {
-	return githubPublic(`/users/${username}`);
+	try {
+		return githubPublic(`/users/${encodeGitHubUsername(username)}`);
+	} catch {
+		return null;
+	}
 }
 
 /** Fetch a user's public repos (up to 100, sorted by stars). */
 export async function fetchPublicRepos(username: string): Promise<PublicGitHubRepo[]> {
+	let login: string;
+	try {
+		login = encodeGitHubUsername(username);
+	} catch {
+		return [];
+	}
 	const repos = await githubPublic<PublicGitHubRepo[]>(
-		`/users/${username}/repos?per_page=100&sort=stargazers&direction=desc`,
+		`/users/${login}/repos?per_page=100&sort=stargazers&direction=desc`,
 	);
 	return repos ?? [];
 }
@@ -69,7 +81,8 @@ export async function fetchPublicRepos(username: string): Promise<PublicGitHubRe
 /** Check if a user has a profile README (username/username repo). */
 export async function hasPublicProfileReadme(username: string): Promise<boolean> {
 	try {
-		const res = await fetch(`${GITHUB_API}/repos/${username}/${username}/readme`, {
+		const login = encodeGitHubUsername(username);
+		const res = await fetch(`${GITHUB_API}/repos/${login}/${login}/readme`, {
 			headers: HEADERS,
 		});
 		return res.ok;

@@ -15,10 +15,16 @@ import {
 	fetchUserGraphQL,
 	fetchUserAchievements,
 	githubApi,
+	isGitHubUsername,
 } from "@tripwire/github";
 import { computeContributorScore } from "@tripwire/core";
 
 import type { TRPCRouterRecord } from "@trpc/server";
+
+const githubUsernameSchema = z
+	.string()
+	.trim()
+	.refine(isGitHubUsername, "Invalid GitHub username");
 
 /** Verify user owns the repo (through the org chain) */
 async function assertRepoAccess(userId: string, repoId: string) {
@@ -119,10 +125,10 @@ export const workflowsRouter = {
 	/** Fetch real GitHub user data for workflow simulation */
 	simulate: authedProcedure
 		.input(z.object({
-			username: z.string().min(1),
+			username: githubUsernameSchema,
 			repoId: z.string().uuid().optional(),
 		}))
-		.mutation(async ({ input }) => {
+		.mutation(async ({ ctx, input }) => {
 			const username = input.username;
 
 			// Try to get an installation token for richer data
@@ -130,19 +136,8 @@ export const workflowsRouter = {
 			let repoId: string | null = input.repoId ?? null;
 			if (repoId) {
 				try {
-					const [repo] = await db
-						.select({ orgId: repositories.orgId })
-						.from(repositories)
-						.where(eq(repositories.id, repoId))
-						.limit(1);
-					if (repo) {
-						const [org] = await db
-							.select({ installationId: organizations.githubInstallationId })
-							.from(organizations)
-							.where(eq(organizations.id, repo.orgId))
-							.limit(1);
-						if (org) token = await getInstallationToken(org.installationId);
-					}
+					const authorized = await assertRepoAccess(ctx.user.id, repoId);
+					token = await getInstallationToken(authorized.organizations.githubInstallationId);
 				} catch { /* fall back to public API */ }
 			}
 
@@ -451,7 +446,7 @@ export const workflowsRouter = {
 
 			// 3. Simulate each workflow
 			const results = activeWorkflows.map((wf) => {
-				const def = wf.definition as { nodes: Array<Record<string, unknown>>; edges: Array<Record<string, unknown>> };
+					const def = wf.definition as unknown as { nodes: Array<Record<string, unknown>>; edges: Array<Record<string, unknown>> };
 				const nodes = def.nodes ?? [];
 				const edges = def.edges ?? [];
 

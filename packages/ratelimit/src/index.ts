@@ -18,6 +18,12 @@ if (env.NODE_ENV === "production" && !env.UNKEY_ROOT_KEY) {
 const NAMESPACES = {
 	/** Joining the waitlist */
 	waitlist: { limit: 3, duration: "60s" as const },
+	/** Shared waitlist ceiling so attackers cannot bypass limits by rotating emails. */
+	waitlistGlobal: { limit: 60, duration: "60s" as const },
+	/** Authenticated chat requests can fan out to paid model calls. */
+	chat: { limit: 5, duration: "60s" as const },
+	/** Direct tool calls can fan out to external APIs, so keep them bounded. */
+	directTool: { limit: 20, duration: "60s" as const },
 } as const;
 
 export type RatelimitNamespace = keyof typeof NAMESPACES;

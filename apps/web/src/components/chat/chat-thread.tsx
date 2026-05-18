@@ -210,6 +210,12 @@ function ChatMessage({ message, showAvatar, onRespondToApproval }: ChatMessagePr
 			onRespondToApproval(part.approval.id, false);
 		}
 	};
+	const canBatchApprovals =
+		pendingApprovals.length > 1 &&
+		pendingApprovals.every((part) => {
+			const args = getToolInput(part);
+			return typeof args.username === "string" && args.username.trim().length > 0;
+		});
 
 	const groupedParts = useMemo(() => {
 		const rawParts = (message.parts ?? []) as MessagePart[];
@@ -217,8 +223,9 @@ function ChatMessage({ message, showAvatar, onRespondToApproval }: ChatMessagePr
 		// Deduplicate parts by toolCallId (legacy tool streams can send duplicates)
 		const seen = new Set<string>();
 		const parts = rawParts.filter((part) => {
-			if (isToolPart(part) || part.type === "tool-result") {
-				const id = part.type === "tool-result"
+			const kind = (part as MessagePart).type;
+			if (isToolPart(part) || kind === "tool-result") {
+				const id = kind === "tool-result"
 					? (part as ToolResultPart).toolCallId
 					: getToolCallId(part);
 				const key = `${part.type}-${id}`;
@@ -297,7 +304,7 @@ function ChatMessage({ message, showAvatar, onRespondToApproval }: ChatMessagePr
 				)}
 			</div>
 			<div className="flex-1 min-w-0 flex flex-col gap-2">
-				{pendingApprovals.length > 1 ? (
+				{canBatchApprovals ? (
 					<>
 						{groupedParts
 							.filter((p) => !isToolPart(p as MessagePart) || (p as MessagePart & { state?: string }).state !== "approval-requested")
@@ -579,12 +586,12 @@ interface ToolApprovalCardProps {
 }
 
 function ToolApprovalCard({ toolName, args, onApprove, onDeny }: ToolApprovalCardProps) {
-	const username = args.username as string | undefined;
-	const { text, yesLabel, noLabel } = getApprovalText(toolName, username);
+	const { text, yesLabel, noLabel } = getApprovalText(toolName, args);
 
 	return (
 		<div className="rounded-xl bg-tw-card p-3 flex flex-col gap-2">
 			<div className="text-[13px] text-tw-text-primary">{renderInlineText(text)}</div>
+			<ApprovalArgsDetails args={args} />
 			<div className="flex items-center gap-2">
 				<button
 					type="button"
@@ -605,6 +612,32 @@ function ToolApprovalCard({ toolName, args, onApprove, onDeny }: ToolApprovalCar
 	);
 }
 
+function ApprovalArgsDetails({ args }: { args: Record<string, unknown> }) {
+	const entries = Object.entries(args);
+	if (entries.length === 0) return null;
+
+	return (
+		<div className="rounded-lg bg-[#FAFAFA08] border border-[#FAFAFA0F] p-2 flex flex-col gap-1">
+			{entries.map(([key, value]) => (
+				<div key={key} className="grid grid-cols-[92px_minmax(0,1fr)] gap-2 text-[11px] leading-4">
+					<span className="text-tw-text-muted">{key}</span>
+					<span className="font-mono text-tw-text-secondary break-words">
+						{formatApprovalArg(value)}
+					</span>
+				</div>
+			))}
+		</div>
+	);
+}
+
+function formatApprovalArg(value: unknown): string {
+	if (typeof value === "string") return value;
+	if (typeof value === "number" || typeof value === "boolean") return String(value);
+	if (value === null) return "null";
+	if (value === undefined) return "undefined";
+	return JSON.stringify(value);
+}
+
 interface BatchApprovalCardProps {
 	approvals: Array<MessagePart & { approval: { id: string } }>;
 	onApproveAll: () => void;
@@ -614,7 +647,11 @@ interface BatchApprovalCardProps {
 function BatchApprovalCard({ approvals, onApproveAll, onDenyAll }: BatchApprovalCardProps) {
 	const parsed = approvals.map((part) => {
 		const toolArgs = getToolInput(part);
-		return { name: getPartToolName(part), username: toolArgs.username as string | undefined };
+		return {
+			name: getPartToolName(part),
+			args: toolArgs,
+			username: toolArgs.username as string | undefined,
+		};
 	});
 
 	const allSameAction = parsed.every((p) => p.name === parsed[0].name);
@@ -659,7 +696,7 @@ function BatchApprovalCard({ approvals, onApproveAll, onDenyAll }: BatchApproval
 				{parsed.map((p, i) => (
 					<div key={getToolCallId(approvals[i]) ?? approvals[i].approval.id} className="flex items-center gap-2 text-[13px] text-tw-text-primary">
 						<span className="size-1.5 rounded-full bg-tw-warning shrink-0" />
-						{getBriefActionText(p.name, p.username)}
+						{getBriefActionText(p.name, p.username, p.args.reason as string | undefined)}
 					</div>
 				))}
 			</div>

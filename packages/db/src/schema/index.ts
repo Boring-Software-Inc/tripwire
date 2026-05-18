@@ -6,6 +6,7 @@ export * from "./auth";
 export * from "./orgs";
 export * from "./oauth";
 export * from "./installations";
+export * from "./install-states";
 export * from "./rules";
 export * from "./rule-meta";
 export * from "./lists";

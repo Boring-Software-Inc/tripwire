@@ -8,6 +8,19 @@ import { organizations, repositories, member } from "@tripwire/db";
 
 import type { TRPCRouterRecord } from "@trpc/server";
 
+function publicOrg(org: typeof organizations.$inferSelect) {
+	return {
+		id: org.id,
+		githubAccountId: org.githubAccountId,
+		githubAccountLogin: org.githubAccountLogin,
+		githubAccountType: org.githubAccountType,
+		avatarUrl: org.avatarUrl,
+		betterAuthOrgId: org.betterAuthOrgId,
+		createdAt: org.createdAt,
+		updatedAt: org.updatedAt,
+	};
+}
+
 /** Verify user is a member of a Better Auth org, return the membership */
 async function assertBaOrgMember(userId: string, baOrgId: string) {
 	const [m] = await db
@@ -27,17 +40,18 @@ async function assertBaOrgMember(userId: string, baOrgId: string) {
 export const orgsRouter = {
 	/** List all Tripwire orgs (GitHub installations) for a user */
 	list: authedProcedure.query(async ({ ctx }) => {
-		return db
+		const rows = await db
 			.select()
 			.from(organizations)
 			.where(eq(organizations.ownerId, ctx.user.id));
+		return rows.map(publicOrg);
 	}),
 
 	/** Get a single org by ID */
 	get: authedProcedure
 		.input(z.object({ orgId: z.string().uuid() }))
 		.query(async ({ ctx, input }) => {
-			return assertOrgOwner(ctx.user.id, input.orgId);
+			return publicOrg(await assertOrgOwner(ctx.user.id, input.orgId));
 		}),
 
 	/** List repos for a GitHub installation */
@@ -70,7 +84,6 @@ export const orgsRouter = {
 				...repos.map((r) => ({
 					...r,
 					orgName: org.githubAccountLogin,
-					installationId: org.githubInstallationId,
 				})),
 			);
 		}
@@ -100,7 +113,6 @@ export const orgsRouter = {
 					...repos.map((r) => ({
 						...r,
 						orgName: install.githubAccountLogin,
-						installationId: install.githubInstallationId,
 					})),
 				);
 			}
@@ -112,10 +124,11 @@ export const orgsRouter = {
 		.input(z.object({ baOrgId: z.string() }))
 		.query(async ({ ctx, input }) => {
 			await assertBaOrgMember(ctx.user.id, input.baOrgId);
-			return db
+			const rows = await db
 				.select()
 				.from(organizations)
 				.where(eq(organizations.betterAuthOrgId, input.baOrgId));
+			return rows.map(publicOrg);
 		}),
 
 	/** Reassign a GitHub installation to a different BA org (owner only) */

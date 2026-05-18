@@ -24,7 +24,7 @@ export const vouchRequests = pgTable(
 	{
 		id: uuid("id").primaryKey().defaultRandom(),
 		githubUsername: text("github_username").notNull(),
-		githubUserId: integer("github_user_id"),
+		githubUserId: integer("github_user_id").notNull(),
 		avatarUrl: text("avatar_url"),
 		/** Why they should be vouched */
 		reason: text("reason").notNull(),
@@ -39,7 +39,7 @@ export const vouchRequests = pgTable(
 		index("vouch_requests_status_idx").on(t.status),
 		index("vouch_requests_username_idx").on(t.githubUsername),
 		uniqueIndex("vouch_requests_pending_uniq")
-			.on(sql`lower(${t.githubUsername})`)
+			.on(t.githubUserId)
 			.where(sql`${t.status} = 'pending'`),
 	],
 );

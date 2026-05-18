@@ -60,7 +60,7 @@ export function renderInlineText(text: string): ReactNode {
 	return parts;
 }
 
-export function getBriefActionText(action: string, username?: string): ReactNode {
+export function getBriefActionText(action: string, username?: string, reason?: string): ReactNode {
 	const user = username ? <>{renderInlineText(`@${username}`)}</> : "user";
 	switch (action) {
 		case "add_to_blacklist":
@@ -75,6 +75,8 @@ export function getBriefActionText(action: string, username?: string): ReactNode
 			return <>Move {user} to whitelist</>;
 		case "move_to_blacklist":
 			return <>Move {user} to blacklist</>;
+		case "reset_contributor_score":
+			return <>Reset score for {user}{reason ? <>: {reason}</> : null}</>;
 		default:
 			return <>{action.replace(/_/g, " ")} {user}</>;
 	}

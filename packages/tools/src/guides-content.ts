@@ -3,10 +3,9 @@ Tripwire is an open-source GitHub moderation tool. Maintainers install the
 Tripwire GitHub App on a repo, configure rules, and Tripwire automatically
 closes / warns / logs PRs, issues, and comments from low-signal accounts.
 
-The Tripwire MCP server gives you tools to inspect a maintainer's repos,
-investigate flagged users, and manage moderation state on their behalf.
-Every mutation goes through the same ownership checks the web app uses
-and emits an event visible in the events feed.
+The Tripwire MCP server gives you read-only tools to inspect a maintainer's
+repos and investigate flagged users. Moderation mutations are handled through
+the Tripwire chat UI, where the server can require signed user approval.
 
 ## First contact
 
@@ -34,33 +33,6 @@ Read-only:
 - lookup_user({ username })            — reputation + recent events for a GitHub user
 - get_guide({ topic })                 — conceptual docs
 
-Lists (mutations):
-- add_to_blacklist / remove_from_blacklist
-- add_to_whitelist / remove_from_whitelist
-
-Rule basics:
-- toggle_rule({ ruleId, enabled })
-- update_rule_action({ ruleId, action, thresholdCount? })
-- copy_rules({ fromRepoId, toRepoId, ruleId? })
-
-Per-rule field setters (each fully typed — no guessing field names):
-- set_min_merged_prs({ count })
-- set_account_age({ days })
-- set_max_prs_per_day({ limit })
-- set_max_files_changed({ limit })
-- set_repo_activity_minimum({ minRepos })
-- set_language_requirement({ language })
-
-Scope tools — controlling which content types are watched:
-- set_content_scope({ pullRequests?, issues?, comments? })
-  Repo-wide default. Omitted keys stay as-is.
-- set_rule_scope({ ruleId, pullRequests?, issues?, comments? })
-  Per-rule override that wins over the repo default. Use this when you
-  want a single rule (e.g. cryptoAddressDetection) to watch a different
-  set of content types than the rest of the pipeline.
-- clear_rule_scope({ ruleId })
-  Remove the override; rule inherits the repo's contentScope again.
-
 Rule ids are constrained by the tool schema (zod enum), so the model
 sees the valid set up front and never has to guess. Same for actions
 (block | warn | log | threshold) and scope keys.
@@ -80,12 +52,9 @@ closing a legitimate PR is a worse failure mode than warning a spammer.
 
 ## Safety
 
-- DO NOT mutate without an explicit user instruction. "I see this user
-  is on your blacklist" is fine; "I added them to your blacklist" is
-  not unless the user asked you to.
-- For destructive ops (blacklist add, action change to "block",
-  removing a whitelist entry), echo the target back before acting:
-  "Blacklisting @username from owner/repo — confirm?"
+- MCP cannot mutate moderation state. If the user asks to change lists
+  or rules, explain that those changes must happen through Tripwire chat
+  where signed approval is enforced.
 - Identity: prefer GitHub user IDs (immutable) over usernames where the
   tool exposes both. Usernames can be renamed and re-registered.
 
@@ -107,22 +76,17 @@ Each rule has \`enabled\` (bool), \`action\` (block | warn | log | threshold),
 an optional \`scopeOverride\`, and rule-specific fields. The full schema
 lives at \`src/lib/rules/config-schema.ts\` in the Tripwire repo.
 
-Built-in rules and the typed setter that adjusts each one:
+Built-in rules:
 
 - **aiSlopDetection** — heuristics for AI-generated PR/issue bodies.
-  No threshold field. Toggle and set action only.
+  No threshold field.
 - **languageRequirement** — block content that isn't the configured language.
-  Setter: set_language_requirement({ language }).
 - **minMergedPrs** — require the author to have at least N merged PRs
-  across GitHub. Setter: set_min_merged_prs({ count }).
+  across GitHub.
 - **accountAge** — require account age >= N days.
-  Setter: set_account_age({ days }).
 - **maxPrsPerDay** — cap PRs per author per repo per day.
-  Setter: set_max_prs_per_day({ limit }).
 - **maxFilesChanged** — cap files-changed per PR.
-  Setter: set_max_files_changed({ limit }).
 - **repoActivityMinimum** — require author to have N public non-fork repos.
-  Setter: set_repo_activity_minimum({ minRepos }).
 - **requireProfileReadme** — require the author's profile to have a README.
   No threshold field.
 - **cryptoAddressDetection** — block content containing crypto addresses.
@@ -145,8 +109,8 @@ Every rule applies to the content types in the repo-wide contentScope
 The override only sets the keys you pass — unset keys still inherit.
 
 Common pattern: keep contentScope tight (e.g. PRs only) and use
-set_rule_scope to widen a specific rule (e.g. cryptoAddressDetection)
-to issues + comments where spam is more common.
+Tripwire chat's signed approval flow to widen a specific rule
+(e.g. cryptoAddressDetection) to issues + comments where spam is more common.
 
 ## GitHub API failure mode
 
@@ -163,11 +127,10 @@ blacklist for a given repo, never both.
 
 ## Conflicts
 
-- add_to_blacklist atomically removes any existing whitelist entry for
+- Blocking a user atomically removes any existing whitelist entry for
   the same user.
-- add_to_whitelist rejects with \`lists.blacklisted\` if the user is
-  currently blacklisted — the agent should call remove_from_blacklist
-  first if the intent is to whitelist.
+- Whitelisting rejects while the user is currently blacklisted; remove the
+  blacklist entry through Tripwire chat first if the intent is to whitelist.
 
 ## Identity
 
@@ -187,9 +150,10 @@ blacklist for a given repo, never both.
 
 ## Recommended workflow
 
-- For a one-off spammer: add_to_blacklist.
+- For a one-off spammer: use Tripwire chat to add them to the blacklist.
 - For a known good contributor who keeps tripping a strict rule:
-  add_to_whitelist (preferred) OR loosen the rule (broader effect).
+  whitelist them through Tripwire chat (preferred) OR loosen the rule
+  (broader effect).
 - For someone who looks suspicious but isn't clearly spam: leave both
   alone and let warn / threshold rules do their thing.
 `.trim(),

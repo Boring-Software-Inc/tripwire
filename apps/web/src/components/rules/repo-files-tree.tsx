@@ -86,7 +86,7 @@ interface RepoFilesTreeProps {
 type FileKey = "RULES.md" | "PULL_REQUEST_TEMPLATE.md" | "AGENTS.md";
 
 const PATH_TO_FILE: Record<string, FileKey> = {
-	".github/RULES.md": "RULES.md",
+	"RULES.md": "RULES.md",
 	".github/PULL_REQUEST_TEMPLATE.md": "PULL_REQUEST_TEMPLATE.md",
 	".github/AGENTS.md": "AGENTS.md",
 };
@@ -317,7 +317,7 @@ function FileSettings({
 
 const FILE_KEYS = ["RULES.md", "PULL_REQUEST_TEMPLATE.md", "AGENTS.md"] as const;
 const FILE_TO_PATH: Record<FileKey, string> = {
-	"RULES.md": ".github/RULES.md",
+	"RULES.md": "RULES.md",
 	"PULL_REQUEST_TEMPLATE.md": ".github/PULL_REQUEST_TEMPLATE.md",
 	"AGENTS.md": ".github/AGENTS.md",
 };
@@ -330,7 +330,7 @@ export function RepoFilesTree(props: RepoFilesTreeProps) {
 	const [editorMode, setEditorMode] = useState<"preview" | "edit">("preview");
 
 	const paths = useMemo(() => [
-		".github/RULES.md",
+		"RULES.md",
 		".github/PULL_REQUEST_TEMPLATE.md",
 		".github/AGENTS.md",
 	], []);

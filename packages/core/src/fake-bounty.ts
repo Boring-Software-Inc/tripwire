@@ -168,76 +168,139 @@ export async function createFakeBounty(repoId: string): Promise<{
 	issueNumber: number;
 	title: string;
 } | null> {
-	const [repo] = await db
-		.select({
-			fullName: repositories.fullName,
-			orgId: repositories.orgId,
-		})
-		.from(repositories)
-		.where(eq(repositories.id, repoId))
-		.limit(1);
-	if (!repo) return null;
+	const plan = await db.transaction(async (tx) => {
+		await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${repoId}), 0)`);
 
-	const [org] = await db
-		.select({ installationId: organizations.githubInstallationId })
-		.from(organizations)
-		.where(eq(organizations.id, repo.orgId))
-		.limit(1);
-	if (!org) return null;
+		const [repo] = await tx
+			.select({
+				fullName: repositories.fullName,
+				orgId: repositories.orgId,
+			})
+			.from(repositories)
+			.where(eq(repositories.id, repoId))
+			.limit(1);
+		if (!repo) return null;
 
-	const [config] = await db
-		.select()
-		.from(fakeBountyConfigs)
-		.where(eq(fakeBountyConfigs.repoId, repoId))
-		.limit(1);
-	if (!config?.enabled) return null;
+		const [org] = await tx
+			.select({ installationId: organizations.githubInstallationId })
+			.from(organizations)
+			.where(eq(organizations.id, repo.orgId))
+			.limit(1);
+		if (!org) return null;
 
-	// Check active count
-	const [activeCount] = await db
-		.select({ count: sql<number>`count(*)::int` })
-		.from(fakeBounties)
-		.where(
-			and(
-				eq(fakeBounties.repoId, repoId),
-				eq(fakeBounties.status, "active"),
-			),
-		);
-	if ((activeCount?.count ?? 0) >= config.maxActive) return null;
+		const [config] = await tx
+			.select()
+			.from(fakeBountyConfigs)
+			.where(eq(fakeBountyConfigs.repoId, repoId))
+			.limit(1);
+		if (!config?.enabled) return null;
 
-	const template = pickTemplate();
-	const token = await getInstallationToken(org.installationId);
-	const [owner, repoName] = repo.fullName.split("/");
+		const [activeCount] = await tx
+			.select({ count: sql<number>`count(*)::int` })
+			.from(fakeBounties)
+			.where(
+				and(
+					eq(fakeBounties.repoId, repoId),
+					eq(fakeBounties.status, "active"),
+				),
+			);
+		if ((activeCount?.count ?? 0) >= config.maxActive) return null;
 
-	// Create the issue on GitHub
-	const issue = await githubApi(`/repos/${owner}/${repoName}/issues`, token, {
+		const template = pickTemplate();
+		const [owner, repoName] = repo.fullName.split("/");
+
+		return {
+			installationId: org.installationId,
+			owner,
+			repoName,
+			template,
+			issueLabels: config.issueLabels,
+			maxActive: config.maxActive,
+		};
+	});
+
+	if (!plan) return null;
+
+	const token = await getInstallationToken(plan.installationId);
+	const issue = await githubApi(`/repos/${plan.owner}/${plan.repoName}/issues`, token, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify({
-			title: template.title,
-			body: template.body,
-			labels: config.issueLabels,
+			title: plan.template.title,
+			body: plan.template.body,
+			labels: plan.issueLabels,
 		}),
 	});
 
 	if (!issue?.number) return null;
 
-	// Record in DB
-	await db.insert(fakeBounties).values({
-		repoId,
-		githubIssueNumber: issue.number,
-		title: template.title,
-		body: template.body,
-	});
+	let created: { issueNumber: number; title: string } | null = null;
+	try {
+		created = await db.transaction(async (tx) => {
+			await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${repoId}), 0)`);
+
+			const [activeCount] = await tx
+				.select({ count: sql<number>`count(*)::int` })
+				.from(fakeBounties)
+				.where(
+					and(
+						eq(fakeBounties.repoId, repoId),
+						eq(fakeBounties.status, "active"),
+					),
+				);
+
+			if ((activeCount?.count ?? 0) >= plan.maxActive) return null;
+
+			await tx.insert(fakeBounties).values({
+				repoId,
+				githubIssueNumber: issue.number,
+				title: plan.template.title,
+				body: plan.template.body,
+			});
+
+			return { issueNumber: issue.number, title: plan.template.title };
+		});
+	} catch (err) {
+		await closeUntrackedFakeBountyIssue(token, plan.owner, plan.repoName, issue.number);
+		throw err;
+	}
+
+	if (!created) {
+		await closeUntrackedFakeBountyIssue(token, plan.owner, plan.repoName, issue.number);
+		return null;
+	}
 
 	await logEvent({
 		repoId,
 		action: "pipeline_logged",
 		severity: "info",
-		description: `Fake bounty issue #${issue.number} created: ${template.title}`,
-		metadata: { fakeBounty: true, issueNumber: issue.number },
+		description: `Fake bounty issue #${created.issueNumber} created: ${created.title}`,
+		metadata: { fakeBounty: true, issueNumber: created.issueNumber },
 	});
 
-	return { issueNumber: issue.number, title: template.title };
+	return created;
+}
+
+async function closeUntrackedFakeBountyIssue(
+	token: string,
+	owner: string,
+	repoName: string,
+	issueNumber: number,
+) {
+	try {
+		await githubApi(`/repos/${owner}/${repoName}/issues/${issueNumber}`, token, {
+			method: "PATCH",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ state: "closed" }),
+		});
+	} catch (err) {
+		console.error("[Tripwire] Failed to close untracked fake bounty issue", {
+			owner,
+			repoName,
+			issueNumber,
+			err,
+		});
+	}
 }
 
 /**

@@ -1,4 +1,3 @@
-import { sql } from "drizzle-orm";
 import {
 	index,
 	integer,
@@ -26,7 +25,7 @@ export const globalVouches = pgTable(
 	{
 		id: uuid("id").primaryKey().defaultRandom(),
 		githubUsername: text("github_username").notNull(),
-		githubUserId: integer("github_user_id"),
+		githubUserId: integer("github_user_id").notNull(),
 		avatarUrl: text("avatar_url"),
 		/** The Tripwire user who vouched for this person */
 		vouchedById: text("vouched_by_id")
@@ -43,7 +42,7 @@ export const globalVouches = pgTable(
 		index("global_vouches_user_id_idx").on(t.githubUserId),
 		index("global_vouches_voucher_idx").on(t.vouchedById),
 		uniqueIndex("global_vouches_user_voucher_uniq").on(
-			sql`lower(${t.githubUsername})`,
+			t.githubUserId,
 			t.vouchedById,
 		),
 	],

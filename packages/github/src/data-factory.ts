@@ -10,6 +10,7 @@
 
 import { githubApi } from "./app";
 import { fetchUserGraphQL, fetchUserContributions } from "./user";
+import { encodeGitHubUsername, normalizeGitHubUsername } from "./username";
 import type { GitHubUserGraphQL, PinnedRepo, ContributionsData } from "./user";
 import type { CachedPR, CachedRepo } from "@tripwire/db";
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
@@ -46,11 +47,12 @@ async function getDbDeps() {
 
 async function getCached(username: string) {
 	try {
+		const login = normalizeGitHubUsername(username);
 		const { sql, db, githubUserCache } = await getDbDeps();
 		const [row] = await db
 			.select()
 			.from(githubUserCache)
-			.where(sql`lower(${githubUserCache.githubUsername}) = ${username.toLowerCase()}`)
+			.where(sql`lower(${githubUserCache.githubUsername}) = ${login.toLowerCase()}`)
 			.limit(1);
 		if (!row) return null;
 		if (row.expiresAt < new Date()) return null; // expired
@@ -72,9 +74,10 @@ async function upsertCache(
 		graphqlJson?: Record<string, unknown> | null;
 	},
 ) {
+	const login = normalizeGitHubUsername(username);
 	const now = new Date();
 	const expiresAt = new Date(now.getTime() + CACHE_TTL_MS);
-	const normalizedUsername = username.toLowerCase();
+	const normalizedUsername = login.toLowerCase();
 	const updateSet = {
 		...(data.githubUserId !== undefined && { githubUserId: data.githubUserId }),
 		...(data.profileJson !== undefined && { profileJson: data.profileJson }),
@@ -214,12 +217,13 @@ export async function fetchUserPRs(
 	username: string,
 	opts: FetchOptions = {},
 ): Promise<PRResult> {
+	const login = normalizeGitHubUsername(username);
 	const limit = opts.limit ?? 5;
 	const state = opts.state ?? "merged";
 
 	// Check cache (only for merged state — the default/common case)
 	if (!opts.forceRefresh && state === "merged") {
-		const cached = await getCached(username);
+		const cached = await getCached(login);
 		if (cached && cached.mergedPrsJson.length > 0) {
 			return {
 				items: (cached.mergedPrsJson as CachedPR[]).slice(0, limit),
@@ -234,7 +238,7 @@ export async function fetchUserPRs(
 	let searchResult: Record<string, unknown> | null = null;
 	try {
 		searchResult = await githubApi(
-			`/search/issues?q=author:${encodeURIComponent(username)}+type:pr${stateFilter}&sort=created&order=desc&per_page=${perPage}`,
+			`/search/issues?q=author:${encodeGitHubUsername(login)}+type:pr${stateFilter}&sort=created&order=desc&per_page=${perPage}`,
 			token,
 		);
 	} catch {
@@ -253,7 +257,7 @@ export async function fetchUserPRs(
 
 	// Cache merged PRs
 	if (state === "merged") {
-		await upsertCache(username, {
+		await upsertCache(login, {
 			mergedPrsJson: prs,
 			mergedPrCount: totalCount,
 		});
@@ -509,11 +513,12 @@ export async function fetchUserRepos(
 	username: string,
 	opts: FetchOptions = {},
 ): Promise<RepoResult> {
+	const login = normalizeGitHubUsername(username);
 	const limit = opts.limit ?? 5;
 
 	// Check cache
 	if (!opts.forceRefresh) {
-		const cached = await getCached(username);
+		const cached = await getCached(login);
 		if (cached && cached.reposJson.length > 0) {
 			return {
 				items: (cached.reposJson as CachedRepo[]).slice(0, limit),
@@ -525,7 +530,7 @@ export async function fetchUserRepos(
 	// Fetch from GitHub REST API
 	const perPage = Math.max(limit, MIN_BATCH_SIZE);
 	const repos = await githubApi(
-		`/users/${encodeURIComponent(username)}/repos?per_page=${perPage}&sort=stargazers&direction=desc`,
+		`/users/${encodeGitHubUsername(login)}/repos?per_page=${perPage}&sort=stargazers&direction=desc`,
 		token,
 	);
 
@@ -536,16 +541,16 @@ export async function fetchUserRepos(
 	// Also get total from profile
 	let profileRepoCount = totalCount;
 	try {
-		const profile = await githubApi(`/users/${encodeURIComponent(username)}`, token);
+		const profile = await githubApi(`/users/${encodeGitHubUsername(login)}`, token);
 		if (profile?.public_repos) profileRepoCount = profile.public_repos as number;
-		await upsertCache(username, {
+		await upsertCache(login, {
 			githubUserId: (profile?.id as number) ?? undefined,
 			profileJson: profile as Record<string, unknown>,
 			reposJson: transformed,
 			repoCount: profileRepoCount,
 		});
 	} catch {
-		await upsertCache(username, { reposJson: transformed, repoCount: totalCount });
+		await upsertCache(login, { reposJson: transformed, repoCount: totalCount });
 	}
 
 	return { items: transformed.slice(0, limit), totalCount: profileRepoCount };
@@ -560,9 +565,10 @@ export async function fetchUserActivity(
 	username: string,
 	opts: Pick<FetchOptions, "forceRefresh"> = {},
 ): Promise<ActivityResult> {
+	const login = normalizeGitHubUsername(username);
 	// Check cache for graphql data
 	if (!opts.forceRefresh) {
-		const cached = await getCached(username);
+		const cached = await getCached(login);
 		if (cached?.graphqlJson) {
 			// We have cached graphql — return it. Contributions aren't cached
 			// (they change daily) but graphql data (orgs, badges, sponsors) is stable.
@@ -571,13 +577,13 @@ export async function fetchUserActivity(
 
 	// Fetch in parallel
 	const [graphql, contribs] = await Promise.all([
-		fetchUserGraphQL(token, username).catch(() => null),
-		fetchUserContributions(token, username).catch(() => null),
+		fetchUserGraphQL(token, login).catch(() => null),
+		fetchUserContributions(token, login).catch(() => null),
 	]);
 
 	// Cache graphql data
 	if (graphql) {
-		await upsertCache(username, {
+		await upsertCache(login, {
 			graphqlJson: graphql as unknown as Record<string, unknown>,
 		});
 	}

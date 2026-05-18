@@ -96,6 +96,25 @@ function getOrderedFields(ruleKey: RuleKey, baseRule: RuleConfig[RuleKey], draft
 	return [...knownFields, ...extraFields];
 }
 
+function scopeOverridesEqual(previousValue: unknown, nextValue: unknown): boolean {
+	const previous = previousValue as RuleConfig[RuleKey]["scopeOverride"] | undefined;
+	const next = nextValue as RuleConfig[RuleKey]["scopeOverride"] | undefined;
+	if (!previous && !next) return true;
+	if (!previous || !next) return false;
+	return (
+		previous.pullRequests === next.pullRequests &&
+		previous.issues === next.issues &&
+		previous.comments === next.comments
+	);
+}
+
+function ruleFieldValuesEqual(field: string, previousValue: unknown, nextValue: unknown): boolean {
+	if (field === "scopeOverride") {
+		return scopeOverridesEqual(previousValue, nextValue);
+	}
+	return Object.is(previousValue, nextValue);
+}
+
 function buildChange(ruleKey: RuleKey, field: string, previousValue: unknown, nextValue: unknown): RuleConfigChange {
 	const ruleLabel = RULE_LABELS[ruleKey];
 	const id = `${ruleKey}.${field}`;
@@ -267,7 +286,7 @@ export function getRuleConfigChanges(base: RuleConfig, draft: RuleConfig): RuleC
 		const draftRule = normalizedDraft[ruleKey];
 
 		for (const field of getOrderedFields(ruleKey, baseRule, draftRule)) {
-			if (Object.is(baseRule[field as RuleField], draftRule[field as RuleField])) {
+			if (ruleFieldValuesEqual(field, baseRule[field as RuleField], draftRule[field as RuleField])) {
 				continue;
 			}
 

@@ -71,7 +71,15 @@ export async function deleteInstallation(installationId: number): Promise<void> 
 		},
 	);
 	if (!res.ok && res.status !== 404) {
-		console.error(`[github] Failed to delete installation ${installationId}: ${res.status}`);
+		const text = await res.text();
+		throw createError({
+			code: "github.installation_delete_failed",
+			status: res.status >= 500 ? 502 : 500,
+			message: "Failed to uninstall the GitHub App installation",
+			why: `GitHub returned HTTP ${res.status} while deleting installation ${installationId}.`,
+			fix: "Retry account deletion after GitHub App credentials and GitHub availability are healthy.",
+			internal: { installationId, githubStatus: res.status, githubBody: text },
+		});
 	}
 }
 

@@ -1,4 +1,7 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { and, eq, gt, isNull, lt } from "drizzle-orm";
+import { db } from "@tripwire/db/client";
+import { installStates } from "@tripwire/db";
 import { env } from "@tripwire/env/server";
 
 /**
@@ -8,8 +11,8 @@ import { env } from "@tripwire/env/server";
  *  1. CSRF — an attacker can't trick a logged-in victim into binding
  *     the attacker's GitHub installation to the victim's account
  *     because the state is bound to userId.
- *  2. Replay — state carries an `exp` timestamp and is single-use
- *     in practice (cookie cleared on success).
+ *  2. Replay — state carries an `exp` timestamp and the callback consumes the
+ *     persisted nonce before accepting an installation.
  *
  * Format: `${base64url(JSON.stringify({ userId, nonce, exp }))}.${base64url(HMAC_SHA256(secret, payload))}`
  */
@@ -64,6 +67,8 @@ function sign(payload: string): string {
 export function signInstallState(userId: string): {
 	value: string;
 	cookieMaxAge: number;
+	nonce: string;
+	expiresAt: Date;
 } {
 	const exp = Math.floor(Date.now() / 1000) + STATE_TTL_SECONDS;
 	const nonce = randomBytes(16).toString("hex");
@@ -73,6 +78,31 @@ export function signInstallState(userId: string): {
 	return {
 		value: `${encoded}.${signature}`,
 		cookieMaxAge: STATE_TTL_SECONDS,
+		nonce,
+		expiresAt: new Date(exp * 1000),
+	};
+}
+
+/**
+ * Generate and persist a state nonce so the callback can consume it exactly once.
+ */
+export async function createInstallState(userId: string): Promise<{
+	value: string;
+	cookieMaxAge: number;
+}> {
+	const state = signInstallState(userId);
+	const now = new Date();
+
+	await db.delete(installStates).where(lt(installStates.expiresAt, now));
+	await db.insert(installStates).values({
+		nonce: state.nonce,
+		userId,
+		expiresAt: state.expiresAt,
+	});
+
+	return {
+		value: state.value,
+		cookieMaxAge: state.cookieMaxAge,
 	};
 }
 
@@ -86,10 +116,44 @@ export function verifyInstallState(
 	value: string | null | undefined,
 	userId: string,
 ): boolean {
-	if (!value || typeof value !== "string") return false;
+	return readInstallStatePayload(value, userId) !== null;
+}
+
+/**
+ * Verify and consume a persisted install-state nonce.
+ */
+export async function consumeInstallState(
+	value: string | null | undefined,
+	userId: string,
+): Promise<boolean> {
+	const payload = readInstallStatePayload(value, userId);
+	if (!payload) return false;
+
+	const now = new Date();
+	const [consumed] = await db
+		.update(installStates)
+		.set({ consumedAt: now })
+		.where(
+			and(
+				eq(installStates.nonce, payload.nonce),
+				eq(installStates.userId, userId),
+				isNull(installStates.consumedAt),
+				gt(installStates.expiresAt, now),
+			),
+		)
+		.returning({ nonce: installStates.nonce });
+
+	return !!consumed;
+}
+
+function readInstallStatePayload(
+	value: string | null | undefined,
+	userId: string,
+): StatePayload | null {
+	if (!value || typeof value !== "string") return null;
 
 	const idx = value.lastIndexOf(".");
-	if (idx <= 0 || idx >= value.length - 1) return false;
+	if (idx <= 0 || idx >= value.length - 1) return null;
 
 	const encoded = value.slice(0, idx);
 	const providedSig = value.slice(idx + 1);
@@ -98,27 +162,30 @@ export function verifyInstallState(
 	try {
 		expectedSig = sign(encoded);
 	} catch {
-		return false;
+		return null;
 	}
 
 	const a = Buffer.from(providedSig);
 	const b = Buffer.from(expectedSig);
-	if (a.length !== b.length) return false;
-	if (!timingSafeEqual(a, b)) return false;
+	if (a.length !== b.length) return null;
+	if (!timingSafeEqual(a, b)) return null;
 
 	let payload: StatePayload;
 	try {
 		const json = b64urlDecode(encoded).toString("utf8");
 		payload = JSON.parse(json) as StatePayload;
 	} catch {
-		return false;
+		return null;
 	}
 
 	if (typeof payload.userId !== "string" || payload.userId !== userId) {
-		return false;
+		return null;
 	}
-	if (typeof payload.exp !== "number") return false;
-	if (payload.exp < Math.floor(Date.now() / 1000)) return false;
+	if (typeof payload.nonce !== "string" || payload.nonce.length === 0) {
+		return null;
+	}
+	if (typeof payload.exp !== "number") return null;
+	if (payload.exp < Math.floor(Date.now() / 1000)) return null;
 
-	return true;
+	return payload;
 }

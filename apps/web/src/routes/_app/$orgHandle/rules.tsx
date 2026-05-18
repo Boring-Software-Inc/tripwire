@@ -216,7 +216,11 @@ function RulesPage() {
 		if (!repoId || !dirty) return;
 
 		try {
-			const savedConfig = await updateConfig.mutateAsync({ repoId, config: activeConfig });
+			const savedConfig = await updateConfig.mutateAsync({
+				repoId,
+				config: activeConfig,
+				baseConfig: serverConfig,
+			});
 			queryClient.setQueryData(configQueryKey, savedConfig);
 			setDraftConfig(null);
 			setShowSavedState(true);
@@ -224,7 +228,7 @@ function RulesPage() {
 		} catch {
 			// Error state is surfaced via the mutation toast.
 		}
-	}, [activeConfig, configQueryKey, dirty, queryClient, repoId, updateConfig]);
+	}, [activeConfig, configQueryKey, dirty, queryClient, repoId, serverConfig, updateConfig]);
 
 	const handleDiscard = useCallback(() => {
 		if (updateConfig.isPending) return;

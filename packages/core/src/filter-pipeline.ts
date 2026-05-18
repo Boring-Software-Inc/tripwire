@@ -1,6 +1,7 @@
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "@tripwire/db/client";
 import {
+	organizations,
 	repositories,
 	ruleConfigs,
 	ruleThresholdCounters,
@@ -400,11 +401,18 @@ export async function runFilterPipeline(
 	let rulesChecked = 0;
 
 	// 1. Look up the repo in our DB
-	const [repo] = await db
-		.select()
+	const [repoRow] = await db
+		.select({ repo: repositories })
 		.from(repositories)
-		.where(eq(repositories.githubRepoId, ctx.githubRepoId));
+		.innerJoin(organizations, eq(repositories.orgId, organizations.id))
+		.where(
+			and(
+				eq(repositories.githubRepoId, ctx.githubRepoId),
+				eq(organizations.githubInstallationId, ctx.installationId),
+			),
+		);
 
+	const repo = repoRow?.repo;
 	if (!repo) {
 		return {
 			allowed: true,
@@ -443,43 +451,14 @@ export async function runFilterPipeline(
 		// permission check failed, continue to whitelist/blacklist checks
 	}
 
-	// 3. Check whitelist (id-first to dodge GitHub username changes; fall back
-	// to case-insensitive username for legacy rows without a userId).
-	const whitelistAll = await db
-		.select()
-		.from(whitelistEntries)
-		.where(eq(whitelistEntries.repoId, repo.id));
-
-	const senderLoginLower = ctx.senderLogin.toLowerCase();
-	if (
-		whitelistAll.some((w) =>
-			w.githubUserId != null
-				? w.githubUserId === ctx.senderId
-				: w.githubUsername.toLowerCase() === senderLoginLower,
-		)
-	) {
-		return {
-			allowed: true,
-			outcome: "whitelist_bypass",
-			evaluations,
-			rulesChecked,
-			repoId: repo.id,
-		};
-	}
-
-	// 3. Check blacklist (id-first, then case-insensitive username fallback).
+	// 3. Check blacklist before whitelist so legacy conflicting rows still
+	// honor the product rule that blacklisted users are blocked.
 	const blacklistAll = await db
 		.select()
 		.from(blacklistEntries)
 		.where(eq(blacklistEntries.repoId, repo.id));
 
-	if (
-		blacklistAll.some((b) =>
-			b.githubUserId != null
-				? b.githubUserId === ctx.senderId
-				: b.githubUsername.toLowerCase() === senderLoginLower,
-		)
-	) {
+	if (blacklistAll.some((b) => b.githubUserId === ctx.senderId)) {
 		return {
 			allowed: false,
 			outcome: "blacklist_blocked",
@@ -491,7 +470,24 @@ export async function runFilterPipeline(
 		};
 	}
 
-	// 4. Load rule config
+	// 4. Check whitelist by immutable GitHub user id so username changes or
+	// later username reuse cannot move trust between accounts.
+	const whitelistAll = await db
+		.select()
+		.from(whitelistEntries)
+		.where(eq(whitelistEntries.repoId, repo.id));
+
+	if (whitelistAll.some((w) => w.githubUserId === ctx.senderId)) {
+		return {
+			allowed: true,
+			outcome: "whitelist_bypass",
+			evaluations,
+			rulesChecked,
+			repoId: repo.id,
+		};
+	}
+
+	// 5. Load rule config
 	const [configRow] = await db
 		.select()
 		.from(ruleConfigs)
@@ -540,9 +536,7 @@ export async function runFilterPipeline(
 		const vouchRows = await db
 			.select()
 			.from(globalVouches)
-			.where(
-				sql`lower(${globalVouches.githubUsername}) = ${senderLoginLower}`,
-			);
+			.where(eq(globalVouches.githubUserId, ctx.senderId));
 
 		if (vouchRows.length >= minVouches) {
 			await db
@@ -578,9 +572,7 @@ export async function runFilterPipeline(
 			const vouchRows = await db
 				.select()
 				.from(globalVouches)
-				.where(
-					sql`lower(${globalVouches.githubUsername}) = ${senderLoginLower}`,
-				);
+				.where(eq(globalVouches.githubUserId, ctx.senderId));
 			isGloballyVouched = vouchRows.length > 0;
 		}
 
@@ -638,13 +630,14 @@ export async function runFilterPipeline(
 
 	// Fetch user once for rules that need it
 	let ghUser: Record<string, unknown> | null = null;
+	let ghUserLookupError: unknown = null;
 	const needsUser =
 		config.accountAge.enabled;
 	if (needsUser) {
 		try {
 			ghUser = await getUser(token, ctx.senderLogin);
-		} catch {
-			// If we can't fetch user info, skip user-dependent rules
+		} catch (err) {
+			ghUserLookupError = err;
 		}
 	}
 
@@ -722,7 +715,7 @@ export async function runFilterPipeline(
 				rule: ruleName,
 				reason,
 				action,
-				outcome: "warned",
+				outcome: "blocked",
 			};
 			if (
 				!firstViolation ||
@@ -734,8 +727,11 @@ export async function runFilterPipeline(
 	}
 
 	// ─── accountAge ────────────────────────────────────────────
-	if (ruleApplies(config.accountAge, contentType, scope) && ghUser) {
+	if (ruleApplies(config.accountAge, contentType, scope)) {
 		rulesChecked++;
+		if (!ghUser) {
+			await recordLookupFailure("accountAge", config.accountAge.action, ghUserLookupError);
+		} else {
 		const createdAt = new Date(ghUser.created_at as string);
 		const ageInDays = Math.floor(
 			(Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24),
@@ -762,6 +758,7 @@ export async function runFilterPipeline(
 				config.accountAge.action,
 				config.accountAge.thresholdCount,
 			);
+		}
 		}
 	}
 

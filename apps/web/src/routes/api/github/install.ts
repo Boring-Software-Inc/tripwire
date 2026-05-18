@@ -2,8 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createContext } from "#/integrations/trpc/init";
 import {
 	INSTALL_STATE_COOKIE,
-	signInstallState,
-} from '@tripwire/github';
+	createInstallState,
+} from "@tripwire/github";
 import { env } from "@tripwire/env/client";
 
 /**
@@ -28,7 +28,7 @@ async function handler({ request }: { request: Request }) {
 	}
 
 	const appSlug = env.VITE_GITHUB_APP_SLUG ?? "tripwire-dev";
-	const { value, cookieMaxAge } = signInstallState(ctx.user.id);
+	const { value, cookieMaxAge } = await createInstallState(ctx.user.id);
 	const isProd = process.env.NODE_ENV === "production";
 
 	const cookieAttrs = [

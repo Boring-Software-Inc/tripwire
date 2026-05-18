@@ -50,23 +50,16 @@ export const fakeBountiesRouter = {
 			if (updates.declineMessage !== undefined) setFields.declineMessage = updates.declineMessage;
 			if (updates.issueLabels !== undefined) setFields.issueLabels = updates.issueLabels;
 
-			const [existing] = await db
-				.select()
-				.from(fakeBountyConfigs)
-				.where(eq(fakeBountyConfigs.repoId, repoId))
-				.limit(1);
-
-			if (existing) {
-				await db
-					.update(fakeBountyConfigs)
-					.set(setFields)
-					.where(eq(fakeBountyConfigs.repoId, repoId));
-			} else {
-				await db.insert(fakeBountyConfigs).values({
+			await db
+				.insert(fakeBountyConfigs)
+				.values({
 					repoId,
 					...setFields,
+				})
+				.onConflictDoUpdate({
+					target: fakeBountyConfigs.repoId,
+					set: setFields,
 				});
-			}
 
 			return { ok: true };
 		}),

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { authedProcedure } from "../init";
 import { assertRepoOwner } from "@tripwire/core";
 import { db } from "@tripwire/db/client";
@@ -15,9 +15,10 @@ import {
 import { logEvent } from '@tripwire/core';
 import { describeRuleConfigChanges, normalizeRuleConfig } from '@tripwire/core';
 import { ruleConfigSchema } from '@tripwire/core';
-import { getInstallationToken, putRepoFile } from '@tripwire/github';
+import { getInstallationToken, getUser, isGitHubUsername, putRepoFile } from '@tripwire/github';
 import {
 	generateHoneypotPhrase,
+	generateAgentsMd,
 	generatePrTemplate,
 	generateRulesMd,
 	pickHoneypotPhrase,
@@ -27,6 +28,88 @@ import type { TRPCRouterRecord } from "@trpc/server";
 
 type RepoRow = typeof repositories.$inferSelect;
 type OrgRow = typeof organizations.$inferSelect;
+type DbTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+async function lockListMembership(tx: DbTx, repoId: string, username: string) {
+	await tx.execute(sql`
+		select pg_advisory_xact_lock(hashtext(${repoId}), hashtext(${username.toLowerCase()}))
+	`);
+}
+
+async function lockRuleConfig(tx: DbTx, repoId: string) {
+	await tx.execute(sql`
+		select pg_advisory_xact_lock(hashtext(${repoId}))
+	`);
+}
+
+function uniqueUsernames(usernames: string[] | undefined): string[] {
+	const seen = new Set<string>();
+	const unique: string[] = [];
+	for (const raw of usernames ?? []) {
+		const username = raw.trim();
+		const key = username.toLowerCase();
+		if (!username || seen.has(key)) continue;
+		seen.add(key);
+		unique.push(username);
+	}
+	return unique;
+}
+
+function mergeRuleConfigChanges(
+	baseConfig: RuleConfig,
+	targetConfig: RuleConfig,
+	currentConfig: RuleConfig,
+): RuleConfig {
+	return normalizeRuleConfig(
+		mergeChangedFields(baseConfig, targetConfig, currentConfig) as RuleConfig,
+	);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function mergeChangedFields(baseValue: unknown, targetValue: unknown, currentValue: unknown): unknown {
+	if (JSON.stringify(baseValue) === JSON.stringify(targetValue)) {
+		return currentValue;
+	}
+
+	if (isRecord(baseValue) && isRecord(targetValue) && isRecord(currentValue)) {
+		const keys = new Set([
+			...Object.keys(baseValue),
+			...Object.keys(targetValue),
+			...Object.keys(currentValue),
+		]);
+		const merged: Record<string, unknown> = {};
+		for (const key of keys) {
+			merged[key] = mergeChangedFields(baseValue[key], targetValue[key], currentValue[key]);
+		}
+		return merged;
+	}
+
+	return targetValue;
+}
+
+async function resolveListUsers(
+	token: string,
+	usernames: string[],
+): Promise<Array<{ login: string; id: number; avatarUrl: string | null }>> {
+	const users = [];
+	for (const username of usernames) {
+		if (!isGitHubUsername(username)) continue;
+		const ghUser = await getUser(token, username) as {
+			login: string;
+			id: number;
+			avatar_url?: string | null;
+		};
+		users.push({
+			login: ghUser.login,
+			id: ghUser.id,
+			avatarUrl: ghUser.avatar_url ?? null,
+		});
+	}
+	return users;
+}
 
 export const rulesRouter = {
 	/** Get rule config for a repo */
@@ -47,47 +130,75 @@ export const rulesRouter = {
 			z.object({
 				repoId: z.string().uuid(),
 				config: ruleConfigSchema,
+				baseConfig: ruleConfigSchema.optional(),
 			}),
 		)
 		.mutation(async ({ input, ctx }) => {
 			const { repo, org } = await assertRepoOwner(ctx.user.id, input.repoId);
 
-			const [existing] = await db
-				.select()
-				.from(ruleConfigs)
-				.where(eq(ruleConfigs.repoId, input.repoId));
+			const { previousConfig, nextConfig } = await db.transaction(async (tx) => {
+				await lockRuleConfig(tx, input.repoId);
 
-			const previousConfig = normalizeRuleConfig(existing?.config ?? DEFAULT_RULE_CONFIG);
-			let nextConfig = normalizeRuleConfig(input.config);
-
-			// If the honeypot was just enabled and no phrases exist yet, mint one.
-			if (
-				nextConfig.repoFiles.prTemplate.honeypotEnabled &&
-				nextConfig.repoFiles.prTemplate.honeypotPhrases.length === 0
-			) {
-				nextConfig = {
-					...nextConfig,
-					repoFiles: {
-						...nextConfig.repoFiles,
-						prTemplate: {
-							...nextConfig.repoFiles.prTemplate,
-							honeypotPhrases: [generateHoneypotPhrase()],
-						},
-					},
-				};
-			}
-
-			if (existing) {
-				await db
-					.update(ruleConfigs)
-					.set({ config: nextConfig, updatedAt: new Date() })
+				const [existing] = await tx
+					.select()
+					.from(ruleConfigs)
 					.where(eq(ruleConfigs.repoId, input.repoId));
-			} else {
-				await db.insert(ruleConfigs).values({
-					repoId: input.repoId,
-					config: nextConfig,
-				});
-			}
+
+				const previousConfig = normalizeRuleConfig(existing?.config ?? DEFAULT_RULE_CONFIG);
+				let nextConfig = input.baseConfig
+					? mergeRuleConfigChanges(
+							normalizeRuleConfig(input.baseConfig),
+							normalizeRuleConfig(input.config),
+							previousConfig,
+						)
+					: normalizeRuleConfig(input.config);
+
+				// If a honeypot file was just enabled and no phrases exist yet, mint one.
+				if (
+					nextConfig.repoFiles.prTemplate.honeypotEnabled &&
+					nextConfig.repoFiles.prTemplate.honeypotPhrases.length === 0
+				) {
+					nextConfig = {
+						...nextConfig,
+						repoFiles: {
+							...nextConfig.repoFiles,
+							prTemplate: {
+								...nextConfig.repoFiles.prTemplate,
+								honeypotPhrases: [generateHoneypotPhrase()],
+							},
+						},
+					};
+				}
+
+				if (
+					nextConfig.repoFiles.agentsMd.honeypotEnabled &&
+					nextConfig.repoFiles.agentsMd.honeypotPhrases.length === 0
+				) {
+					nextConfig = {
+						...nextConfig,
+						repoFiles: {
+							...nextConfig.repoFiles,
+							agentsMd: {
+								...nextConfig.repoFiles.agentsMd,
+								honeypotPhrases: [generateHoneypotPhrase()],
+							},
+						},
+					};
+				}
+
+				await tx
+					.insert(ruleConfigs)
+					.values({
+						repoId: input.repoId,
+						config: nextConfig,
+					})
+					.onConflictDoUpdate({
+						target: ruleConfigs.repoId,
+						set: { config: nextConfig, updatedAt: new Date() },
+					});
+
+				return { previousConfig, nextConfig };
+			});
 
 			const changes = describeRuleConfigChanges(previousConfig, nextConfig);
 
@@ -113,50 +224,65 @@ export const rulesRouter = {
 			if (nextConfig.repoFiles.prTemplate.autoSync) {
 				void syncRepoFileSafe(repo, org, "pr-template", nextConfig);
 			}
+			if (nextConfig.repoFiles.agentsMd.autoSync) {
+				void syncRepoFileSafe(repo, org, "agents-md", nextConfig);
+			}
 
 			return nextConfig;
 		}),
 
-	/** Persist a user-edited override for RULES.md or PR template content. */
+	/** Persist a user-edited override for RULES.md, PR template, or AGENTS.md content. */
 	updateRepoFileContent: authedProcedure
 		.input(
 			z.object({
 				repoId: z.string().uuid(),
-				kind: z.enum(["rules-md", "pr-template"]),
+				kind: z.enum(["rules-md", "pr-template", "agents-md"]),
 				content: z.string().max(50_000),
 			}),
 		)
 		.mutation(async ({ input, ctx }) => {
 			await assertRepoOwner(ctx.user.id, input.repoId);
-			const [existing] = await db
-				.select()
-				.from(ruleConfigs)
-				.where(eq(ruleConfigs.repoId, input.repoId));
-			const current = normalizeRuleConfig(existing?.config ?? DEFAULT_RULE_CONFIG);
-			const next: RuleConfig =
-				input.kind === "rules-md"
-					? {
-							...current,
-							repoFiles: {
-								...current.repoFiles,
-								rulesMd: { ...current.repoFiles.rulesMd, customContent: input.content },
-							},
-						}
-					: {
-							...current,
-							repoFiles: {
-								...current.repoFiles,
-								prTemplate: { ...current.repoFiles.prTemplate, customContent: input.content },
-							},
-						};
-			if (existing) {
-				await db
-					.update(ruleConfigs)
-					.set({ config: next, updatedAt: new Date() })
+			await db.transaction(async (tx) => {
+				await lockRuleConfig(tx, input.repoId);
+				const [existing] = await tx
+					.select()
+					.from(ruleConfigs)
 					.where(eq(ruleConfigs.repoId, input.repoId));
-			} else {
-				await db.insert(ruleConfigs).values({ repoId: input.repoId, config: next });
-			}
+				const current = normalizeRuleConfig(existing?.config ?? DEFAULT_RULE_CONFIG);
+				let next: RuleConfig;
+				if (input.kind === "rules-md") {
+					next = {
+						...current,
+						repoFiles: {
+							...current.repoFiles,
+							rulesMd: { ...current.repoFiles.rulesMd, customContent: input.content },
+						},
+					};
+				} else if (input.kind === "agents-md") {
+					next = {
+						...current,
+						repoFiles: {
+							...current.repoFiles,
+							agentsMd: { ...current.repoFiles.agentsMd, customContent: input.content },
+						},
+					};
+				} else {
+					next = {
+						...current,
+						repoFiles: {
+							...current.repoFiles,
+							prTemplate: { ...current.repoFiles.prTemplate, customContent: input.content },
+						},
+					};
+				}
+				await tx
+					.insert(ruleConfigs)
+					.values({ repoId: input.repoId, config: next })
+					.onConflictDoUpdate({
+						target: ruleConfigs.repoId,
+						set: { config: next, updatedAt: new Date() },
+					});
+			});
 			return { ok: true as const };
 		}),
 
@@ -165,7 +291,7 @@ export const rulesRouter = {
 		.input(
 			z.object({
 				repoId: z.string().uuid(),
-				kind: z.enum(["rules-md", "pr-template"]),
+				kind: z.enum(["rules-md", "pr-template", "agents-md"]),
 			}),
 		)
 		.mutation(async ({ input, ctx }) => {
@@ -241,53 +367,135 @@ export const rulesRouter = {
 			}),
 		)
 		.mutation(async ({ input, ctx }) => {
-			await assertRepoOwner(ctx.user.id, input.repoId);
+			const { org } = await assertRepoOwner(ctx.user.id, input.repoId);
+			const token = await getInstallationToken(org.githubInstallationId);
+			const importedWhitelistUsers = await resolveListUsers(token, uniqueUsernames(input.whitelist));
+			const importedBlacklistUsers = await resolveListUsers(token, uniqueUsernames(input.blacklist));
 
 			// Persist rule config + whitelist + blacklist atomically. If the lists
 			// fail to insert we don't want the rule config drifting from them.
 			//
-			// TODO: conflict-resolution policy between whitelist and blacklist on
-			// import. Today we accept the imported data as-is — if a username
-			// shows up on both lists in the source repo, both rows land here.
-			// The unique-per-list indexes still prevent duplicates within a list.
+			// Blacklist wins on import, matching the manual list mutation paths.
+			// A username present in both imported lists, or already blacklisted in
+			// this repo, must not remain whitelisted.
 			await db.transaction(async (tx) => {
-				const [existing] = await tx
-					.select()
-					.from(ruleConfigs)
-					.where(eq(ruleConfigs.repoId, input.repoId));
+				await lockRuleConfig(tx, input.repoId);
 
-				if (existing) {
-					await tx
-						.update(ruleConfigs)
-						.set({ config: input.config, updatedAt: new Date() })
-						.where(eq(ruleConfigs.repoId, input.repoId));
-				} else {
-					await tx.insert(ruleConfigs).values({
+				const nextConfig = normalizeRuleConfig(input.config);
+				await tx
+					.insert(ruleConfigs)
+					.values({
 						repoId: input.repoId,
-						config: input.config,
+						config: nextConfig,
+					})
+					.onConflictDoUpdate({
+						target: ruleConfigs.repoId,
+						set: { config: nextConfig, updatedAt: new Date() },
 					});
+
+				const affectedUsernames = new Set([
+					...importedWhitelistUsers.map((user) => user.login.toLowerCase()),
+					...importedBlacklistUsers.map((user) => user.login.toLowerCase()),
+				]);
+				for (const githubUsername of affectedUsernames) {
+					await lockListMembership(tx, input.repoId, githubUsername);
 				}
 
-				if (input.whitelist && input.whitelist.length > 0) {
+				const importedBlacklistKeys = new Set(
+					importedBlacklistUsers.map((user) => user.login.toLowerCase()),
+				);
+				const importedBlacklistIds = new Set(
+					importedBlacklistUsers.map((user) => user.id),
+				);
+				const existingBlacklist =
+					importedWhitelistUsers.length > 0
+						? await tx
+								.select({
+									githubUsername: blacklistEntries.githubUsername,
+									githubUserId: blacklistEntries.githubUserId,
+								})
+								.from(blacklistEntries)
+								.where(eq(blacklistEntries.repoId, input.repoId))
+						: [];
+				const importedWhitelistKeys = new Set(
+					importedWhitelistUsers.map((user) => user.login.toLowerCase()),
+				);
+				const importedWhitelistIds = new Set(
+					importedWhitelistUsers.map((user) => user.id),
+				);
+				const blockedUsernames = new Set([
+					...importedBlacklistKeys,
+					...existingBlacklist.map((entry) =>
+						entry.githubUsername.toLowerCase(),
+					).filter((githubUsername) => importedWhitelistKeys.has(githubUsername)),
+				]);
+				const blockedUserIds = new Set([
+					...importedBlacklistIds,
+					...existingBlacklist.map((entry) => entry.githubUserId)
+						.filter((githubUserId) => importedWhitelistIds.has(githubUserId)),
+				]);
+				const whitelist = importedWhitelistUsers.filter(
+					(user) =>
+						!blockedUsernames.has(user.login.toLowerCase()) &&
+						!blockedUserIds.has(user.id),
+				);
+
+				for (const githubUsername of blockedUsernames) {
+					await tx
+						.delete(whitelistEntries)
+						.where(
+							and(
+								eq(whitelistEntries.repoId, input.repoId),
+								sql`lower(${whitelistEntries.githubUsername}) = ${githubUsername}`,
+							),
+						);
+				}
+				for (const githubUserId of blockedUserIds) {
+					await tx
+						.delete(whitelistEntries)
+						.where(
+							and(
+								eq(whitelistEntries.repoId, input.repoId),
+								eq(whitelistEntries.githubUserId, githubUserId),
+							),
+						);
+				}
+
+				if (whitelist.length > 0) {
 					await tx
 						.insert(whitelistEntries)
 						.values(
-							input.whitelist.map((githubUsername) => ({
+							whitelist.map((user) => ({
 								repoId: input.repoId,
-								githubUsername,
+								githubUsername: user.login,
+								githubUserId: user.id,
+								avatarUrl: user.avatarUrl,
 								addedById: ctx.user.id,
 							})),
 						)
 						.onConflictDoNothing();
 				}
 
-				if (input.blacklist && input.blacklist.length > 0) {
+				if (importedBlacklistUsers.length > 0) {
+					for (const user of importedBlacklistUsers) {
+						await tx
+							.delete(whitelistEntries)
+							.where(
+								and(
+									eq(whitelistEntries.repoId, input.repoId),
+									sql`lower(${whitelistEntries.githubUsername}) = ${user.login.toLowerCase()}`,
+								),
+							);
+					}
+
 					await tx
 						.insert(blacklistEntries)
 						.values(
-							input.blacklist.map((githubUsername) => ({
+							importedBlacklistUsers.map((user) => ({
 								repoId: input.repoId,
-								githubUsername,
+								githubUsername: user.login,
+								githubUserId: user.id,
+								avatarUrl: user.avatarUrl,
 								addedById: ctx.user.id,
 							})),
 						)
@@ -300,7 +508,7 @@ export const rulesRouter = {
 } satisfies TRPCRouterRecord;
 
 
-type RepoFileKind = "rules-md" | "pr-template";
+type RepoFileKind = "rules-md" | "pr-template" | "agents-md";
 
 async function syncRepoFile(
 	repo: RepoRow,
@@ -316,6 +524,18 @@ async function syncRepoFile(
 		const content = custom.trim().length > 0 ? custom : generateRulesMd(config, repo.fullName);
 		await putRepoFile(token, owner, repoName, "RULES.md", content, "chore: sync Tripwire RULES.md");
 		return { kind, path: "RULES.md" };
+	}
+
+	if (kind === "agents-md") {
+		const phrase = config.repoFiles.agentsMd.honeypotEnabled
+			? pickHoneypotPhrase(config.repoFiles.agentsMd.honeypotPhrases)
+			: undefined;
+		const custom = config.repoFiles.agentsMd.customContent;
+		const content =
+			custom.trim().length > 0 ? custom : generateAgentsMd(config, repo.fullName, phrase);
+		const path = ".github/AGENTS.md";
+		await putRepoFile(token, owner, repoName, path, content, "chore: sync Tripwire AGENTS.md");
+		return { kind, path };
 	}
 
 	const phrase = config.repoFiles.prTemplate.honeypotEnabled
@@ -341,4 +561,3 @@ async function syncRepoFileSafe(
 		console.error(`[repo-files] auto-sync ${kind} failed for ${repo.id}:`, err);
 	}
 }
-

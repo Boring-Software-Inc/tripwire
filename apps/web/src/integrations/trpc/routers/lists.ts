@@ -1,14 +1,22 @@
 import { z } from "zod";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, or, sql } from "drizzle-orm";
 import { authedProcedure } from "../init";
 import { assertRepoOwner } from "@tripwire/core";
 import { trpcError } from "../error";
 import { db } from "@tripwire/db/client";
 import { whitelistEntries, blacklistEntries } from "@tripwire/db";
 import { logEvent } from '@tripwire/core';
-import { getInstallationToken, getRepoContributors } from '@tripwire/github';
+import { encodeGitHubUsername, getInstallationToken, getRepoContributors, isGitHubUsername } from '@tripwire/github';
 
 import type { TRPCRouterRecord } from "@trpc/server";
+
+type DbTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+async function lockListMembership(tx: DbTx, repoId: string, username: string) {
+	await tx.execute(sql`
+		select pg_advisory_xact_lock(hashtext(${repoId}), hashtext(${username.toLowerCase()}))
+	`);
+}
 
 // Validate GitHub user exists and get their info
 async function validateGitHubUser(username: string): Promise<{
@@ -16,7 +24,7 @@ async function validateGitHubUser(username: string): Promise<{
 	login: string;
 	avatar_url: string;
 }> {
-	const res = await fetch(`https://api.github.com/users/${username}`, {
+	const res = await fetch(`https://api.github.com/users/${encodeGitHubUsername(username)}`, {
 		headers: {
 			Accept: "application/vnd.github.v3+json",
 			"User-Agent": "Tripwire",
@@ -61,7 +69,7 @@ export const whitelistRouter = {
 		.input(
 			z.object({
 				repoId: z.string().uuid(),
-				githubUsername: z.string().min(1),
+				githubUsername: z.string().min(1).refine(isGitHubUsername, "Invalid GitHub username"),
 			}),
 		)
 		.mutation(async ({ input, ctx }) => {
@@ -73,13 +81,18 @@ export const whitelistRouter = {
 			// guarantees the insert is race-safe; ON CONFLICT DO NOTHING turns a
 			// concurrent duplicate into a clean "already whitelisted" 409.
 			const entry = await db.transaction(async (tx) => {
+				await lockListMembership(tx, input.repoId, ghUser.login);
+
 				const [blacklisted] = await tx
 					.select()
 					.from(blacklistEntries)
 					.where(
 						and(
 							eq(blacklistEntries.repoId, input.repoId),
-							sql`lower(${blacklistEntries.githubUsername}) = lower(${ghUser.login})`,
+							or(
+								eq(blacklistEntries.githubUserId, ghUser.id),
+								sql`lower(${blacklistEntries.githubUsername}) = lower(${ghUser.login})`,
+							),
 						),
 					)
 					.limit(1);
@@ -136,26 +149,42 @@ export const whitelistRouter = {
 		.input(
 			z.object({
 				repoId: z.string().uuid(),
-				githubUsername: z.string(),
+				githubUsername: z.string().min(1).refine(isGitHubUsername, "Invalid GitHub username"),
 			}),
 		)
 		.mutation(async ({ input, ctx }) => {
 			await assertRepoOwner(ctx.user.id, input.repoId);
-			await db
-				.delete(whitelistEntries)
-				.where(
-					and(
-						eq(whitelistEntries.repoId, input.repoId),
-						eq(whitelistEntries.githubUsername, input.githubUsername),
-					),
-				);
+			const [deleted] = await db.transaction(async (tx) => {
+				await lockListMembership(tx, input.repoId, input.githubUsername);
+				return tx
+					.delete(whitelistEntries)
+					.where(
+						and(
+							eq(whitelistEntries.repoId, input.repoId),
+							sql`lower(${whitelistEntries.githubUsername}) = ${input.githubUsername.toLowerCase()}`,
+						),
+					)
+					.returning({
+						githubUsername: whitelistEntries.githubUsername,
+						githubUserId: whitelistEntries.githubUserId,
+					});
+			});
+
+			if (!deleted) {
+				throw trpcError({
+					code: "lists.not_whitelisted",
+					status: 404,
+					message: "User is not on the whitelist",
+				});
+			}
 
 			await logEvent({
 				repoId: input.repoId,
 				action: "whitelist_removed",
 				severity: "info",
-				description: `@${input.githubUsername} was removed from the whitelist`,
-				targetGithubUsername: input.githubUsername,
+				description: `@${deleted.githubUsername} was removed from the whitelist`,
+				targetGithubUsername: deleted.githubUsername,
+				targetGithubUserId: deleted.githubUserId ?? undefined,
 				metadata: { removedBy: ctx.user?.name ?? ctx.user?.id },
 			});
 
@@ -201,7 +230,7 @@ export const blacklistRouter = {
 		.input(
 			z.object({
 				repoId: z.string().uuid(),
-				githubUsername: z.string().min(1),
+				githubUsername: z.string().min(1).refine(isGitHubUsername, "Invalid GitHub username"),
 			}),
 		)
 		.mutation(async ({ input, ctx }) => {
@@ -216,12 +245,17 @@ export const blacklistRouter = {
 			// makes ON CONFLICT DO NOTHING the race-safe "already blacklisted"
 			// path.
 			const entry = await db.transaction(async (tx) => {
+				await lockListMembership(tx, input.repoId, ghUser.login);
+
 				await tx
 					.delete(whitelistEntries)
 					.where(
 						and(
 							eq(whitelistEntries.repoId, input.repoId),
-							sql`lower(${whitelistEntries.githubUsername}) = lower(${ghUser.login})`,
+							or(
+								eq(whitelistEntries.githubUserId, ghUser.id),
+								sql`lower(${whitelistEntries.githubUsername}) = lower(${ghUser.login})`,
+							),
 						),
 					);
 
@@ -267,26 +301,42 @@ export const blacklistRouter = {
 		.input(
 			z.object({
 				repoId: z.string().uuid(),
-				githubUsername: z.string(),
+				githubUsername: z.string().min(1).refine(isGitHubUsername, "Invalid GitHub username"),
 			}),
 		)
 		.mutation(async ({ input, ctx }) => {
 			await assertRepoOwner(ctx.user.id, input.repoId);
-			await db
-				.delete(blacklistEntries)
-				.where(
-					and(
-						eq(blacklistEntries.repoId, input.repoId),
-						eq(blacklistEntries.githubUsername, input.githubUsername),
-					),
-				);
+			const [deleted] = await db.transaction(async (tx) => {
+				await lockListMembership(tx, input.repoId, input.githubUsername);
+				return tx
+					.delete(blacklistEntries)
+					.where(
+						and(
+							eq(blacklistEntries.repoId, input.repoId),
+							sql`lower(${blacklistEntries.githubUsername}) = ${input.githubUsername.toLowerCase()}`,
+						),
+					)
+					.returning({
+						githubUsername: blacklistEntries.githubUsername,
+						githubUserId: blacklistEntries.githubUserId,
+					});
+			});
+
+			if (!deleted) {
+				throw trpcError({
+					code: "lists.not_blacklisted",
+					status: 404,
+					message: "User is not on the blacklist",
+				});
+			}
 
 			await logEvent({
 				repoId: input.repoId,
 				action: "blacklist_removed",
 				severity: "info",
-				description: `@${input.githubUsername} was removed from the blacklist`,
-				targetGithubUsername: input.githubUsername,
+				description: `@${deleted.githubUsername} was removed from the blacklist`,
+				targetGithubUsername: deleted.githubUsername,
+				targetGithubUserId: deleted.githubUserId ?? undefined,
 				metadata: { removedBy: ctx.user?.name ?? ctx.user?.id },
 			});
 

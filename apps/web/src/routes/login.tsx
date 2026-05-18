@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { authClient } from '@tripwire/auth/client';
 import { useEffect } from "react";
 import { Button } from "#/components/ui/button";
@@ -9,20 +9,19 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginPage() {
-	const navigate = useNavigate();
 	const { data: session, isPending } = authClient.useSession();
+	const callbackURL = getCallbackURL();
 
-	// Redirect to /rules if already logged in
 	useEffect(() => {
 		if (!isPending && session) {
-			navigate({ to: "/" });
+			window.location.href = callbackURL;
 		}
-	}, [session, isPending, navigate]);
+	}, [session, isPending, callbackURL]);
 
 	async function handleLogin() {
 		await authClient.signIn.social({
 			provider: "github",
-			callbackURL: "/rules",
+			callbackURL,
 		});
 	}
 
@@ -47,4 +46,15 @@ function LoginPage() {
 			</Button>
 		</div>
 	);
+}
+
+function sanitizeRedirect(value: unknown): string | undefined {
+	if (typeof value !== "string") return undefined;
+	if (!value.startsWith("/") || value.startsWith("//")) return undefined;
+	return value;
+}
+
+function getCallbackURL(): string {
+	if (typeof window === "undefined") return "/rules";
+	return sanitizeRedirect(new URLSearchParams(window.location.search).get("redirect")) ?? "/rules";
 }

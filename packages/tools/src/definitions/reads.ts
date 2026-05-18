@@ -16,6 +16,7 @@ import {
 	assertRepoOwner,
 } from '@tripwire/core';
 import {
+	encodeGitHubUsername,
 	fetchUserAchievements,
 	fetchUserGraphQL,
 	getClosedPrCount,
@@ -25,6 +26,7 @@ import {
 	getPublicForkRepoCount,
 	getPublicNonForkRepoCount,
 	hasProfileReadme,
+	isGitHubUsername,
 } from '@tripwire/github';
 import {
 	type ScoreCategory,
@@ -40,6 +42,55 @@ import { requireRepoId } from "../helpers";
 
 function usernameEq(column: unknown, username: string) {
 	return sql`lower(${column}) = ${username.toLowerCase()}`;
+}
+
+const githubUsernameSchema = z
+	.string()
+	.trim()
+	.refine(isGitHubUsername, "Invalid GitHub username");
+
+function parseRepoFullName(input: string) {
+	const parts = input.trim().split("/");
+	if (parts.length !== 2 || !parts[0] || !parts[1]) {
+		throw createError({
+			code: "github.invalid_repo",
+			status: 400,
+			message: "Repo must be in owner/repo format",
+			internal: { repo: input },
+		});
+	}
+	return { owner: parts[0], repoName: parts[1], fullName: `${parts[0]}/${parts[1]}` };
+}
+
+function sanitizeUntrustedMarkdown(value: string | null | undefined): string | null {
+	if (!value) return value ?? null;
+	return value
+		.replace(/<[^>]*>/g, "")
+		.replace(/\]\(\s*(?:javascript|data|vbscript):[^)]*\)/gi, "](#)");
+}
+
+async function resolveOwnedRepoForInput(userId: string, repoInput: string) {
+	const requested = parseRepoFullName(repoInput);
+	const [row] = await db
+		.select({ repo: repositories, org: organizations })
+		.from(repositories)
+		.innerJoin(organizations, eq(repositories.orgId, organizations.id))
+		.where(
+			and(
+				eq(organizations.ownerId, userId),
+				sql`lower(${repositories.fullName}) = ${requested.fullName.toLowerCase()}`,
+			),
+		)
+		.limit(1);
+	if (!row) {
+		throw createError({
+			code: "resource.not_found",
+			status: 404,
+			message: "Repo not found",
+			internal: { repo: requested.fullName },
+		});
+	}
+	return row.repo;
 }
 
 async function getTokenForRepo(repoId: string): Promise<string | null> {
@@ -87,7 +138,7 @@ async function fetchGitHubUser(username: string, token?: string): Promise<GitHub
 	};
 	if (token) headers.Authorization = `Bearer ${token}`;
 
-	const res = await fetch(`https://api.github.com/users/${username}`, { headers });
+	const res = await fetch(`https://api.github.com/users/${encodeGitHubUsername(username)}`, { headers });
 	if (!res.ok) {
 		throw createError({
 			code: "github.user_not_found",
@@ -96,7 +147,21 @@ async function fetchGitHubUser(username: string, token?: string): Promise<GitHub
 			internal: { username, githubStatus: res.status },
 		});
 	}
-	return res.json() as Promise<GitHubUser>;
+	const payload = await res.json();
+	if (
+		!payload ||
+		typeof payload !== "object" ||
+		typeof (payload as GitHubUser).login !== "string" ||
+		typeof (payload as GitHubUser).id !== "number"
+	) {
+		throw createError({
+			code: "github.invalid_user_response",
+			status: 502,
+			message: `GitHub returned an invalid user payload for @${username}`,
+			internal: { username },
+		});
+	}
+	return payload as GitHubUser;
 }
 
 const fmtDate = (d: Date) =>
@@ -126,7 +191,7 @@ const listEvents = defineTool({
 	description:
 		"List recent moderation events for the current repo (newest first). Filterable by username, action, severity.",
 	inputSchema: z.object({
-		username: z.string().optional(),
+		username: githubUsernameSchema.optional(),
 		action: z.string().optional(),
 		severity: z.enum(["info", "warning", "error", "success"]).optional(),
 		limit: z.number().int().min(1).max(50).optional(),
@@ -433,7 +498,7 @@ const lookupUser = defineTool({
 	name: "lookup_user",
 	description:
 		"Look up a GitHub user's profile and their Tripwire activity history for the current repo. Pass the username without @.",
-	inputSchema: z.object({ username: z.string().min(1) }),
+	inputSchema: z.object({ username: githubUsernameSchema }),
 	handler: async ({ username }, ctx) => {
 		const repoId = requireRepoId(ctx);
 		const signals = await gatherUserSignals(username, ctx.userId, repoId);
@@ -513,7 +578,7 @@ const scoreBreakdown = defineTool({
 	description:
 		"Explain a GitHub user's Tripwire contributor score by showing every contributing factor and its point delta. Use when the user asks why a score is what it is.",
 	directInvokable: true,
-	inputSchema: z.object({ username: z.string().min(1) }),
+	inputSchema: z.object({ username: githubUsernameSchema }),
 	handler: async ({ username }, ctx) => {
 		const repoId = requireRepoId(ctx);
 		const signals = await gatherUserSignals(username, ctx.userId, repoId);
@@ -576,7 +641,7 @@ const explainScoreFlag = defineTool({
 	description:
 		"Explain WHY a specific contributor score flag fired by returning the exact PRs, timestamps, and data that triggered it. Use when a user asks about a specific line item in their score (e.g., 'why did I get burst spray?' or 'explain the auto-merge farm signal'). Returns only the relevant subset of data, not the full PR list.",
 	inputSchema: z.object({
-		username: z.string().min(1).describe("GitHub username"),
+		username: githubUsernameSchema.describe("GitHub username"),
 		flag: z.string().min(1).describe("The flag reason text or keyword (e.g., 'burst spray', 'cadence', 'auto-merge', 'blocked ratio', 'merge ratio', 'fork-heavy', 'brand-new')"),
 	}),
 	handler: async ({ username, flag }, ctx) => {
@@ -896,7 +961,7 @@ const describeWorkflow = defineTool({
 		const wf = rows.find((w) => w.name.toLowerCase().includes(nameLower));
 		if (!wf) return { found: false, name };
 
-		const def = wf.definition as { nodes: Array<Record<string, unknown>>; edges: Array<Record<string, unknown>> };
+			const def = wf.definition as unknown as { nodes: Array<Record<string, unknown>>; edges: Array<Record<string, unknown>> };
 		const nodes = def.nodes ?? [];
 		const edges = def.edges ?? [];
 
@@ -945,7 +1010,7 @@ const getUserPrs = defineTool({
 	description:
 		"Fetch a GitHub user's pull requests with full details (title, repo, dates, merge status). Returns 5 merged PRs by default; use limit and state params to adjust.",
 	inputSchema: z.object({
-		username: z.string().min(1).describe("GitHub username"),
+		username: githubUsernameSchema.describe("GitHub username"),
 		limit: z.number().int().min(1).max(25).optional().describe("Number of PRs to return (default 5)"),
 		state: z.enum(["merged", "closed", "open", "all"]).optional().describe("PR state filter (default merged)"),
 	}),
@@ -991,10 +1056,10 @@ const getPrDetail = defineTool({
 	handler: async ({ repo, prNumber }, ctx) => {
 		const repoId = requireRepoId(ctx);
 		await assertRepoOwner(ctx.userId, repoId);
-		const token = await getTokenForRepo(repoId);
+		const requestedRepo = await resolveOwnedRepoForInput(ctx.userId, repo);
+		const token = await getTokenForRepo(requestedRepo.id);
 		if (!token) throw createError({ code: "github.no_token", message: "No GitHub token available for this repo" });
-		const [owner, repoName] = repo.split("/");
-		if (!owner || !repoName) throw createError({ code: "github.invalid_repo", message: "Repo must be in owner/repo format" });
+		const { owner, repoName } = parseRepoFullName(requestedRepo.fullName);
 		const { fetchPRDetail } = await import("@tripwire/github/data-factory");
 		return fetchPRDetail(token, owner, repoName, prNumber);
 	},
@@ -1015,7 +1080,7 @@ const getPrDetail = defineTool({
 			commits: output.pr.commits,
 			timeToMergeMinutes: output.pr.timeToMergeMinutes,
 			draft: output.pr.draft,
-			body: output.pr.body,
+			body: sanitizeUntrustedMarkdown(output.pr.body),
 			closedBy: output.pr.closedBy,
 			selfClosed: output.pr.selfClosed,
 			labels: output.pr.labels,
@@ -1025,7 +1090,7 @@ const getPrDetail = defineTool({
 			comments: output.comments.map((c) => ({
 				author: c.author,
 				authorAvatar: c.authorAvatar,
-				body: c.body,
+				body: sanitizeUntrustedMarkdown(c.body),
 				createdAt: c.createdAt,
 				type: c.type,
 			})),
@@ -1045,12 +1110,12 @@ const getComments = defineTool({
 	handler: async ({ repo, issue_number, limit, include_bots }, ctx) => {
 		const repoId = requireRepoId(ctx);
 		await assertRepoOwner(ctx.userId, repoId);
-		const token = await getTokenForRepo(repoId);
+		const requestedRepo = await resolveOwnedRepoForInput(ctx.userId, repo);
+		const token = await getTokenForRepo(requestedRepo.id);
 		if (!token) throw createError({ code: "github.no_token", message: "No GitHub token available for this repo" });
-		const [owner, repoName] = repo.split("/");
-		if (!owner || !repoName) throw createError({ code: "github.invalid_repo", message: "Repo must be in owner/repo format" });
+		const { owner, repoName } = parseRepoFullName(requestedRepo.fullName);
 		const { fetchComments } = await import("@tripwire/github/data-factory");
-		return { repo, issueNumber: issue_number, ...(await fetchComments(token, owner, repoName, issue_number, { limit, includeBots: include_bots })) };
+		return { repo: requestedRepo.fullName, issueNumber: issue_number, ...(await fetchComments(token, owner, repoName, issue_number, { limit, includeBots: include_bots })) };
 	},
 	chatRender: (output) =>
 		makeSpec("CommentThread", {
@@ -1059,7 +1124,7 @@ const getComments = defineTool({
 			comments: output.comments.map((c) => ({
 				author: c.author,
 				authorAvatar: c.authorAvatar,
-				body: c.body,
+				body: sanitizeUntrustedMarkdown(c.body),
 				createdAt: c.createdAt,
 				type: c.type,
 			})),
@@ -1072,7 +1137,7 @@ const getUserRepos = defineTool({
 	description:
 		"Fetch a GitHub user's repositories with stars, language, and descriptions. Returns 5 top repos by stars by default.",
 	inputSchema: z.object({
-		username: z.string().min(1).describe("GitHub username"),
+		username: githubUsernameSchema.describe("GitHub username"),
 		limit: z.number().int().min(1).max(25).optional().describe("Number of repos to return (default 5)"),
 	}),
 	handler: async ({ username, limit }, ctx) => {
@@ -1113,7 +1178,7 @@ const getUserActivity = defineTool({
 	description:
 		"Fetch a GitHub user's contribution activity: total contributions, active years, pinned repos, and organization memberships.",
 	inputSchema: z.object({
-		username: z.string().min(1).describe("GitHub username"),
+		username: githubUsernameSchema.describe("GitHub username"),
 	}),
 	handler: async ({ username }, ctx) => {
 		const repoId = requireRepoId(ctx);

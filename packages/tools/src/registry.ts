@@ -62,6 +62,9 @@ export interface ToolDefinition<
 	 * Set to a subset to make a tool surface-specific.
 	 *   - MCP-only: `surfaces: ["mcp"]`
 	 *   - Chat-only: `surfaces: ["chat"]`
+	 *
+	 * Approval-gated tools are not registered on MCP because MCP has no
+	 * server-verifiable approval token flow.
 	 */
 	surfaces?: readonly ToolSurface[];
 
@@ -76,6 +79,13 @@ export interface ToolDefinition<
 
 	/** Chat: tool is rendered lazily. */
 	lazy?: boolean;
+
+	/**
+	 * Tool mutates Tripwire state or can trigger external side effects.
+	 * Chat-surfaced mutations must set needsApproval so the signed approval
+	 * flow is part of the registration contract, not only a caller convention.
+	 */
+	mutates?: boolean;
 
 	/**
 	 * Whether the tool can be invoked directly from the UI (outside the chat
@@ -110,6 +120,13 @@ export interface ToolDefinition<
 export function defineTool<TShape extends z.ZodRawShape, TOutput>(
 	def: ToolDefinition<TShape, TOutput>,
 ): ToolDefinition<TShape, TOutput> {
+	const chatSurface = hasSurface(def, "chat");
+	if (def.mutates && chatSurface && def.needsApproval !== true) {
+		throw new Error(`Tool "${def.name}" mutates state and must require approval on chat`);
+	}
+	if (def.directInvokable && (def.mutates || def.needsApproval)) {
+		throw new Error(`Tool "${def.name}" cannot be directly invokable when it mutates or requires approval`);
+	}
 	return def;
 }
 
@@ -130,8 +147,24 @@ export function filterToolsForSurface(
 	tools: readonly AnyToolDefinition[],
 	surface: ToolSurface,
 ): AnyToolDefinition[] {
-	return tools.filter((tool) => {
-		const surfaces = tool.surfaces ?? ALL_SURFACES;
-		return surfaces.includes(surface);
-	});
+	return tools.filter((tool) => isToolAvailableOnSurface(tool, surface));
+}
+
+export function isToolAvailableOnSurface(
+	tool: AnyToolDefinition,
+	surface: ToolSurface,
+): boolean {
+	if (!hasSurface(tool, surface)) return false;
+
+	// MCP calls handlers directly and has no signed approval token boundary.
+	// Keep writes/approval-gated operations chat-only unless a future adapter
+	// adds an MCP-side approval mechanism.
+	if (surface === "mcp" && (tool.needsApproval || tool.mutates)) return false;
+
+	return true;
+}
+
+function hasSurface(tool: Pick<AnyToolDefinition, "surfaces">, surface: ToolSurface): boolean {
+	const surfaces = tool.surfaces ?? ALL_SURFACES;
+	return surfaces.includes(surface);
 }

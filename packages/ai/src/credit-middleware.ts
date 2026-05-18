@@ -16,6 +16,7 @@ interface CreditUsageOptions {
 	userName?: string;
 	userEmail?: string;
 	repoId?: string;
+	quotaLockId?: string;
 	usage: {
 		inputTokens?: number | { total?: number };
 		outputTokens?: number | { total?: number };
@@ -28,6 +29,7 @@ export async function trackCreditUsage({
 	userName,
 	userEmail,
 	repoId,
+	quotaLockId,
 	usage,
 }: CreditUsageOptions): Promise<void> {
 	const promptTokens = typeof usage.inputTokens === "number"
@@ -49,6 +51,7 @@ export async function trackCreditUsage({
 			completionTokens,
 			outcome: "no_tokens",
 		});
+		if (quotaLockId) await releaseQuotaLock(quotaLockId, modelId);
 		return;
 	}
 
@@ -71,22 +74,46 @@ export async function trackCreditUsage({
 		costCents: cents,
 	});
 
-	if (cents === 0) return;
-
 	try {
-		await autumn.track({
-			customerId,
-			featureId: "ai_credits",
-			value: cents,
-			properties: {
-				model: modelId,
-				repoId,
-				promptTokens,
-				completionTokens,
-			},
-		});
+		if (quotaLockId) {
+			await autumn.balances.finalize({
+				lockId: quotaLockId,
+				action: cents === 0 ? "release" : "confirm",
+				...(cents > 0 ? { overrideValue: cents } : {}),
+				properties: {
+					model: modelId,
+					repoId,
+					promptTokens,
+					completionTokens,
+				},
+			});
+		} else if (cents > 0) {
+			await autumn.track({
+				customerId,
+				featureId: "ai_credits",
+				value: cents,
+				properties: {
+					model: modelId,
+					repoId,
+					promptTokens,
+					completionTokens,
+				},
+			});
+		}
 	} catch (err) {
 		console.error("[billing] Failed to track usage:", err);
+	}
+}
+
+async function releaseQuotaLock(lockId: string, modelId: string): Promise<void> {
+	try {
+		await autumn.balances.finalize({
+			lockId,
+			action: "release",
+			properties: { model: modelId },
+		});
+	} catch (err) {
+		console.error("[billing] Failed to release quota lock:", err);
 	}
 }
 

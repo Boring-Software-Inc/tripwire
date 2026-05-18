@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { authedProcedure, publicProcedure } from "../init";
 import { assertRepoOwner, assertRequestOwner } from "@tripwire/core";
 import { trpcError } from "../error";
@@ -259,37 +259,46 @@ async function applyApproval(
 	tx: DbOrTx,
 	repoId: string,
 	kind: RequestKind,
-	gh: {
-		githubUsername: string;
-		githubUserId: number | null;
-		avatarUrl: string | null;
-		addedById: string;
-	},
-) {
+		gh: {
+			githubUsername: string;
+			githubUserId: number | null;
+			avatarUrl: string | null;
+			addedById: string;
+		},
+	) {
 	if (kind === "unblock") {
 		await tx
-			.delete(blacklistEntries)
-			.where(
-				and(
-					eq(blacklistEntries.repoId, repoId),
-					eq(blacklistEntries.githubUsername, gh.githubUsername),
-				),
-			);
+		.delete(blacklistEntries)
+		.where(
+			and(
+				eq(blacklistEntries.repoId, repoId),
+				sql`(${blacklistEntries.githubUserId} = ${gh.githubUserId} or lower(${blacklistEntries.githubUsername}) = ${gh.githubUsername.toLowerCase()})`,
+			),
+		);
 		return;
 	}
 
-	// Rely on the unique index (repoId, lower(githubUsername)) from PR 1 to
-	// keep this idempotent under concurrent approvals.
-	await tx
-		.insert(whitelistEntries)
-		.values({
-			repoId,
-			githubUsername: gh.githubUsername,
-			githubUserId: gh.githubUserId ?? undefined,
+		// Rely on the expression unique index (repoId, lower(githubUsername)) to
+	// keep this idempotent under concurrent approvals. Do not pass a conflict
+	// target here: Postgres cannot match (repo_id, github_username) to the
+	// lower(github_username) index.
+		if (gh.githubUserId == null) {
+			throw trpcError({
+				code: "requests.github_user_id_required",
+				status: 409,
+				message: "This request cannot be approved because it is missing a GitHub user id.",
+				fix: "Ask the contributor to submit a fresh request after signing in with GitHub.",
+			});
+		}
+
+		await tx
+			.insert(whitelistEntries)
+			.values({
+				repoId,
+				githubUsername: gh.githubUsername,
+				githubUserId: gh.githubUserId,
 			avatarUrl: gh.avatarUrl ?? undefined,
 			addedById: gh.addedById,
 		})
-		.onConflictDoNothing({
-			target: [whitelistEntries.repoId, whitelistEntries.githubUsername],
-		});
+		.onConflictDoNothing();
 }

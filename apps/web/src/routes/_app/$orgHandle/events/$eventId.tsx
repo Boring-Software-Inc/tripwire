@@ -38,7 +38,7 @@ function EventDetailPage() {
 		...trpc.blacklist.list.queryOptions({ repoId: repoId || "" }),
 		enabled: !!repoId,
 	});
-	const targetUsername = event?.targetGithubUsername;
+	const targetUsername = event?.targetGithubUsername ?? null;
 	const isAlreadyBlacklisted = blacklistQuery.data?.some(
 		(entry) => entry.githubUsername === targetUsername
 	) ?? false;
@@ -117,7 +117,8 @@ function EventDetailPage() {
 				? "#67E19F"
 				: "#D1BC00";
 
-	const username = displayEvent?.targetGithubUsername || "unknown";
+	const username = displayEvent?.targetGithubUsername ?? "unknown";
+	const canModerateTarget = displayEvent?.targetGithubUsername != null;
 	const user = githubUser.data;
 
 	return (
@@ -240,7 +241,7 @@ function EventDetailPage() {
 								variant={isAlreadyActioned(displayEvent?.action) ? "default" : "primary"}
 								onClick={() => {
 									const repoId = displayEvent?.repo?.id || repo?.id;
-									if (repoId && username !== "unknown") {
+									if (repoId && canModerateTarget) {
 										blacklistMutation.mutate({
 											repoId,
 											githubUsername: username,
@@ -261,7 +262,7 @@ function EventDetailPage() {
 								variant="ghost"
 								onClick={() => {
 									const repoId = displayEvent?.repo?.id || repo?.id;
-									if (repoId && username !== "unknown") {
+									if (repoId && canModerateTarget) {
 										whitelistMutation.mutate({
 											repoId,
 											githubUsername: username,

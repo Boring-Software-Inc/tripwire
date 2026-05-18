@@ -5,8 +5,22 @@ import { auth } from "@tripwire/auth";
 import { registerMcpTools, SERVER_INSTRUCTIONS } from "@tripwire/mcp";
 import { tripwireTools } from "@tripwire/tools";
 
-const handler = withMcpAuth(auth, (req, session) =>
-	createMcpHandler(
+const unauthorized = () => Response.json({
+	jsonrpc: "2.0",
+	error: {
+		code: -32000,
+		message: "Unauthorized: Authentication required",
+	},
+	id: null,
+}, { status: 401, headers: { "WWW-Authenticate": "Bearer" } });
+
+const handler = withMcpAuth(auth, (req, session) => {
+	const expiresAt = new Date(session.accessTokenExpiresAt);
+	if (Number.isNaN(expiresAt.getTime()) || expiresAt.getTime() <= Date.now()) {
+		return unauthorized();
+	}
+
+	return createMcpHandler(
 		(server) => {
 			registerMcpTools(server, session.userId, tripwireTools);
 		},
@@ -21,8 +35,8 @@ const handler = withMcpAuth(auth, (req, session) =>
 			verboseLogs: false,
 			maxDuration: 60,
 		},
-	)(req),
-);
+	)(req);
+});
 
 export const Route = createFileRoute("/api/mcp")({
 	server: {

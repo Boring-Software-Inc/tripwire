@@ -130,6 +130,18 @@ async function onInstallationCreated(payload: InstallationPayload) {
 					isPrivate: repo.private,
 				});
 				console.log("[Install] ✓ Added repo:", repo.full_name);
+			} else {
+				await db
+					.update(repositories)
+					.set({
+						orgId: org.id,
+						name: repo.name,
+						fullName: repo.full_name,
+						isPrivate: repo.private,
+						updatedAt: new Date(),
+					})
+					.where(eq(repositories.id, existing[0].id));
+				console.log("[Install] ✓ Updated repo:", repo.full_name);
 			}
 		}
 	}
@@ -165,6 +177,18 @@ export async function handleInstallationRepositories(payload: InstallationReposP
 					isPrivate: repo.private,
 				});
 				console.log(`[RepoChange] ✓ Added repo ${repo.full_name}`);
+			} else {
+				await db
+					.update(repositories)
+					.set({
+						orgId: org.id,
+						name: repo.name,
+						fullName: repo.full_name,
+						isPrivate: repo.private,
+						updatedAt: new Date(),
+					})
+					.where(eq(repositories.id, existing[0].id));
+				console.log(`[RepoChange] ✓ Updated repo ${repo.full_name}`);
 			}
 		}
 	}
@@ -173,7 +197,7 @@ export async function handleInstallationRepositories(payload: InstallationReposP
 		for (const repo of payload.repositories_removed) {
 			await db
 				.delete(repositories)
-				.where(eq(repositories.githubRepoId, repo.id));
+				.where(and(eq(repositories.githubRepoId, repo.id), eq(repositories.orgId, org.id)));
 			console.log(`[RepoChange] ✓ Removed repo ${repo.id}`);
 		}
 	}

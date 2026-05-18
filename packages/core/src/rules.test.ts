@@ -416,8 +416,13 @@ describe("cryptoAddressDetection", () => {
 // RULE 10: vouchedUsersOnly
 // ═══════════════════════════════════════════════════════════════
 
-describe("vouchedUsersOnly", () => {
-	it("blocks non-vouched users (user not on whitelist and not globally vouched)", () => {
+	describe("vouchedUsersOnly", () => {
+		const passesGlobalVouch = (
+			vouchScope: "repo" | "global" | "both",
+			isGloballyVouched: boolean,
+		) => (vouchScope === "global" || vouchScope === "both") && isGloballyVouched;
+
+		it("blocks non-vouched users (user not on whitelist and not globally vouched)", () => {
 		const isWhitelisted = false;
 		const isGloballyVouched = false;
 		const passed = isWhitelisted || isGloballyVouched;
@@ -430,25 +435,19 @@ describe("vouchedUsersOnly", () => {
 	});
 
 	it("allows globally vouched users with scope=global", () => {
-		const vouchScope = "global";
-		const isGloballyVouched = true;
-		const passed = (vouchScope === "global" || vouchScope === "both") && isGloballyVouched;
+		const passed = passesGlobalVouch("global", true);
 		expect(passed).toBe(true);
 	});
 
 	it("allows globally vouched users with scope=both", () => {
-		const vouchScope = "both";
-		const isGloballyVouched = true;
-		const passed = (vouchScope === "global" || vouchScope === "both") && isGloballyVouched;
+		const passed = passesGlobalVouch("both", true);
 		expect(passed).toBe(true);
 	});
 
 	it("does NOT allow globally vouched users with scope=repo", () => {
 		// With scope=repo, only the whitelist matters (checked earlier).
 		// If user isn't whitelisted, they fail regardless of global vouches.
-		const vouchScope = "repo";
-		const isGloballyVouched = true;
-		const passed = (vouchScope === "global" || vouchScope === "both") && isGloballyVouched;
+		const passed = passesGlobalVouch("repo", true);
 		expect(passed).toBe(false);
 	});
 });

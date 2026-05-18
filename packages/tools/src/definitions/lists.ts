@@ -1,4 +1,4 @@
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { createError } from "evlog";
 import { db } from "@tripwire/db/client";
@@ -10,7 +10,7 @@ import {
 } from "@tripwire/db";
 import { assertRepoOwner } from '@tripwire/core';
 import { logEvent } from '@tripwire/core';
-import { getInstallationToken } from '@tripwire/github';
+import { getInstallationToken, isGitHubUsername } from '@tripwire/github';
 import { resetContributorScore } from '@tripwire/core';
 import {
 	type AnyToolDefinition,
@@ -20,6 +20,14 @@ import {
 import { requireRepoId } from "../helpers";
 function usernameEq(column: unknown, username: string) {
 	return sql`lower(${column}) = ${username.toLowerCase()}`;
+}
+
+type DbTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+async function lockListMembership(tx: DbTx, repoId: string, username: string) {
+	await tx.execute(sql`
+		select pg_advisory_xact_lock(hashtext(${repoId}), hashtext(${username.toLowerCase()}))
+	`);
 }
 
 async function fetchGitHubUser(
@@ -163,7 +171,7 @@ const checkLists = defineTool({
 	name: "check_lists",
 	description:
 		"Check whether a SPECIFIC user is on the whitelist or blacklist. Use this when the user asks about one person; use list_lists for a full overview.",
-	inputSchema: z.object({ username: z.string().min(1) }),
+	inputSchema: z.object({ username: z.string().min(1).refine(isGitHubUsername, "Invalid GitHub username") }),
 	handler: async ({ username }, ctx) => {
 		const repoId = requireRepoId(ctx);
 		await assertRepoOwner(ctx.userId, repoId);
@@ -208,25 +216,32 @@ const addToBlacklist = defineTool({
 	name: "add_to_blacklist",
 	description:
 		"Add a GitHub user to the current repo's blacklist. Removes any existing whitelist entry for the same user in the same transaction.",
+	surfaces: ["chat"],
 	needsApproval: true,
-	inputSchema: z.object({ username: z.string().min(1) }),
+	mutates: true,
+	inputSchema: z.object({ username: z.string().min(1).refine(isGitHubUsername, "Invalid GitHub username") }),
 	handler: async ({ username }, ctx) => {
 		const repoId = requireRepoId(ctx);
 		await assertRepoOwner(ctx.userId, repoId);
 
 		const token = await getTokenForRepo(repoId);
-		const ghUser = await fetchGitHubUser(username, token ?? undefined).catch(() => null);
-		const targetLogin = ghUser?.login ?? username;
-		const targetUserId = ghUser?.id;
-		const avatarUrl = ghUser?.avatar_url;
+		const ghUser = await fetchGitHubUser(username, token ?? undefined);
+		const targetLogin = ghUser.login;
+		const targetUserId = ghUser.id;
+		const avatarUrl = ghUser.avatar_url;
 
 		const inserted = await db.transaction(async (tx) => {
+			await lockListMembership(tx, repoId, targetLogin);
+
 			await tx
 				.delete(whitelistEntries)
 				.where(
 					and(
 						eq(whitelistEntries.repoId, repoId),
-						usernameEq(whitelistEntries.githubUsername, targetLogin),
+						or(
+							eq(whitelistEntries.githubUserId, targetUserId),
+							usernameEq(whitelistEntries.githubUsername, targetLogin),
+						),
 					),
 				);
 			const [row] = await tx
@@ -271,20 +286,25 @@ const addToBlacklist = defineTool({
 const removeFromBlacklist = defineTool({
 	name: "remove_from_blacklist",
 	description: "Remove a GitHub user from the current repo's blacklist.",
+	surfaces: ["chat"],
 	needsApproval: true,
-	inputSchema: z.object({ username: z.string().min(1) }),
+	mutates: true,
+	inputSchema: z.object({ username: z.string().min(1).refine(isGitHubUsername, "Invalid GitHub username") }),
 	handler: async ({ username }, ctx) => {
 		const repoId = requireRepoId(ctx);
 		await assertRepoOwner(ctx.userId, repoId);
-		const deleted = await db
-			.delete(blacklistEntries)
-			.where(
-				and(
-					eq(blacklistEntries.repoId, repoId),
-					usernameEq(blacklistEntries.githubUsername, username),
-				),
-			)
-			.returning();
+		const deleted = await db.transaction(async (tx) => {
+			await lockListMembership(tx, repoId, username);
+			return tx
+				.delete(blacklistEntries)
+				.where(
+					and(
+						eq(blacklistEntries.repoId, repoId),
+						usernameEq(blacklistEntries.githubUsername, username),
+					),
+				)
+				.returning();
+		});
 
 		if (deleted.length === 0) {
 			return {
@@ -313,48 +333,62 @@ const addToWhitelist = defineTool({
 	name: "add_to_whitelist",
 	description:
 		"Add a GitHub user to the current repo's whitelist. Rejects if the user is on the blacklist (remove first).",
+	surfaces: ["chat"],
 	needsApproval: true,
-	inputSchema: z.object({ username: z.string().min(1) }),
+	mutates: true,
+	inputSchema: z.object({ username: z.string().min(1).refine(isGitHubUsername, "Invalid GitHub username") }),
 	handler: async ({ username }, ctx) => {
 		const repoId = requireRepoId(ctx);
 		await assertRepoOwner(ctx.userId, repoId);
 
 		const token = await getTokenForRepo(repoId);
-		const ghUser = await fetchGitHubUser(username, token ?? undefined).catch(() => null);
-		const targetLogin = ghUser?.login ?? username;
-		const targetUserId = ghUser?.id;
-		const avatarUrl = ghUser?.avatar_url;
+		const ghUser = await fetchGitHubUser(username, token ?? undefined);
+		const targetLogin = ghUser.login;
+		const targetUserId = ghUser.id;
+		const avatarUrl = ghUser.avatar_url;
 
-		const [blocked] = await db
-			.select({ id: blacklistEntries.id })
-			.from(blacklistEntries)
-			.where(
-				and(
-					eq(blacklistEntries.repoId, repoId),
-					usernameEq(blacklistEntries.githubUsername, targetLogin),
-				),
-			)
-			.limit(1);
-		if (blocked) {
+		const result = await db.transaction(async (tx) => {
+			await lockListMembership(tx, repoId, targetLogin);
+
+			const [blocked] = await tx
+				.select({ id: blacklistEntries.id })
+				.from(blacklistEntries)
+				.where(
+					and(
+						eq(blacklistEntries.repoId, repoId),
+						or(
+							eq(blacklistEntries.githubUserId, targetUserId),
+							usernameEq(blacklistEntries.githubUsername, targetLogin),
+						),
+					),
+				)
+				.limit(1);
+			if (blocked) {
+				return { blocked: true as const, inserted: null };
+			}
+
+			const [inserted] = await tx
+				.insert(whitelistEntries)
+				.values({
+					repoId,
+					githubUsername: targetLogin,
+					githubUserId: targetUserId,
+					avatarUrl,
+					addedById: ctx.userId,
+				})
+				.onConflictDoNothing()
+				.returning();
+			return { blocked: false as const, inserted };
+		});
+
+		if (result.blocked) {
 			return {
 				ok: false,
 				message: `@${targetLogin} is on the blacklist for this repo. Remove from blacklist before whitelisting.`,
 			};
 		}
 
-		const [inserted] = await db
-			.insert(whitelistEntries)
-			.values({
-				repoId,
-				githubUsername: targetLogin,
-				githubUserId: targetUserId,
-				avatarUrl,
-				addedById: ctx.userId,
-			})
-			.onConflictDoNothing()
-			.returning();
-
-		if (!inserted) {
+		if (!result.inserted) {
 			return {
 				ok: false,
 				message: `@${targetLogin} is already on the whitelist.`,
@@ -374,7 +408,7 @@ const addToWhitelist = defineTool({
 		return {
 			ok: true,
 			message: `@${targetLogin} has been added to the whitelist. They will bypass all rule checks.`,
-			data: { entry: inserted },
+			data: { entry: result.inserted },
 		};
 	},
 });
@@ -382,20 +416,25 @@ const addToWhitelist = defineTool({
 const removeFromWhitelist = defineTool({
 	name: "remove_from_whitelist",
 	description: "Remove a GitHub user from the current repo's whitelist.",
+	surfaces: ["chat"],
 	needsApproval: true,
-	inputSchema: z.object({ username: z.string().min(1) }),
+	mutates: true,
+	inputSchema: z.object({ username: z.string().min(1).refine(isGitHubUsername, "Invalid GitHub username") }),
 	handler: async ({ username }, ctx) => {
 		const repoId = requireRepoId(ctx);
 		await assertRepoOwner(ctx.userId, repoId);
-		const deleted = await db
-			.delete(whitelistEntries)
-			.where(
-				and(
-					eq(whitelistEntries.repoId, repoId),
-					usernameEq(whitelistEntries.githubUsername, username),
-				),
-			)
-			.returning();
+		const deleted = await db.transaction(async (tx) => {
+			await lockListMembership(tx, repoId, username);
+			return tx
+				.delete(whitelistEntries)
+				.where(
+					and(
+						eq(whitelistEntries.repoId, repoId),
+						usernameEq(whitelistEntries.githubUsername, username),
+					),
+				)
+				.returning();
+		});
 
 		if (deleted.length === 0) {
 			return {
@@ -426,24 +465,30 @@ const moveToWhitelist = defineTool({
 	surfaces: ["chat"],
 	needsApproval: true,
 	lazy: true,
-	inputSchema: z.object({ username: z.string().min(1) }),
+	mutates: true,
+	inputSchema: z.object({ username: z.string().min(1).refine(isGitHubUsername, "Invalid GitHub username") }),
 	handler: async ({ username }, ctx) => {
 		const repoId = requireRepoId(ctx);
 		await assertRepoOwner(ctx.userId, repoId);
 
 		const token = await getTokenForRepo(repoId);
-		const ghUser = await fetchGitHubUser(username, token ?? undefined).catch(() => null);
-		const targetLogin = ghUser?.login ?? username;
-		const targetUserId = ghUser?.id;
-		const avatarUrl = ghUser?.avatar_url;
+		const ghUser = await fetchGitHubUser(username, token ?? undefined);
+		const targetLogin = ghUser.login;
+		const targetUserId = ghUser.id;
+		const avatarUrl = ghUser.avatar_url;
 
 		const inserted = await db.transaction(async (tx) => {
+			await lockListMembership(tx, repoId, targetLogin);
+
 			await tx
 				.delete(blacklistEntries)
 				.where(
 					and(
 						eq(blacklistEntries.repoId, repoId),
-						usernameEq(blacklistEntries.githubUsername, targetLogin),
+						or(
+							eq(blacklistEntries.githubUserId, targetUserId),
+							usernameEq(blacklistEntries.githubUsername, targetLogin),
+						),
 					),
 				);
 			const rows = await tx
@@ -491,24 +536,30 @@ const moveToBlacklist = defineTool({
 	surfaces: ["chat"],
 	needsApproval: true,
 	lazy: true,
-	inputSchema: z.object({ username: z.string().min(1) }),
+	mutates: true,
+	inputSchema: z.object({ username: z.string().min(1).refine(isGitHubUsername, "Invalid GitHub username") }),
 	handler: async ({ username }, ctx) => {
 		const repoId = requireRepoId(ctx);
 		await assertRepoOwner(ctx.userId, repoId);
 
 		const token = await getTokenForRepo(repoId);
-		const ghUser = await fetchGitHubUser(username, token ?? undefined).catch(() => null);
-		const targetLogin = ghUser?.login ?? username;
-		const targetUserId = ghUser?.id;
-		const avatarUrl = ghUser?.avatar_url;
+		const ghUser = await fetchGitHubUser(username, token ?? undefined);
+		const targetLogin = ghUser.login;
+		const targetUserId = ghUser.id;
+		const avatarUrl = ghUser.avatar_url;
 
 		const inserted = await db.transaction(async (tx) => {
+			await lockListMembership(tx, repoId, targetLogin);
+
 			await tx
 				.delete(whitelistEntries)
 				.where(
 					and(
 						eq(whitelistEntries.repoId, repoId),
-						usernameEq(whitelistEntries.githubUsername, targetLogin),
+						or(
+							eq(whitelistEntries.githubUserId, targetUserId),
+							usernameEq(whitelistEntries.githubUsername, targetLogin),
+						),
 					),
 				);
 			const rows = await tx
@@ -552,9 +603,11 @@ const resetContributorScoreTool = defineTool({
 	name: "reset_contributor_score",
 	description:
 		"Forgive a GitHub user's accumulated Tripwire history for this repo. Zeros their reputation totals (blocks/allows/near-misses) and stamps a reset timestamp so future score_breakdown / lookup_user calls ignore older events. The audit events themselves are preserved.",
+	surfaces: ["chat"],
 	needsApproval: true,
+	mutates: true,
 	inputSchema: z.object({
-		username: z.string().min(1),
+		username: z.string().min(1).refine(isGitHubUsername, "Invalid GitHub username"),
 		reason: z.string().optional(),
 	}),
 	handler: async ({ username, reason }, ctx) => {
@@ -562,13 +615,13 @@ const resetContributorScoreTool = defineTool({
 		await assertRepoOwner(ctx.userId, repoId);
 
 		const token = await getTokenForRepo(repoId);
-		const ghUser = await fetchGitHubUser(username, token ?? undefined).catch(() => null);
+		const ghUser = await fetchGitHubUser(username, token ?? undefined);
 
 		const result = await resetContributorScore({
 			repoId,
 			userId: ctx.userId,
-			username: ghUser?.login ?? username,
-			githubUserId: ghUser?.id,
+			username: ghUser.login,
+			githubUserId: ghUser.id,
 			reason,
 		});
 

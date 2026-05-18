@@ -4,38 +4,52 @@ import { createTRPCRouter, publicProcedure } from "../init";
 import { db } from "@tripwire/db/client";
 import { waitlist } from "@tripwire/db";
 import { checkRateLimit } from "@tripwire/ratelimit";
-import { trpcError } from "../error";
 
 export const waitlistRouter = createTRPCRouter({
 	join: publicProcedure
-		.input(z.object({ email: z.string().email() }))
-		.mutation(async ({ input }) => {
-			// Rate limit by a stable hash of the (lowercased) email. The previous
-			// x-forwarded-for-based identifier was trivially spoofable.
-			const identifier = createHash("sha256")
-				.update(input.email.toLowerCase())
+		.input(z.object({ email: z.string().trim().email() }))
+		.mutation(async ({ input, ctx }) => {
+			const email = input.email.toLowerCase();
+			const emailIdentifier = createHash("sha256")
+				.update(email)
 				.digest("hex")
 				.slice(0, 32);
-			await checkRateLimit("waitlist", identifier);
+			const ipIdentifier = createHash("sha256")
+				.update(getClientIp(ctx.headers))
+				.digest("hex")
+				.slice(0, 32);
+			await Promise.all([
+				checkRateLimit("waitlistGlobal", "join"),
+				checkRateLimit("waitlist", `email:${emailIdentifier}`),
+				checkRateLimit("waitlist", `ip:${ipIdentifier}`),
+			]);
 
 			try {
-				await db.insert(waitlist).values({ email: input.email });
+				await db.insert(waitlist).values({ email });
 				return { success: true };
 			} catch (err) {
-				// Handle unique constraint violation (already on waitlist)
+				// Return the same success envelope for duplicate emails so the
+				// endpoint cannot be used as a waitlist membership oracle.
 				if (
 					err instanceof Error &&
 					err.message.includes("unique constraint")
 				) {
-					throw trpcError({
-						code: "waitlist.already_joined",
-						status: 409,
-						message: "You're already on the waitlist!",
-						fix: "Watch the inbox you used — we'll email when access opens.",
-						cause: err,
-					});
+					return { success: true };
 				}
 				throw err;
 			}
 		}),
 });
+
+function getClientIp(headers: Headers): string {
+	const cfIp = headers.get("cf-connecting-ip")?.trim();
+	if (cfIp) return cfIp;
+	const realIp = headers.get("x-real-ip")?.trim();
+	if (realIp) return realIp;
+	const forwardedFor = headers.get("x-forwarded-for");
+	const firstForwarded = forwardedFor?.split(",")[0]?.trim();
+	return (
+		firstForwarded ||
+		"unknown"
+	);
+}

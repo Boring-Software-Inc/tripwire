@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "@tripwire/db/client";
 import {
 	DEFAULT_RULE_CONFIG,
@@ -29,20 +29,12 @@ export async function loadRuleConfig(repoId: string): Promise<RuleConfig> {
 	return normalizeRuleConfig(row?.config ?? DEFAULT_RULE_CONFIG);
 }
 
-async function persistRuleConfig(repoId: string, config: RuleConfig): Promise<void> {
-	const normalized = normalizeRuleConfig(config);
-	const [existing] = await db
-		.select({ id: ruleConfigs.id })
-		.from(ruleConfigs)
-		.where(eq(ruleConfigs.repoId, repoId));
-	if (existing) {
-		await db
-			.update(ruleConfigs)
-			.set({ config: normalized, updatedAt: new Date() })
-			.where(eq(ruleConfigs.repoId, repoId));
-	} else {
-		await db.insert(ruleConfigs).values({ repoId, config: normalized });
-	}
+type DbTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+async function lockRuleConfig(tx: DbTx, repoId: string) {
+	await tx.execute(sql`
+		select pg_advisory_xact_lock(hashtext(${repoId}))
+	`);
 }
 export interface RuleMutationOpts {
 	ctx: ToolContext;
@@ -65,21 +57,40 @@ export async function applyRuleMutation(
 	const repoId = requireRepoId(opts.ctx);
 	await assertRepoOwner(opts.ctx.userId, repoId);
 
-	const current = await loadRuleConfig(repoId);
-	const draft = structuredClone(current) as RuleConfig;
-	opts.mutate(draft);
+	const result = await db.transaction(async (tx) => {
+		await lockRuleConfig(tx, repoId);
 
-	const parsed = ruleConfigSchema.safeParse(draft);
-	if (!parsed.success) {
-		const issue = parsed.error.issues[0];
-		const path = issue?.path.join(".") ?? "config";
-		return {
-			ok: false,
-			message: `Invalid rule config: ${path} — ${issue?.message ?? "validation failed"}.`,
-		};
-	}
+		const [row] = await tx
+			.select()
+			.from(ruleConfigs)
+			.where(eq(ruleConfigs.repoId, repoId));
+		const current = normalizeRuleConfig(row?.config ?? DEFAULT_RULE_CONFIG);
+		const draft = structuredClone(current) as RuleConfig;
+		opts.mutate(draft);
 
-	await persistRuleConfig(repoId, parsed.data);
+		const parsed = ruleConfigSchema.safeParse(draft);
+		if (!parsed.success) {
+			const issue = parsed.error.issues[0];
+			const path = issue?.path.join(".") ?? "config";
+			return {
+				ok: false as const,
+				message: `Invalid rule config: ${path} — ${issue?.message ?? "validation failed"}.`,
+			};
+		}
+
+		const normalized = normalizeRuleConfig(parsed.data);
+		await tx
+			.insert(ruleConfigs)
+			.values({ repoId, config: normalized })
+			.onConflictDoUpdate({
+				target: ruleConfigs.repoId,
+				set: { config: normalized, updatedAt: new Date() },
+			});
+
+		return { ok: true as const };
+	});
+
+	if (!result.ok) return result;
 
 	await logEvent({
 		repoId,

@@ -13,6 +13,24 @@ import { env } from "@tripwire/env/server";
 import { eq, and, ne, count } from "drizzle-orm";
 import { deleteInstallation } from "@tripwire/github";
 
+const ORGANIZATION_ROLES = new Set(["owner", "admin", "member"]);
+
+function normalizeOrganizationRole(role: string | string[]) {
+	const roles = Array.isArray(role) ? role : [role];
+	const [singleRole] = roles;
+
+	if (
+		roles.length !== 1 ||
+		typeof singleRole !== "string" ||
+		!ORGANIZATION_ROLES.has(singleRole)
+	) {
+		throw new APIError("BAD_REQUEST", {
+			message: "Invalid organization role.",
+		});
+	}
+	return singleRole;
+}
+
 export const auth = betterAuth({
 	baseURL: env.BETTER_AUTH_URL,
 	secret: env.BETTER_AUTH_SECRET,
@@ -98,57 +116,19 @@ export const auth = betterAuth({
 					// or if explicitly triggered by the user
 				},
 
-				// Guard ownership transfers
-				beforeUpdateMemberRole: async ({ newRole, user, organization: org }) => {
-					// Only owners can transfer ownership
-					if (newRole === "owner" || (Array.isArray(newRole) && newRole.includes("owner"))) {
-						const [callerMembership] = await db
-							.select({ role: member.role })
-							.from(member)
-							.where(and(
-								eq(member.userId, user.id),
-								eq(member.organizationId, org.id),
-							))
-							.limit(1);
-
-						if (!callerMembership || callerMembership.role !== "owner") {
-							throw new APIError("UNAUTHORIZED", {
-								message: "Only the current owner can transfer ownership.",
-							});
-						}
-					}
-
-					return { data: { role: newRole } };
+				beforeUpdateMemberRole: async ({ newRole }) => {
+					// Better Auth passes the target user to this hook, not the caller.
+					// Keep caller authorization in Better Auth's own endpoint checks and
+					// only normalize Tripwire's supported single-role model here.
+					return { data: { role: normalizeOrganizationRole(newRole) } };
 				},
-
-				// After ownership transfer, demote the previous owner to admin
-				afterUpdateMemberRole: async ({ member: updatedMember, previousRole, user, organization: org }) => {
-					const newRole = updatedMember.role;
-					const isPromotion = newRole === "owner" && previousRole !== "owner";
-
-					if (isPromotion) {
-						// Demote the previous owner (the caller) to admin
-						const [previousOwner] = await db
-							.select({ id: member.id })
-							.from(member)
-							.where(and(
-								eq(member.userId, user.id),
-								eq(member.organizationId, org.id),
-								eq(member.role, "owner"),
-							))
-							.limit(1);
-
-						if (previousOwner) {
-							await auth.api.updateMemberRole({
-								headers: new Headers(),
-								body: {
-									memberId: previousOwner.id,
-									role: "admin",
-									organizationId: org.id,
-								},
-							});
-						}
-					}
+				beforeCreateInvitation: async ({ invitation }) => {
+					return {
+						data: {
+							...invitation,
+							role: normalizeOrganizationRole(invitation.role),
+						},
+					};
 				},
 			},
 		}),

@@ -1,4 +1,4 @@
-import { eq, and } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@tripwire/db/client";
 import { organizations, repositories, account, member } from "@tripwire/db";
 import { createAppJwt, getInstallationToken } from "@tripwire/github";
@@ -7,6 +7,14 @@ interface InstallationMeta {
 	accountId: number;
 	accountType: string;
 	accountLogin: string;
+	avatarUrl?: string;
+}
+
+interface InstallationRepo {
+	id: number;
+	name: string;
+	full_name: string;
+	private: boolean;
 }
 
 async function fetchInstallationMeta(
@@ -42,7 +50,97 @@ async function fetchInstallationMeta(
 		accountId: data.account.id,
 		accountType: data.account.type,
 		accountLogin: data.account.login,
+		avatarUrl: (data.account as { avatar_url?: string }).avatar_url,
 	};
+}
+
+async function hasOrgAdminAccess(
+	accessToken: string | null,
+	accessTokenExpiresAt: Date | null,
+	orgLogin: string,
+): Promise<boolean> {
+	if (!accessToken) return false;
+	if (accessTokenExpiresAt && accessTokenExpiresAt.getTime() <= Date.now()) {
+		return false;
+	}
+
+	const res = await fetch(
+		`https://api.github.com/user/memberships/orgs/${encodeURIComponent(orgLogin)}`,
+		{
+			headers: {
+				Authorization: `Bearer ${accessToken}`,
+				Accept: "application/vnd.github+json",
+				"X-GitHub-Api-Version": "2022-11-28",
+			},
+		},
+	);
+	if (!res.ok) {
+		console.warn("[Callback] Failed to verify GitHub org membership", {
+			orgLogin,
+			status: res.status,
+		});
+		return false;
+	}
+
+	const membership = (await res.json()) as { role?: string; state?: string };
+	return membership.role === "admin" && membership.state === "active";
+}
+
+async function fetchInstallationRepos(
+	installationId: number,
+): Promise<InstallationRepo[] | null> {
+	const token = await getInstallationToken(installationId);
+	const reposRes = await fetch(
+		"https://api.github.com/installation/repositories?per_page=100",
+		{
+			headers: {
+				Authorization: `token ${token}`,
+				Accept: "application/vnd.github.v3+json",
+			},
+		},
+	);
+
+	if (!reposRes.ok) {
+		console.error("[Callback] Failed to fetch repos:", reposRes.status);
+		return null;
+	}
+
+	const { repositories: repos } = (await reposRes.json()) as {
+		repositories?: InstallationRepo[];
+	};
+	return repos ?? [];
+}
+
+async function upsertInstallationRepo(
+	orgId: string,
+	repo: InstallationRepo,
+): Promise<void> {
+	const [existingRepo] = await db
+		.select({ id: repositories.id })
+		.from(repositories)
+		.where(eq(repositories.githubRepoId, repo.id));
+
+	if (existingRepo) {
+		await db
+			.update(repositories)
+			.set({
+				orgId,
+				name: repo.name,
+				fullName: repo.full_name,
+				isPrivate: repo.private,
+				updatedAt: new Date(),
+			})
+			.where(eq(repositories.id, existingRepo.id));
+		return;
+	}
+
+	await db.insert(repositories).values({
+		orgId,
+		githubRepoId: repo.id,
+		name: repo.name,
+		fullName: repo.full_name,
+		isPrivate: repo.private,
+	});
 }
 
 /**
@@ -62,13 +160,17 @@ export async function ensureInstallation(
 		.from(organizations)
 		.where(eq(organizations.githubInstallationId, installationId));
 
-	if (existing) return "ok";
+	if (existing) return existing.ownerId === userId ? "ok" : "installer_mismatch";
 
 	const meta = await fetchInstallationMeta(installationId);
 	if (!meta) return "installer_mismatch";
 
 	const [ghAccountRow] = await db
-		.select({ accountId: account.accountId })
+		.select({
+			accountId: account.accountId,
+			accessToken: account.accessToken,
+			accessTokenExpiresAt: account.accessTokenExpiresAt,
+		})
 		.from(account)
 		.where(
 			and(eq(account.userId, userId), eq(account.providerId, "github")),
@@ -88,44 +190,28 @@ export async function ensureInstallation(
 			return "installer_mismatch";
 		}
 	}
-	// For "Organization" installs the installation account id is the org id, not
-	// the installer's user id, so a direct equality check is wrong. We still
-	// require the session user to be GH-linked (above) and rely on GitHub's own
-	// install UI to gate org-admin permission. Stricter membership check TODO.
-
-	const token = await getInstallationToken(installationId);
-	const reposRes = await fetch(
-		"https://api.github.com/installation/repositories?per_page=100",
-		{
-			headers: {
-				Authorization: `token ${token}`,
-				Accept: "application/vnd.github.v3+json",
-			},
-		},
-	);
-
-	if (!reposRes.ok) {
-		console.error("[Callback] Failed to fetch repos:", reposRes.status);
-		return "ok";
+	if (
+		meta.accountType === "Organization" &&
+		!(await hasOrgAdminAccess(
+			ghAccountRow.accessToken,
+			ghAccountRow.accessTokenExpiresAt,
+			meta.accountLogin,
+		))
+	) {
+		console.warn("[Callback] Session user is not an admin of GitHub org", {
+			orgLogin: meta.accountLogin,
+		});
+		return "installer_mismatch";
 	}
 
-	const { repositories: repos } = (await reposRes.json()) as {
-		repositories: Array<{
-			id: number;
-			name: string;
-			full_name: string;
-			private: boolean;
-			owner: {
-				id: number;
-				login: string;
-				type?: string;
-				avatar_url?: string;
-			};
-		}>;
-	};
-	if (!repos || repos.length === 0) return "ok";
+	const [existingAccountOrg] = await db
+		.select()
+		.from(organizations)
+		.where(eq(organizations.githubAccountId, meta.accountId));
 
-	const ghAccount = repos[0].owner;
+	if (existingAccountOrg && existingAccountOrg.ownerId !== userId) {
+		return "installer_mismatch";
+	}
 
 	const [ownerMembership] = await db
 		.select({ organizationId: member.organizationId })
@@ -133,36 +219,38 @@ export async function ensureInstallation(
 		.where(and(eq(member.userId, userId), eq(member.role, "owner")))
 		.limit(1);
 
-	const [org] = await db
-		.insert(organizations)
-		.values({
-			githubInstallationId: installationId,
-			githubAccountId: ghAccount.id,
-			githubAccountLogin: ghAccount.login,
-			githubAccountType: ghAccount.type ?? "User",
-			avatarUrl: ghAccount.avatar_url,
-			ownerId: userId,
-			betterAuthOrgId: ownerMembership?.organizationId ?? null,
-		})
-		.returning();
+	const [org] = existingAccountOrg
+		? await db
+			.update(organizations)
+			.set({
+				githubInstallationId: installationId,
+				githubAccountLogin: meta.accountLogin,
+				githubAccountType: meta.accountType,
+				avatarUrl: meta.avatarUrl,
+				betterAuthOrgId: ownerMembership?.organizationId ?? existingAccountOrg.betterAuthOrgId,
+				updatedAt: new Date(),
+			})
+			.where(eq(organizations.id, existingAccountOrg.id))
+			.returning()
+		: await db
+			.insert(organizations)
+			.values({
+				githubInstallationId: installationId,
+				githubAccountId: meta.accountId,
+				githubAccountLogin: meta.accountLogin,
+				githubAccountType: meta.accountType,
+				avatarUrl: meta.avatarUrl,
+				ownerId: userId,
+				betterAuthOrgId: ownerMembership?.organizationId ?? null,
+			})
+			.returning();
 
-	console.log(`[Callback] Created org "${ghAccount.login}" (ID: ${org.id})`);
+	console.log(`[Callback] Ensured org "${meta.accountLogin}" (ID: ${org.id})`);
 
+	const repos = await fetchInstallationRepos(installationId);
+	if (!repos) return "ok";
 	for (const repo of repos) {
-		const [existingRepo] = await db
-			.select()
-			.from(repositories)
-			.where(eq(repositories.githubRepoId, repo.id));
-
-		if (!existingRepo) {
-			await db.insert(repositories).values({
-				orgId: org.id,
-				githubRepoId: repo.id,
-				name: repo.name,
-				fullName: repo.full_name,
-				isPrivate: repo.private,
-			});
-		}
+		await upsertInstallationRepo(org.id, repo);
 	}
 
 	return "ok";
