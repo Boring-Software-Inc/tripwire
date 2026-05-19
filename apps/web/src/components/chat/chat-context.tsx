@@ -3,6 +3,7 @@ import {
   useContext,
   useState,
   useCallback,
+  useEffect,
   useMemo,
   useRef,
   type ReactNode,
@@ -50,7 +51,7 @@ interface ChatContextValue {
   toggle: () => void
   clearChat: () => void
   loadChat: (chatId: string, messages: UIMessage[]) => void
-  newChat: () => void
+  newChat: () => string
   setWorkflowContext: (ctx: WorkflowContext | null) => void
   appendOptimisticMessage: (message: UIMessage) => void
   replaceOptimisticMessage: (id: string, message: UIMessage) => void
@@ -72,7 +73,7 @@ const defaultContextValue: ChatContextValue = {
   toggle: () => {},
   clearChat: () => {},
   loadChat: () => {},
-  newChat: () => {},
+  newChat: () => "",
   setWorkflowContext: () => {},
   appendOptimisticMessage: () => {},
   replaceOptimisticMessage: () => {},
@@ -148,7 +149,6 @@ function ChatProviderClient({ children }: ChatProviderProps) {
     (convQuery.data?.messages as UIMessage[] | undefined) ?? []
   const persistedRepoId = convQuery.data?.repoId ?? null
   const conversationExists = !!convQuery.data
-  const hasPersistedMessages = persistedMessages.length > 0
 
   // Resolve the effective repoId we'll send: pinned wins over the live workspace.
   const effectiveRepoId = pinnedRepoId ?? persistedRepoId ?? repo?.id
@@ -189,10 +189,10 @@ function ChatProviderClient({ children }: ChatProviderProps) {
     setMessages,
     error: chatHookError,
   } = useChat<UIMessage>({
-    id: hasPersistedMessages
-      ? `${conversationId}:${convQuery.dataUpdatedAt}`
-      : conversationId,
-    messages: persistedMessages,
+    // Stable id per conversation — composite ids recreated Chat when
+    // convQuery refetched after save and could abort in-flight streams.
+    id: conversationId,
+    messages: [],
     transport,
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses,
     onError: (error) => {
@@ -208,7 +208,7 @@ function ChatProviderClient({ children }: ChatProviderProps) {
     onFinish: ({ messages }) => {
       if (messages.length === 0) return
       saveMessages.mutate({
-        chatId: conversationId,
+        chatId: requestBodyRef.current.conversationId,
         repoId: effectiveRepoId,
         messages: messages as unknown as SerializedMessage[],
         title: extractChatTitle(messages),
@@ -239,6 +239,20 @@ function ChatProviderClient({ children }: ChatProviderProps) {
   })
   const isLoading = status === "submitted" || status === "streaming"
 
+  // Hydrate from server when opening a stored conversation (not mid-send).
+  useEffect(() => {
+    if (convQuery.isPending) return
+    if (persistedMessages.length === 0) return
+    if (messages.length > 0) return
+    setMessages(persistedMessages)
+  }, [
+    conversationId,
+    convQuery.isPending,
+    persistedMessages,
+    messages.length,
+    setMessages,
+  ])
+
   // Combine hook error with our custom error state
   const combinedError = chatError || chatHookError || null
 
@@ -260,13 +274,11 @@ function ChatProviderClient({ children }: ChatProviderProps) {
       if (!content.trim() || isQuotaExhausted) return
       setChatError(null)
 
-      // Create DB row on first message if we haven't yet. Use the pinned
-      // repo when loading an existing chat; otherwise fall back to the
-      // live workspace repo.
-      if (!conversationExists && !createdConvIds.current.has(conversationId)) {
-        createdConvIds.current.add(conversationId)
+      const activeConvId = requestBodyRef.current.conversationId
+      if (!conversationExists && !createdConvIds.current.has(activeConvId)) {
+        createdConvIds.current.add(activeConvId)
         createConv.mutate(
-          { id: conversationId, repoId: effectiveRepoId },
+          { id: activeConvId, repoId: effectiveRepoId },
           {
             onSuccess: () => {
               queryClient.invalidateQueries({
@@ -353,8 +365,9 @@ function ChatProviderClient({ children }: ChatProviderProps) {
     setStoredValue(STORAGE_KEY_CONV, id)
     setMessages([])
     setChatError(null)
-    // Fresh chats follow the live workspace repo until they're persisted.
     setPinnedRepoId(null)
+    requestBodyRef.current = { ...requestBodyRef.current, conversationId: id }
+    return id
   }, [setMessages])
 
   const value: ChatContextValue = {

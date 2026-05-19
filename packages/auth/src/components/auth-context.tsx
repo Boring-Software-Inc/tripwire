@@ -1,4 +1,4 @@
-import { createContext, use, type ReactNode } from "react"
+import { createContext, use, useEffect, type ReactNode } from "react"
 import { useNavigate } from "@tanstack/react-router"
 import { authClient } from "../client"
 
@@ -16,6 +16,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { data, isPending } = authClient.useSession()
   const navigate = useNavigate()
 
+  useEffect(() => {
+    if (!isPending && !data) {
+      navigate({ to: "/login" })
+    }
+  }, [data, isPending, navigate])
+
   if (isPending) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-[#191919]">
@@ -25,7 +31,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   if (!data) {
-    navigate({ to: "/login" })
     return null
   }
 

@@ -180,19 +180,13 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     } catch {}
   }, [repos, repo, prefsQuery.data?.activeRepoId])
 
-  // Set active BA org when org changes
-  useEffect(() => {
-    if (currentOrg) {
-      authClient.organization.setActive({ organizationId: currentOrg.id })
-    }
-  }, [currentOrg?.id])
-
   // setOrg navigates to the new org's current page and persists to DB
   const setOrg = useCallback(
     (newOrg: Org | null) => {
       if (!newOrg) return
       const page = orgHandle ? getCurrentPage(pathname) : "home"
       navigate({ to: buildWorkspacePath(newOrg.slug, page) })
+      authClient.organization.setActive({ organizationId: newOrg.id })
       savePrefs.mutate({ activeOrgId: newOrg.id })
     },
     [navigate, pathname, orgHandle, savePrefs]

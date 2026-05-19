@@ -5,7 +5,7 @@ import { useState, useRef, useEffect } from "react"
 import { ChatComposer } from "#/components/chat/chat-composer"
 import { ChatThread } from "#/components/chat/chat-thread"
 import { usePersistedChat } from "#/components/chat/use-persisted-chat"
-import { useWorkspace } from "#/lib/workspace-context"
+import { useWorkspace, useWorkspacePath } from "#/lib/workspace-context"
 import { useTRPC } from "#/integrations/trpc/react"
 import { parseCommand } from "#/lib/chat-commands"
 import { useSlashCommandRunner } from "#/lib/use-chat-command-runner"
@@ -21,6 +21,7 @@ function ChatPage() {
   const { chatId } = Route.useParams()
   const navigate = useNavigate()
   const { repo } = useWorkspace()
+  const homePath = useWorkspacePath("home")
   const trpc = useTRPC()
 
   const queryClient = useQueryClient()
@@ -33,13 +34,14 @@ function ChatPage() {
     },
   })
 
-  const [initialMessage] = useState(() => {
+  // Read after mount — useState initializer only runs on SSR too (no sessionStorage).
+  const [initialMessage, setInitialMessage] = useState<string | null>(null)
+  useEffect(() => {
     const key = `tw.chat.init.${chatId}`
-    if (typeof window === "undefined") return null
     const msg = window.sessionStorage.getItem(key)
-    if (msg) window.sessionStorage.removeItem(key)
-    return msg
-  })
+    if (!msg) return
+    setInitialMessage(msg)
+  }, [chatId])
 
   const chat = usePersistedChat({
     chatId,
@@ -72,16 +74,21 @@ function ChatPage() {
     })
 
   useEffect(() => {
-    if (
-      !initialMessage ||
-      didSendInitial.current ||
-      convQuery.isPending ||
-      chat.messages.length > 0
-    )
+    if (!initialMessage || didSendInitial.current || chat.messages.length > 0)
       return
+
+    const repoIdForChat = convQuery.data?.repoId ?? repo?.id
+    if (!repoIdForChat) {
+      return
+    }
+
     didSendInitial.current = true
     if (initialMessage.trim().length > 10) {
-      generateTitle.mutate({ chatId, messageText: initialMessage.trim() })
+      const titleKey = `tw.chat.title.${chatId}`
+      if (!window.sessionStorage.getItem(titleKey)) {
+        window.sessionStorage.setItem(titleKey, "true")
+        generateTitle.mutate({ chatId, messageText: initialMessage.trim() })
+      }
     }
     const parsed = parseCommand(initialMessage.trim())
     if (parsed) {
@@ -91,11 +98,22 @@ function ChatPage() {
     void chat.sendMessage(initialMessage)
   }, [
     initialMessage,
-    convQuery.isPending,
+    convQuery.data?.repoId,
+    repo?.id,
     chat.messages.length,
     chat.sendMessage,
     runCommand,
+    chatId,
+    generateTitle,
   ])
+
+  useEffect(() => {
+    if (!initialMessage) return
+    const hasAssistantMessage = chat.messages.some((msg) => msg.role === "assistant")
+    if (!hasAssistantMessage) return
+    window.sessionStorage.removeItem(`tw.chat.init.${chatId}`)
+    window.sessionStorage.removeItem(`tw.chat.title.${chatId}`)
+  }, [chat.messages, chatId, initialMessage])
 
   const handleConfirmMutation = async () => {
     if (!pendingConfirmation) return
@@ -115,7 +133,7 @@ function ChatPage() {
         <Button
           variant="ghost"
           type="button"
-          onClick={() => navigate({ to: "/home" })}
+          onClick={() => navigate({ to: homePath })}
           className="flex size-7 items-center justify-center rounded-lg transition-colors hover:bg-tw-hover"
         >
           <ChevronLeftStrokeIcon14 className="text-[#9F9FA9]" />

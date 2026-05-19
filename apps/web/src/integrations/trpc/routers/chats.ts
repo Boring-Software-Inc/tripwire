@@ -13,8 +13,7 @@ import { asConversationStoredMessages } from "#/lib/conversation-stored"
 import { extractChatTitle } from "#/lib/extract-chat-title"
 
 const TITLE_MODEL_FALLBACK = "moonshotai/kimi-k2.6"
-import { generateText, wrapLanguageModel } from "ai"
-import { devToolsMiddleware } from "@ai-sdk/devtools"
+import { generateText } from "ai"
 import { createOpenRouter } from "@openrouter/ai-sdk-provider"
 import { trackCreditUsage } from "@tripwire/ai/credit-middleware"
 import { TITLE_SYSTEM_PROMPT } from "@tripwire/ai/prompt"
@@ -426,12 +425,8 @@ export const chatsRouter = {
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      const preview = input.messageText.slice(0, 80)
-      console.log(`[summarize] chatId=${input.chatId} input="${preview}"`)
-
       const apiKey = process.env.OPENROUTER_API_KEY
       if (!apiKey) {
-        console.warn("[summarize] skipped — no OPENROUTER_API_KEY")
         return { title: null }
       }
 
@@ -439,8 +434,6 @@ export const chatsRouter = {
         process.env.TRIPWIRE_TITLE_MODEL ||
         process.env.TRIPWIRE_AI_MODEL ||
         TITLE_MODEL_FALLBACK
-
-      console.log(`[summarize] model=${modelId}`)
 
       try {
         const openrouter = createOpenRouter({
@@ -450,24 +443,17 @@ export const chatsRouter = {
         })
 
         const result = await generateText({
-          model: wrapLanguageModel({
-            model: openrouter.chat(modelId),
-            middleware: devToolsMiddleware(),
-          }),
+          model: openrouter.chat(modelId),
           system: TITLE_SYSTEM_PROMPT,
-          prompt: input.messageText.slice(0, 500),
+          prompt: `User message: "${input.messageText.slice(0, 500)}"`,
           maxOutputTokens: 60,
         })
 
         const raw = result.text
-        console.log(`[summarize] raw=${JSON.stringify(raw)}`)
         const title = raw.trim().replace(/^["']|["']$/g, "").slice(0, 50)
         if (!title) {
-          console.warn("[summarize] empty after cleanup, skipping")
           return { title: null }
         }
-
-        console.log(`[summarize] result="${title}" (${result.usage.inputTokens ?? 0}in/${result.usage.outputTokens ?? 0}out)`)
 
         await db
           .update(conversations)
@@ -486,9 +472,7 @@ export const chatsRouter = {
         })
 
         return { title }
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err)
-        console.error(`[summarize] error="${msg}"`)
+      } catch {
         return { title: null }
       }
     }),

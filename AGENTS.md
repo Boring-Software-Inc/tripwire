@@ -236,12 +236,13 @@ Create: `mdn create --title "Description" --status todo --priority medium --agen
 - Prefer casual, human-sounding writing; avoid polished AI patterns.
 - Avoid em dashes and formulaic contrast phrasing like "it's not X, it's Y."
 - When showing tightly related counters in UI, prefer one plain sentence that partitions the numbers once instead of repeating the same figure in multiple ratio fragments.
+- When merging another branch or PR into the user's work, keep the user's version for server-side code, APIs, and core app logic; only favor incoming changes for clear UI or shared-type conflicts.
 - For SVG markup that uses fill="currentColor", set visible color via Tailwind text-\* (CSS color).
 - Tailwind only emits utilities it can see as literal class substrings at build time; do not rely on template strings that build arbitrary pixel width classes from variables.
 
 ## Learned Workspace Facts
 
-- Rules navigation uses path segments (`/{orgHandle}/rules`, `/rules/custom`, …); legacy `?tab=custom` maps to `/rules/custom`. Canonicalizing redirects should use `replace: true` so browser Back is not trapped replaying obsolete query URLs.
+- Rules workspace uses path segments under `/{orgHandle}/rules/` (`marketplace`, `installed`, `people`, `requests`, `files`, `workflows`, plus `custom`); bare `/rules` should land on `marketplace`. Legacy `?tab=` values canonicalize to those paths with `replace: true`. Custom-rule flows should use consistent paths (for example `…/rules/custom/new`) without redundant `tab` query params.
 - When turning `location.search` into a query string for redirects or links, handle both string and parsed-object shapes—avoid interpolating search into templates when it might stringify as `[object Object]`.
 - TanStack Router typed `Link` may reject dynamic paths built as `` `/${orgHandle}/…` `` against generated route unions; use an intermediate variable typed as `string` or typed route IDs with `params` when needed.
 - In dev, `[router]` console timings plus `[vite]` logs for slower `/routes/` module responses help separate compile/transform cost from client navigation and render.

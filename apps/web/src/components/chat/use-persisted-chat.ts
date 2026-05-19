@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback } from "react"
+import { useState, useMemo, useRef, useCallback, useEffect } from "react"
 import { useChat } from "@ai-sdk/react"
 import {
   DefaultChatTransport,
@@ -70,10 +70,7 @@ export function usePersistedChat({
     setMessages,
     error: chatHookError,
   } = useChat<UIMessage>({
-    id:
-      initialMessages && initialMessages.length > 0
-        ? `${chatId}:${initialMessagesVersion ?? initialMessages.length}`
-        : chatId,
+    id: chatId,
     messages: initialMessages ?? [],
     transport,
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses,
@@ -99,6 +96,18 @@ export function usePersistedChat({
     },
   })
   const isLoading = status === "submitted" || status === "streaming"
+
+  // useChat only uses `messages` on first mount; hydrate when server data arrives.
+  useEffect(() => {
+    if (!initialMessages?.length) return
+    if (messages.length > 0) return
+    setMessages(initialMessages)
+  }, [
+    initialMessagesVersion,
+    initialMessages,
+    messages.length,
+    setMessages,
+  ])
 
   const sendMessage = useCallback(
     (content: string) => {

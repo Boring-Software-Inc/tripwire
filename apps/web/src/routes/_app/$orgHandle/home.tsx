@@ -254,12 +254,38 @@ function HomeFloatingBar() {
   const navigate = useNavigate()
   const { repo } = useWorkspace()
   const trpc = useTRPC()
+  const queryClient = useQueryClient()
   const createChat = useMutation(trpc.chats.create.mutationOptions())
 
   const handleSubmit = async (message: string) => {
     const trimmedMessage = message.trim()
     if (!trimmedMessage) return
     const chatId = crypto.randomUUID()
+
+    const listKey = trpc.chats.list.queryKey({ limit: 5 })
+    queryClient.setQueryData(
+      listKey,
+      (
+        old:
+          | Array<{
+              id: string
+              title: string | null
+              repoId: string | null
+              createdAt: Date
+              updatedAt: Date
+            }>
+          | undefined
+      ) => [
+        {
+          id: chatId,
+          title: null,
+          repoId: repo?.id ?? null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        ...(old ?? []).slice(0, 4),
+      ]
+    )
 
     try {
       await createChat.mutateAsync({ id: chatId, repoId: repo?.id })

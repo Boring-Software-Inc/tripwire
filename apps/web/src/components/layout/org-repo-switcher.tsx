@@ -2,19 +2,46 @@ import { useWorkspace } from "#/lib/workspace-context"
 import { GithubIcon } from "#/components/icons/github"
 import { Menu, MenuTrigger, MenuPopup, MenuItem } from "#/components/ui/menu"
 import { useAuth } from "@tripwire/auth/components"
+import { useState } from "react"
 import {
   MenuChevronDownIcon10,
   SmallCheckStrokeIcon12,
 } from "#/components/icons/app-chrome-icons"
 
 export function OrgSwitcher() {
-  const { org, orgs, setOrg } = useWorkspace()
+  const { org, orgs, setOrg, isLoading } = useWorkspace()
   const { user } = useAuth()
+  const [open, setOpen] = useState(false)
 
-  if (orgs.length === 0) return null
+  const handleOpenChange = (nextOpen: boolean) => {
+    setOpen(nextOpen)
+  }
+
+  if (orgs.length === 0) {
+    if (!isLoading) return null
+    return (
+      <span className="flex h-8 cursor-default items-center gap-1.5 rounded-[10px] bg-tw-card px-2.5 text-[13px] text-tw-text-tertiary">
+        {org?.logo ? (
+          <img src={org.logo} alt="" className="h-4 w-4 rounded-full" />
+        ) : (
+          <div
+            className="relative size-5 shrink-0 overflow-hidden rounded-full bg-tw-card bg-cover bg-center opacity-70"
+            style={{
+              backgroundImage: user?.image
+                ? `url('${user.image}')`
+                : "url('https://i.pravatar.cc/80?img=12')",
+            }}
+          />
+        )}
+        <span className="max-w-[120px] truncate leading-none">
+          {org?.name ?? "Loading…"}
+        </span>
+      </span>
+    )
+  }
 
   return (
-    <Menu>
+    <Menu open={open} onOpenChange={handleOpenChange}>
       <MenuTrigger className="flex h-8 cursor-pointer items-center gap-1.5 rounded-[10px] bg-tw-card px-2.5 text-tw-text-muted transition-colors hover:text-tw-text-primary">
         {org?.logo ? (
           <img src={org.logo} alt="" className="h-4 w-4 rounded-full" />
@@ -37,7 +64,9 @@ export function OrgSwitcher() {
         {orgs.map((o) => (
           <MenuItem
             key={o.id}
-            onClick={() => setOrg(o)}
+            onClick={() => {
+              setOrg(o)
+            }}
             className="flex items-center justify-between"
           >
             <span className="flex items-center gap-2">
@@ -66,9 +95,24 @@ export function OrgSwitcher() {
 }
 
 export function RepoSwitcher() {
-  const { repo, repos, setRepo } = useWorkspace()
+  const { repo, repos, setRepo, isLoading } = useWorkspace()
+  const [open, setOpen] = useState(false)
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    setOpen(nextOpen)
+  }
 
   if (repos.length === 0) {
+    if (isLoading) {
+      return (
+        <span className="flex h-8 cursor-default items-center gap-1.5 rounded-[10px] bg-tw-card px-2.5 text-[13px] text-tw-text-tertiary">
+          <GithubIcon className="h-5 w-5 shrink-0 text-tw-text-primary opacity-70" />
+          <span className="max-w-[160px] truncate leading-none">
+            {repo?.name ?? "Loading repos…"}
+          </span>
+        </span>
+      )
+    }
     return (
       <span className="flex h-8 items-center rounded-[10px] bg-tw-card px-2.5 text-[13px] text-tw-text-tertiary">
         No repos
@@ -77,7 +121,7 @@ export function RepoSwitcher() {
   }
 
   return (
-    <Menu>
+    <Menu open={open} onOpenChange={handleOpenChange}>
       <MenuTrigger className="flex h-8 cursor-pointer items-center gap-1.5 rounded-[10px] bg-tw-card px-2.5 text-tw-text-muted transition-colors hover:text-tw-text-primary">
         <GithubIcon className="h-5 w-5 text-tw-text-primary" />
         <span className="max-w-[160px] truncate text-[13px] leading-none text-tw-text-primary">
@@ -89,7 +133,9 @@ export function RepoSwitcher() {
         {repos.map((r) => (
           <MenuItem
             key={r.id}
-            onClick={() => setRepo(r)}
+            onClick={() => {
+              setRepo(r)
+            }}
             className="flex items-center justify-between"
           >
             <span className="flex items-center gap-2">

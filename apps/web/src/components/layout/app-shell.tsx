@@ -72,8 +72,21 @@ function AppShellInner() {
 
   const { runCommand, runMutation, cancelMutation, pendingConfirmation } =
     useSlashCommandRunner()
+
+  const routerState = useRouterState()
+  const currentPath = routerState.location.pathname
+  const isHomePage =
+    currentPath === "/home" ||
+    currentPath === "/" ||
+    currentPath.endsWith("/home")
+  const isChatRoute = currentPath.startsWith("/chat/")
+  const isAutomationEditor = /\/automations\/[^/]+$/.test(currentPath)
+
   const needsInstall =
-    !workspaceLoading && orgs.length > 0 && repos.length === 0
+    !isChatRoute &&
+    !workspaceLoading &&
+    orgs.length > 0 &&
+    repos.length === 0
 
   const handleConfirmMutation = async () => {
     if (!pendingConfirmation) return
@@ -132,15 +145,6 @@ function AppShellInner() {
       costUSD,
     }
   }, [chatMessages])
-
-  const routerState = useRouterState()
-  const currentPath = routerState.location.pathname
-  const isHomePage =
-    currentPath === "/home" ||
-    currentPath === "/" ||
-    currentPath.endsWith("/home")
-  const isChatRoute = currentPath.startsWith("/chat/")
-  const isAutomationEditor = /\/automations\/[^/]+$/.test(currentPath)
 
   const showSidePanel =
     !isHomePage && !isChatRoute && !isAutomationEditor && isOpen

@@ -25,6 +25,15 @@ export const auth = betterAuth({
     provider: "pg",
     schema,
   }),
+  // Lets get-session resolve from a short-lived signed cookie instead of
+  // hitting the DB on every load, which cuts the grey AuthProvider flash.
+  session: {
+    cookieCache: {
+      enabled: true,
+      maxAge: 5 * 60,
+      strategy: "compact",
+    },
+  },
   socialProviders: {
     github: {
       clientId: env.GITHUB_CLIENT_ID ?? "",
