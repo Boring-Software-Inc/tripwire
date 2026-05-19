@@ -16,6 +16,7 @@ import { deleteInstallation } from "@tripwire/github"
 export const auth = betterAuth({
   baseURL: env.BETTER_AUTH_URL,
   secret: env.BETTER_AUTH_SECRET,
+  appName: "Tripwire",
   trustedOrigins: [
     "https://tripwire.sh",
     "https://www.tripwire.sh",
@@ -31,7 +32,7 @@ export const auth = betterAuth({
     cookieCache: {
       enabled: true,
       maxAge: 5 * 60,
-      strategy: "compact",
+      strategy: "jwe",
     },
   },
   socialProviders: {
@@ -194,6 +195,7 @@ export const auth = betterAuth({
       oidcConfig: {
         loginPage: "/login",
         consentPage: "/oauth/consent",
+        storeClientSecret: "hashed",
       },
     }),
     dash({
@@ -234,5 +236,20 @@ export const auth = betterAuth({
         },
       },
     },
+  },
+  advanced: {
+    ipAddress: {
+      // For Cloudflare
+      //ipAddressHeaders: ["cf-connecting-ip", "x-forwarded-for"],
+
+      // For Vercel
+      ipAddressHeaders: ["x-vercel-forwarded-for", "x-forwarded-for"],
+
+      // For AWS/Generic
+      // ipAddressHeaders: ["x-forwarded-for"],
+    },
+  },
+  experimental: {
+    joins: true,
   },
 })
