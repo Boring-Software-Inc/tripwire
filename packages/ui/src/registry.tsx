@@ -1668,10 +1668,11 @@ function ScoreBreakdownButton({ username }: { username: string }) {
     <div className="flex items-center gap-2 pt-0.5">
       <Button
         variant="ghost"
+        size="sm"
         type="button"
         onClick={load}
         disabled={state.phase === "loading"}
-        className="rounded-md bg-[#FAFAFA08] px-2 py-1 text-[11px] text-tw-text-secondary transition-colors hover:bg-[#FAFAFA12] hover:text-tw-text-primary disabled:opacity-50"
+        className="rounded-md bg-[#FAFAFA08] text-[10px] px-1 text-tw-text-secondary transition-colors disabled:opacity-50"
       >
         {state.phase === "loading" ? "Loading…" : "Score breakdown"}
       </Button>

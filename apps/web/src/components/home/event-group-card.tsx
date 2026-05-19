@@ -54,7 +54,7 @@ export function EventGroupCard({ group, onOpenEvent }: EventGroupCardProps) {
         onClick={() => onOpenEvent?.(first)}
         className="group cursor-pointer rounded-[10px] text-left focus:outline-none"
       >
-        <div className="flex flex-col gap-1 rounded-[10px] bg-tw-inner p-2 transition-colors group-hover:bg-[#FAFAFA26]">
+        <div className="flex flex-col gap-1 rounded-[10px] bg-tw-inner p-2 transition-colors group-hover:bg-[#FAFAFA26] w-full">
           {users.length === 1 && first.preview ? (
             <SingleUserPreview
               user={getUser(users[0])}
