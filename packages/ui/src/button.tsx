@@ -18,7 +18,7 @@ export const buttonVariants = cva(
     variants: {
       size: {
         /** Tall / multi-line content (empty states, pickers); overrides fixed height + nowrap. */
-        card: "h-auto min-h-0 w-full justify-start whitespace-normal p-0 shadow-none sm:h-auto [&_svg]:mx-0",
+        card: "h-auto min-h-0 w-full justify-start p-0 whitespace-normal shadow-none sm:h-auto [&_svg]:mx-0",
         default: "h-9 px-[calc(--spacing(3)-1px)] sm:h-8",
         icon: "size-9 sm:size-8",
         "icon-lg": "size-10 sm:size-9",
@@ -34,7 +34,7 @@ export const buttonVariants = cva(
       },
       variant: {
         default:
-          "px-2 border-none bg-primary text-primary-foreground shadow-xs shadow-primary/24 not-disabled:inset-shadow-[0_1px_--theme(--color-white/16%)] hover:bg-primary/90 data-pressed:bg-primary/90 *:data-[slot=button-loading-indicator]:text-primary-foreground [:active,[data-pressed]]:inset-shadow-[0_1px_--theme(--color-black/8%)] [:disabled,:active,[data-pressed]]:shadow-none",
+          "border-none bg-primary px-2 text-primary-foreground shadow-xs shadow-primary/24 not-disabled:inset-shadow-[0_1px_--theme(--color-white/16%)] hover:bg-primary/90 data-pressed:bg-primary/90 *:data-[slot=button-loading-indicator]:text-primary-foreground [:active,[data-pressed]]:inset-shadow-[0_1px_--theme(--color-black/8%)] [:disabled,:active,[data-pressed]]:shadow-none",
         destructive:
           "border-destructive bg-destructive shadow-destructive/24 hover:bg-destructive/90 data-pressed:bg-destructive/90 text-white shadow-xs not-disabled:inset-shadow-[0_1px_--theme(--color-white/16%)] *:data-[slot=button-loading-indicator]:text-white [:active,[data-pressed]]:inset-shadow-[0_1px_--theme(--color-black/8%)] [:disabled,:active,[data-pressed]]:shadow-none",
         "destructive-outline":

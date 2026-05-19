@@ -543,7 +543,9 @@ async function lookupUserExecute(
   }
 }
 
-function lookupOutputToSlideRecord(output: Awaited<ReturnType<typeof lookupUserExecute>>) {
+function lookupOutputToSlideRecord(
+  output: Awaited<ReturnType<typeof lookupUserExecute>>
+) {
   return {
     username: output.ghUser.login,
     repoId: output.repoId,
@@ -572,13 +574,16 @@ function lookupOutputToSlideRecord(output: Awaited<ReturnType<typeof lookupUserE
     sponsoringCount: output.profile.graphqlData?.sponsoringCount ?? 0,
     achievements: output.profile.achievements,
     badges: output.badges,
-    contributionsLastYear: output.profile.graphqlData?.contributionsLastYear ?? 0,
+    contributionsLastYear:
+      output.profile.graphqlData?.contributionsLastYear ?? 0,
     contributorScore: output.score.total,
     status: output.status,
   }
 }
 
-function lookupOutputToSlideProps(output: Awaited<ReturnType<typeof lookupUserExecute>>) {
+function lookupOutputToSlideProps(
+  output: Awaited<ReturnType<typeof lookupUserExecute>>
+) {
   return makeSpec("UserCard", lookupOutputToSlideRecord(output))
 }
 

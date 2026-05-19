@@ -26,9 +26,7 @@ export const RuleImpactReport = artifact(
     triggeredCount: z.number(),
     affectedUsers: z.number(),
     timeRange: z.string(),
-    breakdown: z.array(
-      z.object({ action: z.string(), count: z.number() })
-    ),
+    breakdown: z.array(z.object({ action: z.string(), count: z.number() })),
   })
 )
 

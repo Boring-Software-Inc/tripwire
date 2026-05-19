@@ -44,7 +44,7 @@ function IntegrationsPage() {
           <Button
             size="xs"
             variant="outline"
-            className="shrink-0 border-[#CDCDCD] bg-white text-black hover:bg-white/90 px-1"
+            className="shrink-0 border-[#CDCDCD] bg-white px-1 text-black hover:bg-white/90"
             render={
               <a
                 href={routes.api.githubInstall}

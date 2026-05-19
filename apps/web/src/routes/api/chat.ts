@@ -422,13 +422,14 @@ export const Route = createFileRoute("/api/chat")({
 
               const persistMemory = Promise.all(
                 finishedMessages.slice(-2).map((msg) => {
-                  const textParts = msg.parts
-                    ?.filter(
-                      (p): p is { type: "text"; text: string } =>
-                        (p as Record<string, unknown>).type === "text"
-                    )
-                    .map((p) => p.text)
-                    .join("") ?? ""
+                  const textParts =
+                    msg.parts
+                      ?.filter(
+                        (p): p is { type: "text"; text: string } =>
+                          (p as Record<string, unknown>).type === "text"
+                      )
+                      .map((p) => p.text)
+                      .join("") ?? ""
                   return memoryProvider
                     .saveMessage({
                       chatId: conversationId,
@@ -438,7 +439,10 @@ export const Route = createFileRoute("/api/chat")({
                       timestamp: new Date(),
                     })
                     .catch((err: unknown) => {
-                      console.error("[chat] Failed to persist memory message:", err)
+                      console.error(
+                        "[chat] Failed to persist memory message:",
+                        err
+                      )
                     })
                 })
               )

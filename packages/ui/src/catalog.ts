@@ -60,7 +60,7 @@ export const catalog = defineCatalog(schema, {
             z.object({
               username: z.string(),
               message: z.string(),
-            }),
+            })
           )
           .optional(),
       }),

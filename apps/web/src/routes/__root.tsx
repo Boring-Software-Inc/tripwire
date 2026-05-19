@@ -1,82 +1,82 @@
-import { createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
-import { createMiddleware } from "@tanstack/react-start";
-import { AutumnProvider } from "autumn-js/react";
-import { evlogErrorHandler } from "evlog/nitro/v3";
-import { NuqsAdapter } from "nuqs/adapters/tanstack-router";
-import { AnchoredToastProvider, ToastProvider } from "#/components/ui/toast";
-import RootProvider from "#/integrations/tanstack-query/root-provider";
-import { useEffect, useState } from "react";
-import { isReactGrabEnabled, isReactScanEnabled } from "#/lib/feature-flags";
-import appCss from "../styles.css?url";
+import { createRootRoute, HeadContent, Scripts } from "@tanstack/react-router"
+import { createMiddleware } from "@tanstack/react-start"
+import { AutumnProvider } from "autumn-js/react"
+import { evlogErrorHandler } from "evlog/nitro/v3"
+import { NuqsAdapter } from "nuqs/adapters/tanstack-router"
+import { AnchoredToastProvider, ToastProvider } from "#/components/ui/toast"
+import RootProvider from "#/integrations/tanstack-query/root-provider"
+import { useEffect, useState } from "react"
+import { isReactGrabEnabled, isReactScanEnabled } from "#/lib/feature-flags"
+import appCss from "../styles.css?url"
 
 function ClientOnlyDevtools() {
-	const [Devtools, setDevtools] = useState<React.ComponentType | null>(null);
-	useEffect(() => {
-		import("@ai-sdk-tools/devtools").then((m) => {
-			setDevtools(() => m.AIDevtools);
-		});
-	}, []);
-	return Devtools ? <Devtools /> : null;
+  const [Devtools, setDevtools] = useState<React.ComponentType | null>(null)
+  useEffect(() => {
+    import("@ai-sdk-tools/devtools").then((m) => {
+      setDevtools(() => m.AIDevtools)
+    })
+  }, [])
+  return Devtools ? <Devtools /> : null
 }
 
 export const Route = createRootRoute({
-	server: {
-		middleware: [createMiddleware().server(evlogErrorHandler)],
-	},
-	head: () => ({
-		meta: [
-			{ charSet: "utf-8" },
-			{
-				name: "viewport",
-				content: "width=device-width, initial-scale=1",
-			},
-			{ title: "Tripwire" },
-		],
-		links: [
-			{ rel: "icon", type: "image/png", href: "/favicon.png" },
-			{ rel: "stylesheet", href: appCss },
-		],
-	}),
-	shellComponent: RootDocument,
-});
+  server: {
+    middleware: [createMiddleware().server(evlogErrorHandler)],
+  },
+  head: () => ({
+    meta: [
+      { charSet: "utf-8" },
+      {
+        name: "viewport",
+        content: "width=device-width, initial-scale=1",
+      },
+      { title: "Tripwire" },
+    ],
+    links: [
+      { rel: "icon", type: "image/png", href: "/favicon.png" },
+      { rel: "stylesheet", href: appCss },
+    ],
+  }),
+  shellComponent: RootDocument,
+})
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-	return (
-		<html lang="en" suppressHydrationWarning>
-			<head>
-				{isReactScanEnabled ? (
-					<script
-						crossOrigin="anonymous"
-						src="https://unpkg.com/react-scan/dist/auto.global.js"
-					/>
-				) : null}
-				{isReactGrabEnabled ? (
-					<script
-						crossOrigin="anonymous"
-						src="https://unpkg.com/react-grab/dist/index.global.js"
-					/>
-				) : null}
-				<HeadContent />
-			</head>
-			<body>
-				<RootProvider>
-					<NuqsAdapter>
-						<AutumnProvider useBetterAuth>
-							<ToastProvider>
-								<AnchoredToastProvider>{children}</AnchoredToastProvider>
-							</ToastProvider>
-						</AutumnProvider>
-					</NuqsAdapter>
-				</RootProvider>
-				{isReactGrabEnabled ? (
-					<script
-						async
-						src="https://unpkg.com/@react-grab/cursor/dist/client.global.js"
-					/>
-				) : null}
-				<Scripts />
-				{process.env.NODE_ENV === "development" && <ClientOnlyDevtools />}
-			</body>
-		</html>
-	);
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        {isReactScanEnabled ? (
+          <script
+            crossOrigin="anonymous"
+            src="https://unpkg.com/react-scan/dist/auto.global.js"
+          />
+        ) : null}
+        {isReactGrabEnabled ? (
+          <script
+            crossOrigin="anonymous"
+            src="https://unpkg.com/react-grab/dist/index.global.js"
+          />
+        ) : null}
+        <HeadContent />
+      </head>
+      <body>
+        <RootProvider>
+          <NuqsAdapter>
+            <AutumnProvider useBetterAuth>
+              <ToastProvider>
+                <AnchoredToastProvider>{children}</AnchoredToastProvider>
+              </ToastProvider>
+            </AutumnProvider>
+          </NuqsAdapter>
+        </RootProvider>
+        {isReactGrabEnabled ? (
+          <script
+            async
+            src="https://unpkg.com/@react-grab/cursor/dist/client.global.js"
+          />
+        ) : null}
+        <Scripts />
+        {process.env.NODE_ENV === "development" && <ClientOnlyDevtools />}
+      </body>
+    </html>
+  )
 }

@@ -18,7 +18,6 @@ const PAGE_CONTEXT: Record<string, string> = {
     "The search page. Searching across events, contributors, and activity.",
 }
 
-
 function getPageContext(currentPage: string): string {
   const exact = PAGE_CONTEXT[currentPage]
   if (exact) return exact
@@ -158,7 +157,6 @@ When someone asks vague questions like "what can you do?", "help", "idk", or see
 </example>
 </examples>`
 }
-
 
 export const TITLE_SYSTEM_PROMPT: string = [
   "Generate a short, descriptive title (under 50 characters) for a chat conversation.",

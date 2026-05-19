@@ -30,8 +30,7 @@ export function useMentionChipAttachmentBelow(options: {
       const s = composerSurfaceRef.current
       const r = inlineComposeRef.current
       if (!s || !r) return
-      const over =
-        r.scrollWidth > s.clientWidth + INLINE_OVERFLOW_MARGIN_PX
+      const over = r.scrollWidth > s.clientWidth + INLINE_OVERFLOW_MARGIN_PX
       setMentionsAttachBelow(over)
     }
 
@@ -45,11 +44,7 @@ export function useMentionChipAttachmentBelow(options: {
       window.removeEventListener("resize", checkOverflow)
       ro.disconnect()
     }
-  }, [
-    mentionsAttachBelow,
-    options.mentionCount,
-    options.textForMeasure,
-  ])
+  }, [mentionsAttachBelow, options.mentionCount, options.textForMeasure])
 
   useLayoutEffect(() => {
     if (options.mentionCount === 0) return
@@ -85,11 +80,7 @@ export function useMentionChipAttachmentBelow(options: {
       window.removeEventListener("resize", checkRevert)
       ro.disconnect()
     }
-  }, [
-    mentionsAttachBelow,
-    options.mentionCount,
-    options.textForMeasure,
-  ])
+  }, [mentionsAttachBelow, options.mentionCount, options.textForMeasure])
 
   return {
     mentionsAttachBelow,

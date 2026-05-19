@@ -1,10 +1,7 @@
 import { Agent } from "@ai-sdk-tools/agents"
 import type { LanguageModel, LanguageModelUsage, ToolSet, UIMessage } from "ai"
 import { memoryProvider } from "./memory"
-import {
-  trackCreditUsage,
-  logCreditUsageError,
-} from "./credit-middleware"
+import { trackCreditUsage, logCreditUsageError } from "./credit-middleware"
 
 interface TripwireAgentContext extends Record<string, unknown> {
   chatId: string

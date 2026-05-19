@@ -9,8 +9,7 @@ import { tripwireDevServeTiming } from "./vite/dev-serve-timing-plugin"
 
 const config = defineConfig(({ mode }) => {
   const env = loadEnv(mode, "../..", "")
-  const tanstackDevtoolsEnabled =
-    env.VITE_DISABLE_TANSTACK_DEVTOOLS !== "1"
+  const tanstackDevtoolsEnabled = env.VITE_DISABLE_TANSTACK_DEVTOOLS !== "1"
 
   return {
     // .env lives at the monorepo root so every package + app shares it.

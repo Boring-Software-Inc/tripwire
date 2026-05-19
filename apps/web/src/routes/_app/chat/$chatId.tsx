@@ -34,7 +34,9 @@ function ChatPage() {
   const generateTitle = useMutation({
     ...trpc.chats.generateTitle.mutationOptions(),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: trpc.chats.get.queryKey({ chatId }) })
+      queryClient.invalidateQueries({
+        queryKey: trpc.chats.get.queryKey({ chatId }),
+      })
       queryClient.invalidateQueries({ queryKey: trpc.chats.list.queryKey() })
     },
   })
@@ -114,7 +116,9 @@ function ChatPage() {
 
   useEffect(() => {
     if (!initialMessage) return
-    const hasAssistantMessage = chat.messages.some((msg) => msg.role === "assistant")
+    const hasAssistantMessage = chat.messages.some(
+      (msg) => msg.role === "assistant"
+    )
     if (!hasAssistantMessage) return
     window.sessionStorage.removeItem(`tw.chat.init.${chatId}`)
     window.sessionStorage.removeItem(`tw.chat.title.${chatId}`)

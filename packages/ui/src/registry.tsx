@@ -209,8 +209,8 @@ function UserCardInner({
   return (
     <div
       className={cn(
-        "flex min-w-0 flex-col gap-2.5 rounded-xl bg-tw-card p-3 justify-between",
-        surfaceClassName,
+        "flex min-w-0 flex-col justify-between gap-2.5 rounded-xl bg-tw-card p-3",
+        surfaceClassName
       )}
     >
       <div className="flex items-center gap-2.5">
@@ -243,7 +243,7 @@ function UserCardInner({
         </div>
         <div className="flex shrink-0 flex-col items-center">
           <span
-            className={`text-[18px] font-semibold leading-none tabular-nums ${scoreColor}`}
+            className={`text-[18px] leading-none font-semibold tabular-nums ${scoreColor}`}
           >
             {props.contributorScore}
           </span>
@@ -266,31 +266,45 @@ function UserCardInner({
         </div>
         <div className="flex items-center justify-between">
           <span className="text-tw-text-muted">Repos</span>
-          <span className="text-tw-text-primary tabular-nums">{fmtCompact(props.publicRepos)}</span>
+          <span className="text-tw-text-primary tabular-nums">
+            {fmtCompact(props.publicRepos)}
+          </span>
         </div>
         <div className="flex items-center justify-between">
           <span className="text-tw-text-muted">Followers</span>
-          <span className="text-tw-text-primary tabular-nums">{fmtCompact(props.followers)}</span>
+          <span className="text-tw-text-primary tabular-nums">
+            {fmtCompact(props.followers)}
+          </span>
         </div>
         <div className="flex items-center justify-between">
           <span className="text-tw-text-muted">1y contrib</span>
-          <span className="text-tw-text-primary tabular-nums">{fmtCompact(props.contributionsLastYear)}</span>
+          <span className="text-tw-text-primary tabular-nums">
+            {fmtCompact(props.contributionsLastYear)}
+          </span>
         </div>
         <div className="flex items-center justify-between">
           <span className="text-tw-text-muted">Merged PRs</span>
-          <span className="text-tw-text-primary tabular-nums">{fmtCompact(props.mergedPrs)}</span>
+          <span className="text-tw-text-primary tabular-nums">
+            {fmtCompact(props.mergedPrs)}
+          </span>
         </div>
         <div className="flex items-center justify-between">
           <span className="text-tw-text-muted">Closed</span>
-          <span className="text-tw-text-primary tabular-nums">{fmtCompact(props.closedUnmergedPrs)}</span>
+          <span className="text-tw-text-primary tabular-nums">
+            {fmtCompact(props.closedUnmergedPrs)}
+          </span>
         </div>
         <div className="flex items-center justify-between">
           <span className="text-tw-text-muted">PRs here</span>
-          <span className="text-tw-text-primary tabular-nums">{fmtCompact(props.prsToThisRepo)}</span>
+          <span className="text-tw-text-primary tabular-nums">
+            {fmtCompact(props.prsToThisRepo)}
+          </span>
         </div>
         <div className="flex items-center justify-between">
           <span className="text-tw-text-muted">Forks</span>
-          <span className="text-tw-text-primary tabular-nums">{fmtCompact(props.publicForkRepos)}</span>
+          <span className="text-tw-text-primary tabular-nums">
+            {fmtCompact(props.publicForkRepos)}
+          </span>
         </div>
       </div>
 
@@ -365,7 +379,9 @@ export const { registry } = defineRegistry(catalog, {
         if (!emblaApi) return
         onSelect()
         emblaApi.on("select", onSelect)
-        return () => { emblaApi.off("select", onSelect) }
+        return () => {
+          emblaApi.off("select", onSelect)
+        }
       }, [emblaApi, onSelect])
 
       return (
@@ -384,10 +400,7 @@ export const { registry } = defineRegistry(catalog, {
                     key={slide.username}
                     className="min-w-0 shrink-0 grow-0 basis-[88%]"
                   >
-                    <UserCardInner
-                      props={slide}
-                      surfaceClassName="h-full"
-                    />
+                    <UserCardInner props={slide} surfaceClassName="h-full" />
                   </div>
                 ))}
               </div>
@@ -419,7 +432,7 @@ export const { registry } = defineRegistry(catalog, {
                         "block h-[2px] w-full rounded-full transition-colors",
                         i === active
                           ? "bg-tw-text-secondary"
-                          : "bg-white/[0.10] group-hover:bg-white/20",
+                          : "bg-white/[0.10] group-hover:bg-white/20"
                       )}
                     />
                   </button>
@@ -452,7 +465,6 @@ export const { registry } = defineRegistry(catalog, {
         </div>
       )
     },
-
 
     // ─── Events List ──────────────────────────────────────────────
     EventsList: ({ props }) => {

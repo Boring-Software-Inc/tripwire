@@ -72,13 +72,13 @@ describe("mention helpers", () => {
 
   it("does not flag email-domain @segments as mentions", () => {
     expect(
-      listGithubAtMentionsMissingChips("hey user@corp.com hello", new Set()),
+      listGithubAtMentionsMissingChips("hey user@corp.com hello", new Set())
     ).toEqual([])
   })
 
   it("listGithubAtMentionsMissingChips is empty when every @handle matches a chip", () => {
     expect(
-      listGithubAtMentionsMissingChips("@Tor @tor", new Set(["tor"])),
+      listGithubAtMentionsMissingChips("@Tor @tor", new Set(["tor"]))
     ).toEqual([])
   })
 })

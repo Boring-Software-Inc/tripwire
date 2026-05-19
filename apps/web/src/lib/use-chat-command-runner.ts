@@ -173,12 +173,8 @@ export function useSlashCommandRunner(adapter?: CommandRunnerAdapter) {
 
   const invalidateLists = useCallback(() => {
     if (!repoId) return
-    queryClient.invalidateQueries(
-      trpc.blacklist.list.queryFilter({ repoId })
-    )
-    queryClient.invalidateQueries(
-      trpc.whitelist.list.queryFilter({ repoId })
-    )
+    queryClient.invalidateQueries(trpc.blacklist.list.queryFilter({ repoId }))
+    queryClient.invalidateQueries(trpc.whitelist.list.queryFilter({ repoId }))
     queryClient.invalidateQueries(
       trpc.events.digest.queryFilter({
         repoId,
@@ -230,8 +226,7 @@ export function useSlashCommandRunner(adapter?: CommandRunnerAdapter) {
         } catch (error) {
           return {
             kind: "error",
-            message:
-              error instanceof Error ? error.message : "Command failed.",
+            message: error instanceof Error ? error.message : "Command failed.",
           }
         }
       }
@@ -292,7 +287,12 @@ export function useSlashCommandRunner(adapter?: CommandRunnerAdapter) {
 
         return { kind: "done" }
       } catch (error) {
-        if (loading && command.kind === "read" && command.tool && command.buildArgs) {
+        if (
+          loading &&
+          command.kind === "read" &&
+          command.tool &&
+          command.buildArgs
+        ) {
           replaceOptimisticMessage(
             loading.id,
             makeToolMessage({
@@ -306,8 +306,7 @@ export function useSlashCommandRunner(adapter?: CommandRunnerAdapter) {
         }
         return {
           kind: "error",
-          message:
-            error instanceof Error ? error.message : "Command failed.",
+          message: error instanceof Error ? error.message : "Command failed.",
         }
       }
     },
@@ -424,7 +423,5 @@ function successMessageFor(c: MutationConfirmation): string {
 
 function nextFrame(): Promise<void> {
   if (typeof window === "undefined") return Promise.resolve()
-  return new Promise((resolve) =>
-    window.requestAnimationFrame(() => resolve())
-  )
+  return new Promise((resolve) => window.requestAnimationFrame(() => resolve()))
 }

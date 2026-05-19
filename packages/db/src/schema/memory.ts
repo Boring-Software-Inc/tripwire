@@ -1,10 +1,4 @@
-import {
-  index,
-  integer,
-  pgTable,
-  text,
-  timestamp,
-} from "drizzle-orm/pg-core"
+import { index, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core"
 import { user } from "./auth"
 
 export const workingMemory = pgTable(
@@ -17,9 +11,7 @@ export const workingMemory = pgTable(
     content: text("content").notNull(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
-  (t) => [
-    index("wm_scope_idx").on(t.scope, t.chatId, t.userId),
-  ]
+  (t) => [index("wm_scope_idx").on(t.scope, t.chatId, t.userId)]
 )
 
 export const conversationMessages = pgTable(
@@ -32,7 +24,5 @@ export const conversationMessages = pgTable(
     content: text("content").notNull(),
     timestamp: timestamp("timestamp").notNull().defaultNow(),
   },
-  (t) => [
-    index("cm_chat_ts_idx").on(t.chatId, t.timestamp),
-  ]
+  (t) => [index("cm_chat_ts_idx").on(t.chatId, t.timestamp)]
 )

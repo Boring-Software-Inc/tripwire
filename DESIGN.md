@@ -126,6 +126,7 @@ Tripwire's visual system is built on tonal layering, not decoration. Depth comes
 This is not Linear's polished calm. Not Better Auth's template energy. Not a monitoring wall with fifty metrics competing for attention. The Situation Room shows one thing at a time, clearly, and shuts up when there's nothing to report.
 
 **Key Characteristics:**
+
 - Dark-native. No light theme. Charcoal tonal layering for depth.
 - Color is signal. Saturated hues appear only for actionable states.
 - Tight, utilitarian spacing. No generous whitespace for its own sake.
@@ -137,9 +138,11 @@ This is not Linear's polished calm. Not Better Auth's template energy. Not a mon
 A restrained palette. Tinted near-blacks do the structural work. Saturated color is reserved for signal.
 
 ### Primary
+
 - **Signal Blue** (#34a6ff): The system's voice. Links, active states, primary actions, focus rings. The only saturated color that appears without an event triggering it. Used sparingly; its rarity is the point.
 
 ### Tertiary
+
 - **Clear Green** (#67e19f): Positive verdicts. Success states, upward trends, passing checks. Never decorative.
 - **Alert Red** (#f56d5d): Negative verdicts. Errors, flagged contributors, blocked actions.
 - **Warning Gold** (#d1bc00): Ambiguous signal. Thresholds approached, requires review.
@@ -147,6 +150,7 @@ A restrained palette. Tinted near-blacks do the structural work. Saturated color
 - **Chart Orange** (#df750c): Data visualization secondary.
 
 ### Neutral
+
 - **Blackout** (#0d0d0f): The void. Page background, the base layer everything sits on.
 - **Gunmetal** (#17171a): First elevation. Sidebar backgrounds, inset containers, recessed surfaces.
 - **Charcoal** (#202023): Second elevation. Cards, inputs, popovers. The primary interactive surface.
@@ -162,6 +166,7 @@ A restrained palette. Tinted near-blacks do the structural work. Saturated color
 - **Text Tertiary** (#6e6e6e): Disabled states, placeholders, the quietest text that's still legible.
 
 ### Named Rules
+
 **The Signal Rule.** Saturated color means something happened. Blue is the system's voice. Green is a pass. Red is a flag. Gold is a maybe. If a color appears without conveying a verdict or enabling an action, remove it.
 
 ## 3. Typography
@@ -172,6 +177,7 @@ A restrained palette. Tinted near-blacks do the structural work. Saturated color
 **Character:** A serif/sans split that mirrors the product's dual nature: Playfair brings the identity (the eye, the wire, the surveillance metaphor), Geist does the work (labels, data, controls). Playfair appears only where the brand speaks; Geist handles everything else without drawing attention.
 
 ### Hierarchy
+
 - **Display** (500, clamp(2rem, 5vw, 3.5rem), 1.1): Landing page headlines, hero moments. Playfair Display only. Never in the dashboard.
 - **Headline** (600, 1.25rem/20px, 1.2, -0.01em): Page titles, section headings inside the app. Geist.
 - **Title** (500, 1rem/16px, 1.25): Card titles, dialog titles, secondary headings. Geist.
@@ -179,6 +185,7 @@ A restrained palette. Tinted near-blacks do the structural work. Saturated color
 - **Label** (520, 0.75rem/12px, 1.33, -0.2px): Stat labels, metadata, nav items, chips. Tight tracking for small sizes.
 
 ### Named Rules
+
 **The 13px Rule.** Body text is 13px, not 14px or 16px. The dashboard is dense and utilitarian. Larger body text wastes vertical space and softens the tone. 13px with 19px line-height is the sweet spot: readable without being generous.
 
 ## 4. Elevation
@@ -190,11 +197,13 @@ Four tonal layers define the z-axis: Blackout (base) → Gunmetal (recessed) →
 Shadows appear only when an element physically breaks the plane: popovers, dropdown menus, dialogs, toasts. These are the only surfaces that cast shadows, and the shadows are tight and dark.
 
 ### Shadow Vocabulary
+
 - **Overlay** (`shadow-lg` with 5% opacity): Dialogs, dropdown menus, popovers. Diffuse, low-opacity. The overlay exists; it doesn't announce itself.
 - **Button Press** (`inset-shadow` with black/8%): Active/pressed state on primary buttons. Pushes the surface inward.
 - **Button Ambient** (`shadow-xs` with primary/24%): Primary buttons at rest cast a faint colored glow. The only decorative shadow permitted.
 
 ### Named Rules
+
 **The Flat-By-Default Rule.** Surfaces are flat at rest. If you're reaching for `box-shadow`, the element had better be floating above the page (popover, dialog, toast). Tonal layering handles everything else.
 
 ## 5. Components
@@ -202,6 +211,7 @@ Shadows appear only when an element physically breaks the plane: popovers, dropd
 Utilitarian and precise. Compact sizing, tight spacing, minimal state changes.
 
 ### Buttons
+
 - **Shape:** Gently rounded (8px radius), consistent across all variants.
 - **Primary:** Signal Blue background, white text, 36px height, 12px horizontal padding. Faint blue glow at rest (`shadow-xs shadow-primary/24`). Inset white highlight on top edge (`inset-shadow white/16%`).
 - **Hover / Focus:** Slight darkening on press. Inset black shadow on active (`inset-shadow black/8%`). Focus ring: 2px Signal Blue ring with 1px offset.
@@ -212,36 +222,42 @@ Utilitarian and precise. Compact sizing, tight spacing, minimal state changes.
 - **Loading:** Text goes transparent, centered spinner overlays. Pointer events disabled.
 
 ### Cards / Containers
+
 - **Nesting pattern:** Outer shell (Charcoal, 16px radius, 4px padding) → Inner surface (Inner Wash, 10px radius, 8px padding). This two-layer card is the signature container pattern.
 - **Flat cards:** Some cards skip the nesting. Single layer: Charcoal background, Border Line stroke, 12px radius, 12px padding.
 - **Hover:** Inner wash brightens to ~15% white on group hover.
 - **No shadows.** Cards sit in the tonal layer; they don't float.
 
 ### Chips / Pills
+
 - **User chips:** Dark fill (#212328), 4px radius, tight padding (2px vertical, 4px left). Inline avatar (14px, circular) with a faint white ring. 12px text.
 - **Issue chips:** Slightly lighter fill (#2A2A2A), 5px radius, minimal padding. Used inline in chat.
 - **User pills:** Full-round (pill radius), dark neutral fill, 1px border. Small avatar + 12px label.
 - **Rule:** Chips are informational, never interactive. No hover state, no click handler.
 
 ### Inputs / Fields
+
 - **Style:** Charcoal background, 10px radius, 28px height, 8px horizontal padding. No visible border at rest on dark surfaces; faint white/8% border on landing page inputs.
 - **Focus:** Border brightens to white/20%. No glow, no ring expansion. Subtle.
 - **Placeholder:** #999999. Quiet but legible.
 - **Error / Disabled:** Error state uses Alert Red border. Disabled at 50% opacity.
 
 ### Navigation
+
 - **Sidebar:** Fixed 233px width. Gunmetal-adjacent background. 2px horizontal padding.
 - **Nav items:** 30px height, 8px radius, 8px horizontal padding. Text Muted at rest, Text Primary when active. Hover Dim background on hover.
 - **Top nav:** 32px height items, 8px radius, 12px horizontal padding. 13px medium-weight text. Text Muted inactive, #FAFAFA active.
 - **Workspace switcher:** 32px height, 8px radius, Charcoal background with 1px #333333 border.
 
 ### Dialogs
+
 - **Backdrop:** Black at 32% opacity with subtle backdrop blur.
 - **Content:** Popover background, 16px radius, large shadow (5% opacity). Max width 512px.
 - **Entry:** Scale from 98% + fade in, 200ms duration.
 - **Footer:** Separated by border-top, muted background at 72% opacity.
 
 ### Toasts
+
 - **Position:** Configurable (six positions). Stacked with z-index layering.
 - **Shape:** 8px radius. Popover background mixed darker per stack depth.
 - **Animation:** Custom cubic-bezier (.22, 1, .36, 1) for smooth slide-in. Direction-aware swipe dismiss.
@@ -250,6 +266,7 @@ Utilitarian and precise. Compact sizing, tight spacing, minimal state changes.
 ## 6. Do's and Don'ts
 
 ### Do:
+
 - **Do** use tonal layering (Blackout → Gunmetal → Charcoal → Inner Wash) for depth. Four steps maximum.
 - **Do** keep body text at 13px/19px line-height. The dashboard is dense on purpose.
 - **Do** use Signal Blue exclusively for interactive elements and system voice. It earns its presence.
@@ -259,6 +276,7 @@ Utilitarian and precise. Compact sizing, tight spacing, minimal state changes.
 - **Do** keep shadows tight and dark on overlays. If the shadow is visible from across the room, it's too much.
 
 ### Don't:
+
 - **Don't** introduce a light theme. Tripwire is dark-native. The tonal palette breaks in light mode.
 - **Don't** use saturated color decoratively. Green, red, and gold are verdicts. Blue is the system's voice. No colored backgrounds for vibes.
 - **Don't** look like Linear. No smooth gradients, no polished calm, no "designed for designers" energy. Tripwire is rougher and more utilitarian.
