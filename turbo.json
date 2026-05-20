@@ -38,7 +38,8 @@
     "AXIOM_TOKEN",
     "AXIOM_DATASET",
     "AXIOM_TRACES_DATASET",
-    "OTEL_EXPORTER_OTLP_ENDPOINT"
+    "OTEL_EXPORTER_OTLP_ENDPOINT",
+    "FEEDBACK_WEBHOOK_URL"
   ],
   "tasks": {
     "build": {

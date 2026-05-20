@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { Button } from "#/components/ui/button"
+import { Button } from "@tripwire/ui/button"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState, useRef, useEffect } from "react"
 import { ChatComposer } from "#/components/chat/chat-composer"

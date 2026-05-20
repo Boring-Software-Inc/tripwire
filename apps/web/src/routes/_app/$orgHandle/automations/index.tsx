@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useState } from "react"
-import { Button } from "#/components/ui/button"
+import { Button } from "@tripwire/ui/button"
 import { AnimatePresence, motion } from "framer-motion"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { parseAsStringEnum, useQueryState } from "nuqs"

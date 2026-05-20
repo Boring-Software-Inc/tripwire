@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react"
-import { Button } from "#/components/ui/button"
+import { Button } from "@tripwire/ui/button"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useQuery } from "@tanstack/react-query"
 import { useWorkspace } from "#/lib/workspace-context"

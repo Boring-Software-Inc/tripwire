@@ -8,7 +8,7 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from "react"
-import { Button } from "#/components/ui/button"
+import { Button } from "@tripwire/ui/button"
 import { useQuery } from "@tanstack/react-query"
 import { MicIcon, PlusIcon } from "#/components/icons/nav-icons"
 import { useTRPC } from "#/integrations/trpc/react"

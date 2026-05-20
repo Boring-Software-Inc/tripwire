@@ -2,7 +2,7 @@ import { useEffect, useState } from "react"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { parseAsString, useQueryStates } from "nuqs"
 import { authClient } from "@tripwire/auth/client"
-import { Button } from "#/components/ui/button"
+import { Button } from "@tripwire/ui/button"
 import { TripwireSparkIcon } from "#/components/icons/nav-icons"
 import { OauthConsentCheckRingIcon20 } from "#/components/icons/oauth-consent-check-ring-icon"
 

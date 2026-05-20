@@ -486,4 +486,10 @@ export const chatsRouter = {
           )
         )
     }),
+
+  deleteAll: authedProcedure.mutation(async ({ ctx }) => {
+    await db
+      .delete(conversations)
+      .where(eq(conversations.userId, ctx.user.id))
+  }),
 } satisfies TRPCRouterRecord

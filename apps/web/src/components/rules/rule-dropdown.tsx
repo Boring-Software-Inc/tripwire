@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react"
-import { Button } from "#/components/ui/button"
+import { Button } from "@tripwire/ui/button"
 import { DropdownChevronDownIcon10 } from "#/components/icons/app-chrome-icons"
 
 interface RuleDropdownProps {

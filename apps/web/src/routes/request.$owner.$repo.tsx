@@ -4,7 +4,7 @@ import { useMutation, useQuery } from "@tanstack/react-query"
 import { parseAsString, parseAsStringEnum, useQueryStates } from "nuqs"
 import { authClient } from "@tripwire/auth/client"
 import { useTRPC } from "#/integrations/trpc/react"
-import { Button } from "#/components/ui/button"
+import { Button } from "@tripwire/ui/button"
 import { TripwireLogo } from "#/components/icons/tripwire-logo"
 import { toastFromError } from "#/lib/toast-error"
 

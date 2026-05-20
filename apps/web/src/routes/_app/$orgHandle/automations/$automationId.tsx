@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Button } from "#/components/ui/button"
+import { Button } from "@tripwire/ui/button"
 import { useWorkspace } from "#/lib/workspace-context"
 import { useTRPC } from "#/integrations/trpc/react"
 import { WorkflowEditor } from "#/components/automations/workflow-editor"

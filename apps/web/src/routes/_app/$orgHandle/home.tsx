@@ -2,7 +2,16 @@
 
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import { useState } from "react"
-import { Button } from "#/components/ui/button"
+import { Button } from "@tripwire/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "#/components/ui/dialog"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { motion, AnimatePresence } from "framer-motion"
 import { ChatComposer } from "#/components/chat/chat-composer"
@@ -354,6 +363,7 @@ function RecentChats() {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [clearAllOpen, setClearAllOpen] = useState(false)
   const chatsQuery = useQuery(trpc.chats.list.queryOptions({ limit: 5 }))
   const chats = chatsQuery.data ?? []
 
@@ -364,7 +374,6 @@ function RecentChats() {
         setConfirmDeleteId(null)
         await queryClient.cancelQueries({ queryKey: listQueryKey })
         const previous = queryClient.getQueryData(listQueryKey)
-        await new Promise((r) => setTimeout(r, 300))
         queryClient.setQueryData(
           listQueryKey,
           (old: typeof chats | undefined) =>
@@ -383,13 +392,67 @@ function RecentChats() {
     })
   )
 
+  const deleteAllChats = useMutation(
+    trpc.chats.deleteAll.mutationOptions({
+      onMutate: async () => {
+        setClearAllOpen(false)
+        await queryClient.cancelQueries({ queryKey: listQueryKey })
+        const previous = queryClient.getQueryData(listQueryKey)
+        queryClient.setQueryData(listQueryKey, [])
+        return { previous }
+      },
+      onError: (_err, _vars, ctx) => {
+        if (ctx?.previous) {
+          queryClient.setQueryData(listQueryKey, ctx.previous)
+        }
+      },
+      onSettled: () => {
+        queryClient.invalidateQueries({ queryKey: listQueryKey })
+      },
+    })
+  )
+
   if (chats.length === 0) return null
 
   return (
     <div className="mt-8 w-full">
-      <h2 className="mb-2 px-2 text-[13px] font-medium tracking-wider text-tw-text-muted uppercase">
-        Recent chats
-      </h2>
+      <div className="mb-2 flex items-center justify-between px-2">
+        <h2 className="text-[13px] font-medium tracking-wider text-tw-text-muted uppercase">
+          Recent chats
+        </h2>
+        <button
+          type="button"
+          onClick={() => setClearAllOpen(true)}
+          className="text-[11px] font-medium text-tw-text-muted transition-colors hover:text-red-400"
+        >
+          Clear all
+        </button>
+      </div>
+
+      <Dialog open={clearAllOpen} onOpenChange={setClearAllOpen}>
+        <DialogContent showCloseButton={false} className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-base">Clear all chats</DialogTitle>
+            <DialogDescription>
+              This will permanently delete all your chat history. This action
+              cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter variant="bare">
+            <DialogClose render={<Button variant="ghost" size="sm" />}>
+              Cancel
+            </DialogClose>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => deleteAllChats.mutate()}
+              className="bg-red-500 text-white hover:bg-red-600"
+            >
+              Delete all chats
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <div className="flex flex-col gap-0.5">
         <AnimatePresence initial={false}>
           {chats.map((chat) => {

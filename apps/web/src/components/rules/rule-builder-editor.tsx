@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react"
-import { Button } from "#/components/ui/button"
+import { Button } from "@tripwire/ui/button"
 import { toastFromError } from "#/lib/toast-error"
 import {
   ReactFlow,

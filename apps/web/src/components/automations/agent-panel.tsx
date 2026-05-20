@@ -1,5 +1,5 @@
 import { useEffect } from "react"
-import { Button } from "#/components/ui/button"
+import { Button } from "@tripwire/ui/button"
 import { PlusStrokeIcon14 } from "#/components/icons/app-chrome-icons"
 import { ChatThread } from "#/components/chat/chat-thread"
 import { ChatComposer } from "#/components/chat/chat-composer"

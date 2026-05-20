@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { UserPill } from "./user-pill"
-import { Button } from "#/components/ui/button"
+import { Button } from "@tripwire/ui/button"
 import { toastFromError } from "#/lib/toast-error"
 
 interface User {

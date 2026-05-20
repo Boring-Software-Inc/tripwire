@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react"
-import { Button } from "#/components/ui/button"
+import { Button } from "@tripwire/ui/button"
 import {
   UnicodeSpinner,
   useRandomThinkingVariant,

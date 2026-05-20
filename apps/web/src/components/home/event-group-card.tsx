@@ -1,5 +1,5 @@
 import type { KeyboardEvent, MouseEvent } from "react"
-import { Button } from "#/components/ui/button"
+import { Button } from "@tripwire/ui/button"
 import {
   EventAlertTriangleIcon,
   EventCloseCircleSolidIcon,

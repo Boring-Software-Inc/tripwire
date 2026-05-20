@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useState } from "react"
-import { Button } from "#/components/ui/button"
+import { Button } from "@tripwire/ui/button"
 import { useQuery } from "@tanstack/react-query"
 import { useAuth } from "@tripwire/auth/components"
 import { authClient } from "@tripwire/auth/client"

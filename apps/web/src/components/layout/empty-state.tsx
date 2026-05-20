@@ -1,5 +1,5 @@
 import { TripwireLogo } from "../icons/tripwire-logo"
-import { Button } from "#/components/ui/button"
+import { Button } from "@tripwire/ui/button"
 
 interface EmptyStateProps {
   title: string

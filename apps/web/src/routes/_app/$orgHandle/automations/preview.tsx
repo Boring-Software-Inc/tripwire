@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { Button } from "#/components/ui/button"
+import { Button } from "@tripwire/ui/button"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useWorkspace } from "#/lib/workspace-context"
 import { useTRPC } from "#/integrations/trpc/react"

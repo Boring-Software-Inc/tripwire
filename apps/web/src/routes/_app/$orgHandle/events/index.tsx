@@ -4,7 +4,7 @@ import { useTRPC } from "#/integrations/trpc/react"
 import { useWorkspace } from "#/lib/workspace-context"
 import { EmptyState } from "#/components/layout/empty-state"
 import { useEffect, useState } from "react"
-import { Button } from "#/components/ui/button"
+import { Button } from "@tripwire/ui/button"
 import { markEventsViewed } from "#/lib/use-events-unread"
 import { routes } from "#/lib/routes"
 import {

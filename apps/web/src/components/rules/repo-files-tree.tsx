@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react"
 import { useFileTree, FileTree } from "@pierre/trees/react"
 import { parseAsStringEnum, useQueryState } from "nuqs"
-import { Button } from "#/components/ui/button"
+import { Button } from "@tripwire/ui/button"
 import { Checkbox } from "#/components/ui/checkbox"
 import { HoneypotMicroPlusIcon7 } from "#/components/icons/honeypot-micro-plus-icon"
 import type { RuleConfig, HoneypotPhraseKind } from "@tripwire/db"

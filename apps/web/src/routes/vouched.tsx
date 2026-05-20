@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { authClient } from "@tripwire/auth/client"
 import { useTRPC } from "#/integrations/trpc/react"
-import { Button } from "#/components/ui/button"
+import { Button } from "@tripwire/ui/button"
 import {
   Dialog,
   DialogContent,

@@ -1,5 +1,5 @@
 import { CloseIcon } from "../icons/close-icon"
-import { Button } from "#/components/ui/button"
+import { Button } from "@tripwire/ui/button"
 
 interface UserPillProps {
   username: string

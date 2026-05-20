@@ -58,6 +58,7 @@
     "@tripwire/core": "workspace:*",
     "@tripwire/db": "workspace:*",
     "@tripwire/env": "workspace:*",
+    "@tripwire/feedback": "workspace:*",
     "@tripwire/github": "workspace:*",
     "@tripwire/mcp": "workspace:*",
     "@tripwire/ratelimit": "workspace:*",

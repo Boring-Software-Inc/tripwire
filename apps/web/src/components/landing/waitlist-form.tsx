@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { useMutation } from "@tanstack/react-query"
 import { useTRPC } from "#/integrations/trpc/react"
-import { Button } from "#/components/ui/button"
+import { Button } from "@tripwire/ui/button"
 
 export function WaitlistForm() {
   const [email, setEmail] = useState("")

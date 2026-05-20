@@ -15,6 +15,7 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as OauthConsentRouteImport } from './routes/oauth/consent'
 import { Route as ApiMcpRouteImport } from './routes/api/mcp'
+import { Route as ApiFeedbackRouteImport } from './routes/api/feedback'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppSearchRouteImport } from './routes/_app/search'
@@ -91,6 +92,11 @@ const OauthConsentRoute = OauthConsentRouteImport.update({
 const ApiMcpRoute = ApiMcpRouteImport.update({
   id: '/api/mcp',
   path: '/api/mcp',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiFeedbackRoute = ApiFeedbackRouteImport.update({
+  id: '/api/feedback',
+  path: '/api/feedback',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiChatRoute = ApiChatRouteImport.update({
@@ -364,6 +370,7 @@ export interface FileRoutesByFullPath {
   '/search': typeof AppSearchRoute
   '/settings': typeof AppSettingsRouteWithChildren
   '/api/chat': typeof ApiChatRoute
+  '/api/feedback': typeof ApiFeedbackRoute
   '/api/mcp': typeof ApiMcpRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/$orgHandle/rules': typeof AppOrgHandleRulesRouteRouteWithChildren
@@ -419,6 +426,7 @@ export interface FileRoutesByTo {
   '/search': typeof AppSearchRoute
   '/settings': typeof AppSettingsRouteWithChildren
   '/api/chat': typeof ApiChatRoute
+  '/api/feedback': typeof ApiFeedbackRoute
   '/api/mcp': typeof ApiMcpRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/.well-known/oauth-authorization-server/$': typeof Char91DotwellKnownChar93OauthAuthorizationServerSplatRoute
@@ -475,6 +483,7 @@ export interface FileRoutesById {
   '/_app/search': typeof AppSearchRoute
   '/_app/settings': typeof AppSettingsRouteWithChildren
   '/api/chat': typeof ApiChatRoute
+  '/api/feedback': typeof ApiFeedbackRoute
   '/api/mcp': typeof ApiMcpRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/_app/$orgHandle/rules': typeof AppOrgHandleRulesRouteRouteWithChildren
@@ -532,6 +541,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/settings'
     | '/api/chat'
+    | '/api/feedback'
     | '/api/mcp'
     | '/oauth/consent'
     | '/$orgHandle/rules'
@@ -587,6 +597,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/settings'
     | '/api/chat'
+    | '/api/feedback'
     | '/api/mcp'
     | '/oauth/consent'
     | '/.well-known/oauth-authorization-server/$'
@@ -642,6 +653,7 @@ export interface FileRouteTypes {
     | '/_app/search'
     | '/_app/settings'
     | '/api/chat'
+    | '/api/feedback'
     | '/api/mcp'
     | '/oauth/consent'
     | '/_app/$orgHandle/rules'
@@ -691,6 +703,7 @@ export interface RootRouteChildren {
   Char91DotwellKnownChar93OauthAuthorizationServerRoute: typeof Char91DotwellKnownChar93OauthAuthorizationServerRouteWithChildren
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteWithChildren
   ApiChatRoute: typeof ApiChatRoute
+  ApiFeedbackRoute: typeof ApiFeedbackRoute
   ApiMcpRoute: typeof ApiMcpRoute
   OauthConsentRoute: typeof OauthConsentRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -746,6 +759,13 @@ declare module '@tanstack/react-router' {
       path: '/api/mcp'
       fullPath: '/api/mcp'
       preLoaderRoute: typeof ApiMcpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/feedback': {
+      id: '/api/feedback'
+      path: '/api/feedback'
+      fullPath: '/api/feedback'
+      preLoaderRoute: typeof ApiFeedbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/chat': {
@@ -1236,6 +1256,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRouteWithChildren,
   ApiChatRoute: ApiChatRoute,
+  ApiFeedbackRoute: ApiFeedbackRoute,
   ApiMcpRoute: ApiMcpRoute,
   OauthConsentRoute: OauthConsentRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,

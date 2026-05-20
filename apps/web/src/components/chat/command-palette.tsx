@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react"
-import { Button } from "#/components/ui/button"
+import { Button } from "@tripwire/ui/button"
 import type { SlashCommand } from "#/lib/chat-commands"
 import { cn } from "@tripwire/ui/utils"
 

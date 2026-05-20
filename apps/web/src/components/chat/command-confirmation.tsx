@@ -1,5 +1,5 @@
 import { AlertCircle, Info } from "lucide-react"
-import { Button } from "#/components/ui/button"
+import { Button } from "@tripwire/ui/button"
 import type { MutationConfirmation } from "#/lib/chat-commands"
 
 interface CommandConfirmationProps {

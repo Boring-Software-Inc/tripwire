@@ -1,5 +1,5 @@
 import type { Node } from "@xyflow/react"
-import { Button } from "#/components/ui/button"
+import { Button } from "@tripwire/ui/button"
 import {
   getNodeEntry,
   type ParamDefinition,

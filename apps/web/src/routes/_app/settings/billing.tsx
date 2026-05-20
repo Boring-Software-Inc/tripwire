@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { Button } from "#/components/ui/button"
+import { Button } from "@tripwire/ui/button"
 import { useCustomer } from "autumn-js/react"
 import { useWorkspace } from "#/lib/workspace-context"
 import { PlusStrokeIcon14 } from "#/components/icons/app-chrome-icons"

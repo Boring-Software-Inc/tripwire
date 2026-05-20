@@ -1,6 +1,6 @@
 import { AnimatePresence, motion, type Transition } from "framer-motion"
 import { useEffect, useRef, useState } from "react"
-import { Button } from "#/components/ui/button"
+import { Button } from "@tripwire/ui/button"
 import { ChevronDown } from "#/components/icons/chevron-down"
 import { CloseIcon } from "#/components/icons/close-icon"
 import { SaveBarSuccessCheckIcon12 } from "#/components/icons/app-chrome-icons"

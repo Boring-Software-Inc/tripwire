@@ -8,7 +8,7 @@ import { ContributionsHeatmap } from "#/components/profile/contributions-heatmap
 import { PinnedRepos } from "#/components/profile/pinned-repos"
 import { GithubIcon } from "#/components/icons/github"
 import { CommunitySignals } from "#/components/profile/community-signals"
-import { Button } from "#/components/ui/button"
+import { Button } from "@tripwire/ui/button"
 import { buildSeoMeta } from "#/lib/seo"
 
 export const Route = createFileRoute("/_app/users/$username")({

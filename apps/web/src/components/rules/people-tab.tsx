@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Button } from "#/components/ui/button"
+import { Button } from "@tripwire/ui/button"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useTRPC } from "#/integrations/trpc/react"
 import { toastFromError } from "#/lib/toast-error"

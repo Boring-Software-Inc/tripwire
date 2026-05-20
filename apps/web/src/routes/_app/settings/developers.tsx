@@ -2,7 +2,7 @@ import { useState } from "react"
 import { createFileRoute } from "@tanstack/react-router"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useTRPC } from "#/integrations/trpc/react"
-import { Button } from "#/components/ui/button"
+import { Button } from "@tripwire/ui/button"
 import { toastManager } from "#/components/ui/toast"
 import { toastFromError } from "#/lib/toast-error"
 

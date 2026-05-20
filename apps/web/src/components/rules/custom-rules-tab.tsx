@@ -2,7 +2,7 @@ import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
 import { useTRPC } from "#/integrations/trpc/react"
-import { Button } from "#/components/ui/button"
+import { Button } from "@tripwire/ui/button"
 import {
   Dialog,
   DialogContent,

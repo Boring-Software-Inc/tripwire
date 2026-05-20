@@ -1,5 +1,5 @@
 import { memo, useState, useRef, useEffect, useCallback } from "react"
-import { Button } from "#/components/ui/button"
+import { Button } from "@tripwire/ui/button"
 import { Handle, Position, useStoreApi, type NodeProps } from "@xyflow/react"
 import { NODE_STYLE_MAP, HANDLE_COLORS, getNodeStyle } from "#/lib/node-styles"
 import { formatScheduleSublabel } from "#/lib/schedule-format"

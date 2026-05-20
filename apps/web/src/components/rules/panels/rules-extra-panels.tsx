@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
-import { Button } from "#/components/ui/button"
+import { Button } from "@tripwire/ui/button"
 import { RepoFilesTree } from "#/components/rules/repo-files-tree"
 import { PeopleTab } from "#/components/rules/people-tab"
 import { useRulesWorkspace } from "#/components/rules/rules-workspace-context"

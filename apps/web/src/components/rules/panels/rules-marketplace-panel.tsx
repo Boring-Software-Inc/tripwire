@@ -11,7 +11,7 @@ import {
   VouchedUsersViz,
 } from "#/components/rules/rule-card-grid"
 import { useRulesWorkspace } from "#/components/rules/rules-workspace-context"
-import { Button } from "#/components/ui/button"
+import { Button } from "@tripwire/ui/button"
 
 export function RulesMarketplacePanel() {
   const {

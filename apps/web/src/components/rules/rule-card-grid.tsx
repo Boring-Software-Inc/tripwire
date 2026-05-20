@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "#/components/ui/dialog"
-import { Button } from "#/components/ui/button"
+import { Button } from "@tripwire/ui/button"
 
 export {
   ProfilePictureViz,

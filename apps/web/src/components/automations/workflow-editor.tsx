@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useMemo, useEffect } from "react"
-import { Button } from "#/components/ui/button"
+import { Button } from "@tripwire/ui/button"
 import { onWorkflowMutation } from "#/lib/workflow-events"
 import { buildChangeSummary, type EditorSnapshot } from "#/lib/pending-changes"
 import { PendingChangesToolbar } from "#/components/automations/pending-changes-toolbar"

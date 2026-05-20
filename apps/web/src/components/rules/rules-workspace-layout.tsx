@@ -1,7 +1,7 @@
 import { Link, Outlet } from "@tanstack/react-router"
 import { RulesSaveBar } from "#/components/rules/rules-save-bar"
 import { EmptyState } from "#/components/layout/empty-state"
-import { Button } from "#/components/ui/button"
+import { Button } from "@tripwire/ui/button"
 import { Checkbox } from "#/components/ui/checkbox"
 import {
   Dialog,

@@ -11,7 +11,7 @@ import { EventsIcon } from "../icons/events-icon"
 import { IntegrationsIcon } from "../icons/integrations-icon"
 import { useWorkspace } from "#/lib/workspace-context"
 import { useSidebar } from "#/lib/sidebar-context"
-import { Button } from "#/components/ui/button"
+import { Button } from "@tripwire/ui/button"
 
 const topNav = [
   { label: "Home", icon: HomeIcon, to: "/home" },

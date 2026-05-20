@@ -1,4 +1,4 @@
-import { Button } from "#/components/ui/button"
+import { Button } from "@tripwire/ui/button"
 import { ContextUsageRingIcon } from "#/components/icons/context-usage-ring-icon"
 import {
   HoverCard,

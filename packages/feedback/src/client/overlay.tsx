@@ -1,0 +1,273 @@
+import { useRef, useState } from 'react';
+import { useMountEffect } from './use-mount-effect';
+import { createPortal } from 'react-dom';
+import { getElementContext, freeze, unfreeze } from 'react-grab/primitives';
+import { getFiberFromHostInstance, getDisplayName, traverseFiber } from 'bippy';
+import { useFeedback } from './context';
+
+type HoveredInfo = {
+  rect: DOMRect;
+  componentName: string | null;
+  tagName: string;
+} | null;
+
+function getComponentName(element: Element): string | null {
+  const fiber = getFiberFromHostInstance(element);
+  if (!fiber) {
+    return null;
+  }
+  let name: string | null = null;
+  traverseFiber(
+    fiber,
+    (f) => {
+      const displayName = getDisplayName(f);
+      if (displayName && !displayName.startsWith('_')) {
+        name = displayName;
+        return true;
+      }
+      return false;
+    },
+    true
+  );
+  return name;
+}
+
+export function FeedbackOverlay() {
+  const { isSelecting, selectElement, cancelSelection, config } = useFeedback();
+  const overlayZIndex = config.ui?.zIndex ? config.ui.zIndex - 2 : 9998;
+  const [hovered, setHovered] = useState<HoveredInfo>(null);
+  const [isResolving, setIsResolving] = useState(false);
+  const highlightRef = useRef<HTMLDivElement>(null);
+  const cancelledRef = useRef(false);
+
+  const isResolvingRef = useRef(isResolving);
+  isResolvingRef.current = isResolving;
+  const isSelectingRef = useRef(isSelecting);
+  isSelectingRef.current = isSelecting;
+  const selectElementRef = useRef(selectElement);
+  selectElementRef.current = selectElement;
+  const cancelSelectionRef = useRef(cancelSelection);
+  cancelSelectionRef.current = cancelSelection;
+
+  useMountEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isResolvingRef.current) {
+        return;
+      }
+
+      if (highlightRef.current) {
+        highlightRef.current.style.display = 'none';
+      }
+      const overlay = document.getElementById('feedback-overlay-layer');
+      if (overlay) {
+        overlay.style.pointerEvents = 'none';
+      }
+
+      const target = document.elementFromPoint(e.clientX, e.clientY);
+
+      if (overlay) {
+        overlay.style.pointerEvents = 'auto';
+      }
+      if (highlightRef.current) {
+        highlightRef.current.style.display = '';
+      }
+
+      if (
+        target &&
+        target !== document.body &&
+        !target.hasAttribute('data-feedback-ignore')
+      ) {
+        setHovered({
+          rect: target.getBoundingClientRect(),
+          componentName: getComponentName(target),
+          tagName: target.tagName.toLowerCase(),
+        });
+      } else {
+        setHovered(null);
+      }
+    };
+
+    const handleClick = async (e: MouseEvent) => {
+      if (!isSelectingRef.current || isResolvingRef.current) {
+        return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (highlightRef.current) {
+        highlightRef.current.style.display = 'none';
+      }
+      const overlay = document.getElementById('feedback-overlay-layer');
+      if (overlay) {
+        overlay.style.pointerEvents = 'none';
+      }
+
+      const target = document.elementFromPoint(e.clientX, e.clientY);
+      if (overlay) {
+        overlay.style.pointerEvents = 'auto';
+      }
+      if (!target) {
+        return;
+      }
+
+      setIsResolving(true);
+      cancelledRef.current = false;
+      try {
+        let screenshot: Blob | null = null;
+        try {
+          const overlayEl = document.getElementById('feedback-overlay-layer');
+          if (overlayEl) overlayEl.style.display = 'none';
+
+          const selectedRect = target.getBoundingClientRect();
+          const componentName = getComponentName(target);
+          const highlightLabel = componentName ?? target.tagName.toLowerCase();
+
+          const html2canvas = (await import('html2canvas-pro')).default;
+          const canvas = await html2canvas(document.body, {
+            logging: false,
+            width: window.innerWidth,
+            height: window.innerHeight,
+            scrollX: -window.scrollX,
+            scrollY: -window.scrollY,
+            windowWidth: window.innerWidth,
+            windowHeight: window.innerHeight,
+            onclone: (clonedDoc) => {
+              for (const el of clonedDoc.querySelectorAll<HTMLElement>(
+                '[data-privacy="masked"]'
+              )) {
+                el.style.filter = 'blur(10px)';
+              }
+
+              const highlight = clonedDoc.createElement('div');
+              Object.assign(highlight.style, {
+                position: 'fixed',
+                top: `${selectedRect.top}px`,
+                left: `${selectedRect.left}px`,
+                width: `${selectedRect.width}px`,
+                height: `${selectedRect.height}px`,
+                border: '2px solid #34a6ff',
+                backgroundColor: 'rgba(52, 166, 255, 0.08)',
+                borderRadius: '3px',
+                zIndex: '999999',
+                pointerEvents: 'none',
+              });
+              clonedDoc.body.appendChild(highlight);
+
+              const label = clonedDoc.createElement('div');
+              Object.assign(label.style, {
+                position: 'fixed',
+                top: `${Math.max(selectedRect.top - 24, 4)}px`,
+                left: `${selectedRect.left}px`,
+                backgroundColor: '#34a6ff',
+                color: '#ffffff',
+                fontSize: '11px',
+                fontFamily: 'ui-monospace, monospace',
+                fontWeight: '500',
+                padding: '2px 6px',
+                borderRadius: '3px',
+                zIndex: '999999',
+                pointerEvents: 'none',
+                whiteSpace: 'nowrap',
+              });
+              label.textContent = highlightLabel;
+              clonedDoc.body.appendChild(label);
+            },
+          });
+
+          if (overlayEl) overlayEl.style.display = '';
+
+          screenshot = await new Promise<Blob>((resolve, reject) =>
+            canvas.toBlob(
+              (b) => (b ? resolve(b) : reject(new Error('toBlob failed'))),
+              'image/png'
+            )
+          );
+        } catch {
+          const overlayEl = document.getElementById('feedback-overlay-layer');
+          if (overlayEl) overlayEl.style.display = '';
+        }
+
+        if (cancelledRef.current) return;
+
+        freeze();
+        const context = await getElementContext(target);
+        if (cancelledRef.current) {
+          unfreeze();
+          return;
+        }
+        unfreeze();
+        selectElementRef.current(context, screenshot);
+      } catch (err) {
+        unfreeze();
+        if (!cancelledRef.current) {
+          console.error('[feedback] Failed to resolve element context:', err);
+          cancelSelectionRef.current();
+        }
+      } finally {
+        setIsResolving(false);
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (isResolvingRef.current) {
+          cancelledRef.current = true;
+          unfreeze();
+        }
+        cancelSelectionRef.current();
+      }
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('click', handleClick, true);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('click', handleClick, true);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  });
+
+  if (!isSelecting) {
+    return null;
+  }
+
+  return createPortal(
+    <div
+      id="feedback-overlay-layer"
+      className="fixed inset-0 cursor-crosshair bg-black/10"
+      style={{ zIndex: overlayZIndex }}
+    >
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-tw-surface text-tw-text-primary px-4 py-2 rounded-full font-medium text-sm shadow-lg border border-tw-border animate-in fade-in slide-in-from-top-4">
+        {isResolving
+          ? 'Resolving component...'
+          : 'Click an element to select it \u00b7 Press Esc to cancel'}
+      </div>
+
+      {hovered && (
+        <div
+          ref={highlightRef}
+          className="fixed pointer-events-none transition-all duration-75 ease-out rounded-sm border-2 border-tw-accent bg-tw-accent/10"
+          style={{
+            top: hovered.rect.top,
+            left: hovered.rect.left,
+            width: hovered.rect.width,
+            height: hovered.rect.height,
+          }}
+        >
+          <div className="absolute -top-6 left-0 bg-tw-accent text-white text-xs px-2 py-0.5 rounded-sm whitespace-nowrap flex items-center gap-1">
+            {hovered.componentName ? (
+              <>
+                <span className="font-medium">{hovered.componentName}</span>
+                <span className="opacity-60 font-mono">{hovered.tagName}</span>
+              </>
+            ) : (
+              <span className="font-mono">{hovered.tagName}</span>
+            )}
+          </div>
+        </div>
+      )}
+    </div>,
+    document.body
+  );
+}

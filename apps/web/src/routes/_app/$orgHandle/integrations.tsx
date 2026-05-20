@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { useWorkspace } from "#/lib/workspace-context"
-import { Button } from "#/components/ui/button"
+import { Button } from "@tripwire/ui/button"
 import { routes } from "#/lib/routes"
 import { GitHubMarkWhiteIcon20 } from "#/components/icons/github-mark-icon"
 import { SuccessCheckStrokeIcon14 } from "#/components/icons/app-chrome-icons"

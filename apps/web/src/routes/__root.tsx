@@ -7,6 +7,8 @@ import { AnchoredToastProvider, ToastProvider } from "#/components/ui/toast"
 import RootProvider from "#/integrations/tanstack-query/root-provider"
 import { useEffect, useState } from "react"
 import { isReactGrabEnabled, isReactScanEnabled } from "#/lib/feature-flags"
+import { FeedbackProvider, FeedbackOverlay } from "@tripwire/feedback"
+import { FeedbackDialog } from "#/components/feedback-dialog"
 import appCss from "../styles.css?url"
 
 function ClientOnlyDevtools() {
@@ -63,7 +65,13 @@ function RootDocument({ children }: { children: React.ReactNode }) {
           <NuqsAdapter>
             <AutumnProvider useBetterAuth>
               <ToastProvider>
-                <AnchoredToastProvider>{children}</AnchoredToastProvider>
+                <AnchoredToastProvider>
+                  <FeedbackProvider endpoint="/api/feedback">
+                    <FeedbackOverlay />
+                    <FeedbackDialog />
+                    {children}
+                  </FeedbackProvider>
+                </AnchoredToastProvider>
               </ToastProvider>
             </AutumnProvider>
           </NuqsAdapter>

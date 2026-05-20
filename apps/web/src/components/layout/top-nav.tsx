@@ -1,5 +1,5 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router"
-import { Button } from "#/components/ui/button"
+import { Button } from "@tripwire/ui/button"
 import { useQuery } from "@tanstack/react-query"
 import {
   HomeNavIcon,
@@ -18,6 +18,7 @@ import {
   MenuSeparator,
 } from "#/components/ui/menu"
 import { useAuth } from "@tripwire/auth/components"
+import { useFeedback } from "@tripwire/feedback"
 import { useWorkspace } from "#/lib/workspace-context"
 import { OrgRepoSwitcher } from "./org-repo-switcher"
 import { useTRPC } from "#/integrations/trpc/react"
@@ -77,6 +78,7 @@ interface TopNavProps {
 
 export function TopNav({ askOpen, onToggleAsk }: TopNavProps) {
   const { user } = useAuth()
+  const { startSelection } = useFeedback()
   const { org, repo } = useWorkspace()
   const { data: customer } = useCustomer()
   const isPro = customer?.subscriptions?.some(
@@ -195,6 +197,13 @@ export function TopNav({ askOpen, onToggleAsk }: TopNavProps) {
             </MenuItem>
             <MenuItem onClick={() => navigate({ to: "/settings/general" })}>
               Settings
+            </MenuItem>
+            <MenuItem
+              onClick={() => {
+                setTimeout(() => startSelection(), 100)
+              }}
+            >
+              Send Feedback
             </MenuItem>
             <MenuSeparator />
             <MenuItem onClick={handleSignOut}>Sign out</MenuItem>
