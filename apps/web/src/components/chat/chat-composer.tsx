@@ -590,73 +590,69 @@ export function ChatComposer({
         </div>
       ) : null}
 
-      <div className="flex min-h-9 w-full flex-wrap items-center gap-1.5">
+      <div
+        ref={composerSurfaceRef}
+        className={cn(
+          "flex min-h-9 w-full min-w-0 rounded-[10px] bg-tw-inner px-1.5 py-1",
+          mentions.length > 0 &&
+            mentionsAttachBelow &&
+            "min-h-0 flex-col gap-1.5 pb-2"
+        )}
+      >
         <div
-          ref={composerSurfaceRef}
+          ref={inlineComposeRef}
           className={cn(
-            "flex min-h-9 min-w-0 flex-1 rounded-[10px] bg-tw-inner px-1.5 py-1",
-            mentions.length > 0 &&
-              mentionsAttachBelow &&
-              "min-h-0 flex-col gap-1.5 pb-2"
+            "flex min-h-9 w-full min-w-0 items-center gap-1.5",
+            showInlineChipsRow && "flex-nowrap"
           )}
         >
-          <div
-            ref={inlineComposeRef}
+          <input
+            ref={inputRef}
+            type="text"
+            placeholder={mentions.length > 0 ? "" : placeholder}
+            value={text}
+            onChange={(event) => {
+              slashInput.handleInputChange(event)
+              updateCursor(event.target)
+              setDismissedTriggerKey(null)
+              setHighlightedIndex(0)
+            }}
+            onClick={(event) => updateCursor(event.currentTarget)}
+            onKeyUp={(event) => updateCursor(event.currentTarget)}
+            onKeyDown={handleKeyDown}
+            disabled={disabled}
+            role="combobox"
+            aria-autocomplete="list"
+            aria-controls={suggestionListId}
+            aria-expanded={showSuggestionsEffective}
+            aria-activedescendant={activeSuggestionId}
             className={cn(
-              "min-h-9 w-full min-w-0",
-              showInlineChipsRow && "flex flex-nowrap items-center gap-1.5"
+              "h-8 min-h-8 min-w-0 flex-1 rounded-md bg-transparent px-1.5 text-[14px] leading-none text-tw-text-primary outline-none placeholder:text-tw-text-tertiary disabled:opacity-50",
+              showInlineChipsRow && "min-w-[8rem] shrink"
             )}
+          />
+          {showInlineChipsRow ? mentionChipElements : null}
+          <Button
+            variant="ghost"
+            type="button"
+            aria-label="Voice input unavailable"
+            title="Voice input unavailable"
+            disabled
+            className="flex size-7 shrink-0 items-center justify-center rounded-md text-tw-text-tertiary transition-colors hover:text-tw-text-secondary disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:text-tw-text-tertiary"
           >
-            <input
-              ref={inputRef}
-              type="text"
-              placeholder={mentions.length > 0 ? "" : placeholder}
-              value={text}
-              onChange={(event) => {
-                slashInput.handleInputChange(event)
-                updateCursor(event.target)
-                setDismissedTriggerKey(null)
-                setHighlightedIndex(0)
-              }}
-              onClick={(event) => updateCursor(event.currentTarget)}
-              onKeyUp={(event) => updateCursor(event.currentTarget)}
-              onKeyDown={handleKeyDown}
-              disabled={disabled}
-              role="combobox"
-              aria-autocomplete="list"
-              aria-controls={suggestionListId}
-              aria-expanded={showSuggestionsEffective}
-              aria-activedescendant={activeSuggestionId}
-              className={cn(
-                "min-h-8 rounded-md bg-transparent px-1.5 text-[14px] text-tw-text-primary outline-none placeholder:text-tw-text-tertiary disabled:opacity-50",
-                showInlineChipsRow
-                  ? "h-8 min-w-[8rem] flex-1 shrink"
-                  : "h-8 w-full min-w-0 shrink-0"
-              )}
-            />
-            {showInlineChipsRow ? mentionChipElements : null}
-          </div>
-          {mentionsAttachBelow && mentions.length > 0 ? (
-            <div
-              ref={chipAttachmentStripRef}
-              role="group"
-              aria-label="Mentions"
-              className="-mx-0.5 flex max-w-full min-w-0 flex-nowrap gap-1.5 overflow-x-auto overscroll-x-contain px-0.5 [scrollbar-width:thin]"
-            >
-              {mentionChipElements}
-            </div>
-          ) : null}
+            <MicIcon />
+          </Button>
         </div>
-        <Button
-          variant="ghost"
-          type="button"
-          aria-label="Voice input unavailable"
-          title="Voice input unavailable"
-          disabled
-          className="flex size-9 items-center justify-center rounded-[10px] text-tw-text-tertiary transition-colors hover:text-tw-text-secondary disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:text-tw-text-tertiary"
-        >
-          <MicIcon />
-        </Button>
+        {mentionsAttachBelow && mentions.length > 0 ? (
+          <div
+            ref={chipAttachmentStripRef}
+            role="group"
+            aria-label="Mentions"
+            className="-mx-0.5 flex max-w-full min-w-0 flex-nowrap gap-1.5 overflow-x-auto overscroll-x-contain px-0.5 [scrollbar-width:thin]"
+          >
+            {mentionChipElements}
+          </div>
+        ) : null}
       </div>
       <div className="flex w-full items-center justify-between pt-1.5">
         <div className="flex items-center gap-1">
