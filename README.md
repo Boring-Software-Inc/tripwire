@@ -53,6 +53,9 @@ Optional:
 - `AUTUMN_SECRET_KEY` — billing
 - `AXIOM_TOKEN`, `AXIOM_DATASET`, `AXIOM_TRACES_DATASET` — logs and traces
 - `OTEL_EXPORTER_OTLP_ENDPOINT` — OpenTelemetry endpoint, defaults to Axiom
+- `INNGEST_EVENT_KEY` / `INNGEST_SIGNING_KEY` — durable background jobs (used by the research harness; in dev, run `npx inngest-cli dev` instead)
+- `INNGEST_ENV` — required if your Inngest keys belong to a branch environment (otherwise you'll see "400 Branch environment name is required"); leave unset for production
+- `RESEARCH_GH_TOKEN` — PAT with `public_repo` scope for the admin research eval harness; lets it read PR data from any public repo without requiring the GH App to be installed
 
 Push tables to db:
 

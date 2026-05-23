@@ -1,0 +1,28 @@
+{
+  "name": "@tripwire/research",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./engine": "./src/engine.ts",
+    "./labeling": "./src/labeling.ts",
+    "./rate-limit": "./src/rate-limit.ts",
+    "./export-csv": "./src/export-csv.ts",
+    "./export-jsonl": "./src/export-jsonl.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@tripwire/core": "workspace:*",
+    "@tripwire/db": "workspace:*",
+    "@tripwire/github": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2",
+    "vitest": "^3.0.5"
+  }
+}

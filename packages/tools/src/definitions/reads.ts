@@ -3,30 +3,21 @@ import { z } from "zod"
 import { createError } from "evlog"
 import { db } from "@tripwire/db/client"
 import {
-  blacklistEntries,
   events,
   githubReputation,
   organizations,
   repositories,
-  whitelistEntries,
   type EventAction,
 } from "@tripwire/db"
 import { assertEventOwner, assertRepoOwner } from "@tripwire/core"
-import {
-  fetchUserAchievements,
-  fetchUserGraphQL,
-  getClosedPrCount,
-  getContextRepoPrCount,
-  getInstallationToken,
-  getMergedPrCount,
-  getPublicForkRepoCount,
-  getPublicNonForkRepoCount,
-  hasProfileReadme,
-} from "@tripwire/github"
+import { getInstallationToken } from "@tripwire/github"
 import {
   type ScoreCategory,
   type ScoreInput,
   computeContributorScore,
+  fetchContributorSignals,
+  type GitHubUser,
+  type UserSignals,
 } from "@tripwire/core"
 import { type AnyToolDefinition, defineTool, makeSpec } from "../registry"
 import { requireRepoId } from "../helpers"
@@ -53,48 +44,6 @@ async function getTokenForRepo(repoId: string): Promise<string | null> {
   } catch {
     return null
   }
-}
-
-interface GitHubUser {
-  login: string
-  id: number
-  name?: string | null
-  avatar_url?: string | null
-  bio?: string | null
-  company?: string | null
-  location?: string | null
-  blog?: string | null
-  twitter_username?: string | null
-  public_repos?: number
-  public_gists?: number
-  followers?: number
-  following?: number
-  created_at?: string
-  two_factor_authentication?: boolean
-}
-
-async function fetchGitHubUser(
-  username: string,
-  token?: string
-): Promise<GitHubUser> {
-  const headers: Record<string, string> = {
-    Accept: "application/vnd.github.v3+json",
-    "User-Agent": "Tripwire",
-  }
-  if (token) headers.Authorization = `Bearer ${token}`
-
-  const res = await fetch(`https://api.github.com/users/${username}`, {
-    headers,
-  })
-  if (!res.ok) {
-    throw createError({
-      code: "github.user_not_found",
-      status: 404,
-      message: `GitHub user @${username} not found`,
-      internal: { username, githubStatus: res.status },
-    })
-  }
-  return res.json() as Promise<GitHubUser>
 }
 
 const fmtDate = (d: Date) =>
@@ -186,13 +135,6 @@ const getEvent = defineTool({
 })
 // Used by both lookup_user (UserCard) and score_breakdown (ScoreBreakdown).
 
-interface UserSignals {
-  ghUser: GitHubUser
-  scoreInput: ScoreInput
-  status: "normal" | "blacklisted" | "whitelisted"
-  badges: string[]
-}
-
 async function gatherUserSignals(
   username: string,
   userId: string,
@@ -200,291 +142,11 @@ async function gatherUserSignals(
 ): Promise<UserSignals> {
   await assertRepoOwner(userId, repoId)
   const token = await getTokenForRepo(repoId)
-  const [repoRow] = await db
-    .select({ fullName: repositories.fullName })
-    .from(repositories)
-    .where(eq(repositories.id, repoId))
-    .limit(1)
-  const contextRepoFullName = repoRow?.fullName ?? ""
-
-  const [
-    ghUser,
-    whitelist,
-    blacklist,
-    allEvents,
-    reputationRow,
-    mergedPrs,
-    closedPrs,
-    nonForkRepos,
-    forkRepos,
-    prsToThisRepo,
-    profileReadme,
-    graphqlData,
-    achievements,
-  ] = await Promise.all([
-    fetchGitHubUser(username, token ?? undefined),
-    db
-      .select()
-      .from(whitelistEntries)
-      .where(
-        and(
-          eq(whitelistEntries.repoId, repoId),
-          usernameEq(whitelistEntries.githubUsername, username)
-        )
-      )
-      .limit(1),
-    db
-      .select()
-      .from(blacklistEntries)
-      .where(
-        and(
-          eq(blacklistEntries.repoId, repoId),
-          usernameEq(blacklistEntries.githubUsername, username)
-        )
-      )
-      .limit(1),
-    db
-      .select()
-      .from(events)
-      .where(
-        and(
-          eq(events.repoId, repoId),
-          usernameEq(events.targetGithubUsername, username)
-        )
-      ),
-    db
-      .select({ scoreResetAt: githubReputation.scoreResetAt })
-      .from(githubReputation)
-      .where(
-        and(
-          eq(githubReputation.repoId, repoId),
-          sql`lower(${githubReputation.githubUsername}) = ${username.toLowerCase()}`
-        )
-      )
-      .limit(1),
-    token
-      ? getMergedPrCount(token, username).catch(() => 0)
-      : Promise.resolve(0),
-    token
-      ? getClosedPrCount(token, username).catch(() => 0)
-      : Promise.resolve(0),
-    token
-      ? getPublicNonForkRepoCount(token, username).catch(() => 0)
-      : Promise.resolve(0),
-    token
-      ? getPublicForkRepoCount(token, username).catch(() => 0)
-      : Promise.resolve(0),
-    token && contextRepoFullName
-      ? getContextRepoPrCount(token, username, contextRepoFullName).catch(
-          () => 0
-        )
-      : Promise.resolve(0),
-    token
-      ? hasProfileReadme(token, username).catch(() => false)
-      : Promise.resolve(false),
-    token
-      ? fetchUserGraphQL(token, username).catch(() => null)
-      : Promise.resolve(null),
-    fetchUserAchievements(username).catch(() => []),
-  ])
-
-  const scoreResetAt = reputationRow[0]?.scoreResetAt ?? null
-  const countsAfterReset = scoreResetAt
-    ? allEvents.filter((e) => e.createdAt > scoreResetAt)
-    : allEvents
-
-  const closedUnmergedPrs = Math.max(0, closedPrs - mergedPrs)
-  const blockedCount = countsAfterReset.filter(
-    (e) => e.action === "pipeline_blocked"
-  ).length
-  const allowedCount = countsAfterReset.filter(
-    (e) => e.action === "pipeline_allowed"
-  ).length
-  const nearMissCount = countsAfterReset.filter(
-    (e) => e.action === "rule_near_miss"
-  ).length
-  const createdAt = ghUser.created_at ? new Date(ghUser.created_at) : new Date()
-  const accountAgeDays = Math.floor(
-    (Date.now() - createdAt.getTime()) / 86400000
-  )
-
-  const badges: string[] = []
-  if (graphqlData?.isGitHubStar) badges.push("GitHub Star")
-  if (graphqlData?.isBountyHunter) badges.push("Bug Bounty Hunter")
-  if (graphqlData?.isDeveloperProgramMember) badges.push("Dev Program")
-  if (graphqlData?.isCampusExpert) badges.push("Campus Expert")
-  if (graphqlData?.isSiteAdmin) badges.push("GitHub Staff")
-
-  const status: UserSignals["status"] =
-    blacklist.length > 0
-      ? "blacklisted"
-      : whitelist.length > 0
-        ? "whitelisted"
-        : "normal"
-
-  // ─── Change 3: Build timestamped repo events for decay scoring ──
-  const repoEvents = countsAfterReset
-    .filter((e) =>
-      [
-        "pipeline_allowed",
-        "pipeline_blocked",
-        "rule_near_miss",
-        "block_cleared",
-      ].includes(e.action)
-    )
-    .map((e) => ({
-      type: (e.action === "pipeline_allowed"
-        ? "allowed"
-        : e.action === "pipeline_blocked"
-          ? "blocked"
-          : e.action === "block_cleared"
-            ? "cleared"
-            : "near-miss") as "allowed" | "blocked" | "near-miss" | "cleared",
-      createdAt: e.createdAt,
-    }))
-
-  // ─── Changes 1+2: Fetch PR details for substance + spray data ──
-  // Use data factory (cached, non-blocking). Dynamic import to avoid client bundle.
-  let mergedPrSummary: { total: number; qualityWeightedCount: number } | null =
-    null
-  let prTemporalData: {
-    creationIntervals: number[]
-    timeToMerge: number[]
-    distinctRepoCount: number
-    maxPrsInOneHourWindow: number
-    reposInDensestWindow: number
-  } | null = null
-
-  if (token && mergedPrs > 0) {
-    try {
-      const { fetchUserPRs } = await import("@tripwire/github/data-factory")
-      // Fetch up to 100 recent merged PRs for analysis
-      const prResult = await fetchUserPRs(token, username, {
-        limit: 100,
-        state: "merged",
-      })
-      const prs = prResult.items
-
-      if (prs.length > 0) {
-        // ── Substance: quality-weighted count ──
-        // Each PR's weight is based on its target repo's stars (proxy for quality).
-        // We use the stars from the repo metadata when available via enrichment.
-        // Since we don't have stars in CachedPR, use a simpler heuristic:
-        // PRs to repos with known names (not the contributor's own username) get higher weight.
-        let qualityWeightedCount = 0
-        const repoSet = new Set<string>()
-        for (const pr of prs) {
-          repoSet.add(pr.repoFullName)
-          // Default multiplier: 0.5 (mid-tier) since we have repo name but not stars
-          // PRs to the contributor's own repos get 0.25 (self-merge is lower signal)
-          const isOwnRepo = pr.repoFullName
-            .toLowerCase()
-            .startsWith(username.toLowerCase() + "/")
-          qualityWeightedCount += isOwnRepo ? 0.25 : 0.5
-        }
-        // Extrapolate if we only sampled a portion
-        const sampleRatio = mergedPrs > 0 ? prs.length / mergedPrs : 1
-        const extrapolatedQuality =
-          sampleRatio > 0
-            ? qualityWeightedCount / sampleRatio
-            : qualityWeightedCount
-
-        mergedPrSummary = {
-          total: mergedPrs,
-          qualityWeightedCount: Math.round(extrapolatedQuality * 10) / 10,
-        }
-
-        // ── Temporal data for spray detection ──
-        const timestamps = prs
-          .map((pr) => new Date(pr.createdAt).getTime())
-          .filter((t) => !isNaN(t))
-          .sort((a, b) => a - b)
-
-        // Creation intervals (seconds between consecutive PRs)
-        const creationIntervals: number[] = []
-        for (let i = 1; i < timestamps.length; i++) {
-          creationIntervals.push((timestamps[i] - timestamps[i - 1]) / 1000)
-        }
-
-        // Time-to-merge (seconds)
-        const timeToMerge = prs
-          .filter((pr) => pr.mergedAt && pr.createdAt)
-          .map(
-            (pr) =>
-              (new Date(pr.mergedAt!).getTime() -
-                new Date(pr.createdAt).getTime()) /
-              1000
-          )
-          .filter((t) => t >= 0)
-
-        // Sliding 1-hour window: find the densest hour
-        let maxPrsInWindow = 0
-        let reposInDensestWindow = 0
-        const HOUR_MS = 3600_000
-        for (let i = 0; i < timestamps.length; i++) {
-          const windowEnd = timestamps[i] + HOUR_MS
-          let count = 0
-          const windowRepos = new Set<string>()
-          for (
-            let j = i;
-            j < timestamps.length && timestamps[j] <= windowEnd;
-            j++
-          ) {
-            count++
-            windowRepos.add(prs[j]?.repoFullName ?? "")
-          }
-          if (count > maxPrsInWindow) {
-            maxPrsInWindow = count
-            reposInDensestWindow = windowRepos.size
-          }
-        }
-
-        prTemporalData = {
-          creationIntervals,
-          timeToMerge,
-          distinctRepoCount: repoSet.size,
-          maxPrsInOneHourWindow: maxPrsInWindow,
-          reposInDensestWindow,
-        }
-      }
-    } catch {
-      // Data factory unavailable — degrade gracefully, use flat counts
-    }
-  }
-
-  return {
-    ghUser,
-    scoreInput: {
-      accountAgeDays,
-      followers: ghUser.followers ?? 0,
-      following: ghUser.following ?? 0,
-      publicRepos: ghUser.public_repos ?? 0,
-      publicNonForkRepoCount: nonForkRepos,
-      publicForkRepoCount: forkRepos,
-      contextRepoPrCount: prsToThisRepo,
-      publicGists: ghUser.public_gists ?? 0,
-      bio: ghUser.bio ?? null,
-      company: ghUser.company ?? null,
-      location: ghUser.location ?? null,
-      blog: ghUser.blog ?? null,
-      twitterUsername: ghUser.twitter_username ?? null,
-      hasTwoFactor: ghUser.two_factor_authentication ?? false,
-      hasProfileReadme: profileReadme,
-      graphql: graphqlData,
-      achievements,
-      mergedPrCount: mergedPrs,
-      closedPrCount: closedPrs,
-      closedUnmergedPrCount: closedUnmergedPrs,
-      blockedCount,
-      allowedCount,
-      nearMissCount,
-      mergedPrSummary,
-      prTemporalData,
-      repoEvents: repoEvents.length > 0 ? repoEvents : null,
-    },
-    status,
-    badges,
-  }
+  return fetchContributorSignals({
+    username,
+    token,
+    contextRepoId: repoId,
+  })
 }
 
 async function lookupUserExecute(

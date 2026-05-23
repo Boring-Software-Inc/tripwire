@@ -12,6 +12,7 @@
 export * from "./events"
 export * from "./reputation"
 export * from "./contributor-score"
+export * from "./contributor-fetch"
 export * from "./filter-pipeline"
 export * from "./language-detection"
 export * from "./fake-bounty"

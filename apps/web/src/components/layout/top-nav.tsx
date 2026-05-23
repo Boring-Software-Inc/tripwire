@@ -205,6 +205,9 @@ export function TopNav({ askOpen, onToggleAsk }: TopNavProps) {
             >
               Send Feedback
             </MenuItem>
+            <AdminMenuItem
+              onNavigate={() => navigate({ to: "/admin/research" })}
+            />
             <MenuSeparator />
             <MenuItem onClick={handleSignOut}>Sign out</MenuItem>
           </MenuPopup>
@@ -273,5 +276,17 @@ export function TopNav({ askOpen, onToggleAsk }: TopNavProps) {
         ) : null}
       </div>
     </div>
+  )
+}
+
+function AdminMenuItem({ onNavigate }: { onNavigate: () => void }) {
+  const trpc = useTRPC()
+  const me = useQuery({ ...trpc.auth.me.queryOptions() })
+  if (!me.data?.isAdmin) return null
+  return (
+    <>
+      <MenuSeparator />
+      <MenuItem onClick={onNavigate}>Admin</MenuItem>
+    </>
   )
 }

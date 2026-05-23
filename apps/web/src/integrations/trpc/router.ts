@@ -13,6 +13,8 @@ import { apiKeysRouter } from "./routers/api-keys"
 import { preferencesRouter } from "./routers/preferences"
 import { workflowsRouter } from "./routers/workflows"
 import { customRulesRouter } from "./routers/custom-rules"
+import { researchRouter } from "./routers/research"
+import { authRouter } from "./routers/auth"
 
 export const trpcRouter = createTRPCRouter({
   orgs: orgsRouter,
@@ -30,6 +32,8 @@ export const trpcRouter = createTRPCRouter({
   preferences: preferencesRouter,
   workflows: workflowsRouter,
   customRules: customRulesRouter,
+  research: researchRouter,
+  auth: authRouter,
 })
 
 export type TRPCRouter = typeof trpcRouter

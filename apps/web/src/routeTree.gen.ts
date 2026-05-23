@@ -12,9 +12,11 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as VouchedRouteImport } from './routes/vouched'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/_app'
+import { Route as AdminRouteImport } from './routes/_admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as OauthConsentRouteImport } from './routes/oauth/consent'
 import { Route as ApiMcpRouteImport } from './routes/api/mcp'
+import { Route as ApiInngestRouteImport } from './routes/api/inngest'
 import { Route as ApiFeedbackRouteImport } from './routes/api/feedback'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
@@ -53,6 +55,7 @@ import { Route as AppOrgHandleRulesRouteRouteImport } from './routes/_app/$orgHa
 import { Route as AppOrgHandleRulesIndexRouteImport } from './routes/_app/$orgHandle/rules/index'
 import { Route as AppOrgHandleEventsIndexRouteImport } from './routes/_app/$orgHandle/events/index'
 import { Route as AppOrgHandleAutomationsIndexRouteImport } from './routes/_app/$orgHandle/automations/index'
+import { Route as AdminAdminResearchIndexRouteImport } from './routes/_admin/admin/research/index'
 import { Route as AppOrgHandleRulesWorkflowsRouteImport } from './routes/_app/$orgHandle/rules/workflows'
 import { Route as AppOrgHandleRulesRequestsRouteImport } from './routes/_app/$orgHandle/rules/requests'
 import { Route as AppOrgHandleRulesPeopleRouteImport } from './routes/_app/$orgHandle/rules/people'
@@ -62,6 +65,8 @@ import { Route as AppOrgHandleRulesFilesRouteImport } from './routes/_app/$orgHa
 import { Route as AppOrgHandleEventsEventIdRouteImport } from './routes/_app/$orgHandle/events/$eventId'
 import { Route as AppOrgHandleAutomationsPreviewRouteImport } from './routes/_app/$orgHandle/automations/preview'
 import { Route as AppOrgHandleAutomationsAutomationIdRouteImport } from './routes/_app/$orgHandle/automations/$automationId'
+import { Route as AdminAdminResearchNewRouteImport } from './routes/_admin/admin/research/new'
+import { Route as AdminAdminResearchRunIdRouteImport } from './routes/_admin/admin/research/$runId'
 import { Route as AppOrgHandleRulesCustomIndexRouteImport } from './routes/_app/$orgHandle/rules/custom/index'
 import { Route as AppOrgHandleRulesCustomRuleIdRouteImport } from './routes/_app/$orgHandle/rules/custom/$ruleId'
 
@@ -79,6 +84,10 @@ const AppRoute = AppRouteImport.update({
   id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/_admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -92,6 +101,11 @@ const OauthConsentRoute = OauthConsentRouteImport.update({
 const ApiMcpRoute = ApiMcpRouteImport.update({
   id: '/api/mcp',
   path: '/api/mcp',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiInngestRoute = ApiInngestRouteImport.update({
+  id: '/api/inngest',
+  path: '/api/inngest',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiFeedbackRoute = ApiFeedbackRouteImport.update({
@@ -290,6 +304,11 @@ const AppOrgHandleAutomationsIndexRoute =
     path: '/automations/',
     getParentRoute: () => AppOrgHandleRoute,
   } as any)
+const AdminAdminResearchIndexRoute = AdminAdminResearchIndexRouteImport.update({
+  id: '/admin/research/',
+  path: '/admin/research/',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AppOrgHandleRulesWorkflowsRoute =
   AppOrgHandleRulesWorkflowsRouteImport.update({
     id: '/workflows',
@@ -342,6 +361,16 @@ const AppOrgHandleAutomationsAutomationIdRoute =
     path: '/automations/$automationId',
     getParentRoute: () => AppOrgHandleRoute,
   } as any)
+const AdminAdminResearchNewRoute = AdminAdminResearchNewRouteImport.update({
+  id: '/admin/research/new',
+  path: '/admin/research/new',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAdminResearchRunIdRoute = AdminAdminResearchRunIdRouteImport.update({
+  id: '/admin/research/$runId',
+  path: '/admin/research/$runId',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AppOrgHandleRulesCustomIndexRoute =
   AppOrgHandleRulesCustomIndexRouteImport.update({
     id: '/custom/',
@@ -371,6 +400,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AppSettingsRouteWithChildren
   '/api/chat': typeof ApiChatRoute
   '/api/feedback': typeof ApiFeedbackRoute
+  '/api/inngest': typeof ApiInngestRoute
   '/api/mcp': typeof ApiMcpRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/$orgHandle/rules': typeof AppOrgHandleRulesRouteRouteWithChildren
@@ -396,6 +426,8 @@ export interface FileRoutesByFullPath {
   '/api/v1/vouched': typeof ApiV1VouchedRoute
   '/request/$owner/$repo': typeof RequestOwnerRepoRoute
   '/events/': typeof AppEventsIndexRoute
+  '/admin/research/$runId': typeof AdminAdminResearchRunIdRoute
+  '/admin/research/new': typeof AdminAdminResearchNewRoute
   '/$orgHandle/automations/$automationId': typeof AppOrgHandleAutomationsAutomationIdRoute
   '/$orgHandle/automations/preview': typeof AppOrgHandleAutomationsPreviewRoute
   '/$orgHandle/events/$eventId': typeof AppOrgHandleEventsEventIdRoute
@@ -405,6 +437,7 @@ export interface FileRoutesByFullPath {
   '/$orgHandle/rules/people': typeof AppOrgHandleRulesPeopleRoute
   '/$orgHandle/rules/requests': typeof AppOrgHandleRulesRequestsRoute
   '/$orgHandle/rules/workflows': typeof AppOrgHandleRulesWorkflowsRoute
+  '/admin/research/': typeof AdminAdminResearchIndexRoute
   '/$orgHandle/automations/': typeof AppOrgHandleAutomationsIndexRoute
   '/$orgHandle/events/': typeof AppOrgHandleEventsIndexRoute
   '/$orgHandle/rules/': typeof AppOrgHandleRulesIndexRoute
@@ -427,6 +460,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AppSettingsRouteWithChildren
   '/api/chat': typeof ApiChatRoute
   '/api/feedback': typeof ApiFeedbackRoute
+  '/api/inngest': typeof ApiInngestRoute
   '/api/mcp': typeof ApiMcpRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/.well-known/oauth-authorization-server/$': typeof Char91DotwellKnownChar93OauthAuthorizationServerSplatRoute
@@ -451,6 +485,8 @@ export interface FileRoutesByTo {
   '/api/v1/vouched': typeof ApiV1VouchedRoute
   '/request/$owner/$repo': typeof RequestOwnerRepoRoute
   '/events': typeof AppEventsIndexRoute
+  '/admin/research/$runId': typeof AdminAdminResearchRunIdRoute
+  '/admin/research/new': typeof AdminAdminResearchNewRoute
   '/$orgHandle/automations/$automationId': typeof AppOrgHandleAutomationsAutomationIdRoute
   '/$orgHandle/automations/preview': typeof AppOrgHandleAutomationsPreviewRoute
   '/$orgHandle/events/$eventId': typeof AppOrgHandleEventsEventIdRoute
@@ -460,6 +496,7 @@ export interface FileRoutesByTo {
   '/$orgHandle/rules/people': typeof AppOrgHandleRulesPeopleRoute
   '/$orgHandle/rules/requests': typeof AppOrgHandleRulesRequestsRoute
   '/$orgHandle/rules/workflows': typeof AppOrgHandleRulesWorkflowsRoute
+  '/admin/research': typeof AdminAdminResearchIndexRoute
   '/$orgHandle/automations': typeof AppOrgHandleAutomationsIndexRoute
   '/$orgHandle/events': typeof AppOrgHandleEventsIndexRoute
   '/$orgHandle/rules': typeof AppOrgHandleRulesIndexRoute
@@ -469,6 +506,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_admin': typeof AdminRouteWithChildren
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/vouched': typeof VouchedRoute
@@ -484,6 +522,7 @@ export interface FileRoutesById {
   '/_app/settings': typeof AppSettingsRouteWithChildren
   '/api/chat': typeof ApiChatRoute
   '/api/feedback': typeof ApiFeedbackRoute
+  '/api/inngest': typeof ApiInngestRoute
   '/api/mcp': typeof ApiMcpRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/_app/$orgHandle/rules': typeof AppOrgHandleRulesRouteRouteWithChildren
@@ -509,6 +548,8 @@ export interface FileRoutesById {
   '/api/v1/vouched': typeof ApiV1VouchedRoute
   '/request/$owner/$repo': typeof RequestOwnerRepoRoute
   '/_app/events/': typeof AppEventsIndexRoute
+  '/_admin/admin/research/$runId': typeof AdminAdminResearchRunIdRoute
+  '/_admin/admin/research/new': typeof AdminAdminResearchNewRoute
   '/_app/$orgHandle/automations/$automationId': typeof AppOrgHandleAutomationsAutomationIdRoute
   '/_app/$orgHandle/automations/preview': typeof AppOrgHandleAutomationsPreviewRoute
   '/_app/$orgHandle/events/$eventId': typeof AppOrgHandleEventsEventIdRoute
@@ -518,6 +559,7 @@ export interface FileRoutesById {
   '/_app/$orgHandle/rules/people': typeof AppOrgHandleRulesPeopleRoute
   '/_app/$orgHandle/rules/requests': typeof AppOrgHandleRulesRequestsRoute
   '/_app/$orgHandle/rules/workflows': typeof AppOrgHandleRulesWorkflowsRoute
+  '/_admin/admin/research/': typeof AdminAdminResearchIndexRoute
   '/_app/$orgHandle/automations/': typeof AppOrgHandleAutomationsIndexRoute
   '/_app/$orgHandle/events/': typeof AppOrgHandleEventsIndexRoute
   '/_app/$orgHandle/rules/': typeof AppOrgHandleRulesIndexRoute
@@ -542,6 +584,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/api/chat'
     | '/api/feedback'
+    | '/api/inngest'
     | '/api/mcp'
     | '/oauth/consent'
     | '/$orgHandle/rules'
@@ -567,6 +610,8 @@ export interface FileRouteTypes {
     | '/api/v1/vouched'
     | '/request/$owner/$repo'
     | '/events/'
+    | '/admin/research/$runId'
+    | '/admin/research/new'
     | '/$orgHandle/automations/$automationId'
     | '/$orgHandle/automations/preview'
     | '/$orgHandle/events/$eventId'
@@ -576,6 +621,7 @@ export interface FileRouteTypes {
     | '/$orgHandle/rules/people'
     | '/$orgHandle/rules/requests'
     | '/$orgHandle/rules/workflows'
+    | '/admin/research/'
     | '/$orgHandle/automations/'
     | '/$orgHandle/events/'
     | '/$orgHandle/rules/'
@@ -598,6 +644,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/api/chat'
     | '/api/feedback'
+    | '/api/inngest'
     | '/api/mcp'
     | '/oauth/consent'
     | '/.well-known/oauth-authorization-server/$'
@@ -622,6 +669,8 @@ export interface FileRouteTypes {
     | '/api/v1/vouched'
     | '/request/$owner/$repo'
     | '/events'
+    | '/admin/research/$runId'
+    | '/admin/research/new'
     | '/$orgHandle/automations/$automationId'
     | '/$orgHandle/automations/preview'
     | '/$orgHandle/events/$eventId'
@@ -631,6 +680,7 @@ export interface FileRouteTypes {
     | '/$orgHandle/rules/people'
     | '/$orgHandle/rules/requests'
     | '/$orgHandle/rules/workflows'
+    | '/admin/research'
     | '/$orgHandle/automations'
     | '/$orgHandle/events'
     | '/$orgHandle/rules'
@@ -639,6 +689,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/_admin'
     | '/_app'
     | '/login'
     | '/vouched'
@@ -654,6 +705,7 @@ export interface FileRouteTypes {
     | '/_app/settings'
     | '/api/chat'
     | '/api/feedback'
+    | '/api/inngest'
     | '/api/mcp'
     | '/oauth/consent'
     | '/_app/$orgHandle/rules'
@@ -679,6 +731,8 @@ export interface FileRouteTypes {
     | '/api/v1/vouched'
     | '/request/$owner/$repo'
     | '/_app/events/'
+    | '/_admin/admin/research/$runId'
+    | '/_admin/admin/research/new'
     | '/_app/$orgHandle/automations/$automationId'
     | '/_app/$orgHandle/automations/preview'
     | '/_app/$orgHandle/events/$eventId'
@@ -688,6 +742,7 @@ export interface FileRouteTypes {
     | '/_app/$orgHandle/rules/people'
     | '/_app/$orgHandle/rules/requests'
     | '/_app/$orgHandle/rules/workflows'
+    | '/_admin/admin/research/'
     | '/_app/$orgHandle/automations/'
     | '/_app/$orgHandle/events/'
     | '/_app/$orgHandle/rules/'
@@ -697,6 +752,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRouteWithChildren
   AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
   VouchedRoute: typeof VouchedRoute
@@ -704,6 +760,7 @@ export interface RootRouteChildren {
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteWithChildren
   ApiChatRoute: typeof ApiChatRoute
   ApiFeedbackRoute: typeof ApiFeedbackRoute
+  ApiInngestRoute: typeof ApiInngestRoute
   ApiMcpRoute: typeof ApiMcpRoute
   OauthConsentRoute: typeof OauthConsentRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -740,6 +797,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_admin': {
+      id: '/_admin'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -759,6 +823,13 @@ declare module '@tanstack/react-router' {
       path: '/api/mcp'
       fullPath: '/api/mcp'
       preLoaderRoute: typeof ApiMcpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/inngest': {
+      id: '/api/inngest'
+      path: '/api/inngest'
+      fullPath: '/api/inngest'
+      preLoaderRoute: typeof ApiInngestRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/feedback': {
@@ -1027,6 +1098,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppOrgHandleAutomationsIndexRouteImport
       parentRoute: typeof AppOrgHandleRoute
     }
+    '/_admin/admin/research/': {
+      id: '/_admin/admin/research/'
+      path: '/admin/research'
+      fullPath: '/admin/research/'
+      preLoaderRoute: typeof AdminAdminResearchIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/_app/$orgHandle/rules/workflows': {
       id: '/_app/$orgHandle/rules/workflows'
       path: '/workflows'
@@ -1090,6 +1168,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppOrgHandleAutomationsAutomationIdRouteImport
       parentRoute: typeof AppOrgHandleRoute
     }
+    '/_admin/admin/research/new': {
+      id: '/_admin/admin/research/new'
+      path: '/admin/research/new'
+      fullPath: '/admin/research/new'
+      preLoaderRoute: typeof AdminAdminResearchNewRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/_admin/admin/research/$runId': {
+      id: '/_admin/admin/research/$runId'
+      path: '/admin/research/$runId'
+      fullPath: '/admin/research/$runId'
+      preLoaderRoute: typeof AdminAdminResearchRunIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/_app/$orgHandle/rules/custom/': {
       id: '/_app/$orgHandle/rules/custom/'
       path: '/custom'
@@ -1106,6 +1198,20 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface AdminRouteChildren {
+  AdminAdminResearchRunIdRoute: typeof AdminAdminResearchRunIdRoute
+  AdminAdminResearchNewRoute: typeof AdminAdminResearchNewRoute
+  AdminAdminResearchIndexRoute: typeof AdminAdminResearchIndexRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminAdminResearchRunIdRoute: AdminAdminResearchRunIdRoute,
+  AdminAdminResearchNewRoute: AdminAdminResearchNewRoute,
+  AdminAdminResearchIndexRoute: AdminAdminResearchIndexRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 interface AppOrgHandleRulesRouteRouteChildren {
   AppOrgHandleRulesFilesRoute: typeof AppOrgHandleRulesFilesRoute
@@ -1248,6 +1354,7 @@ const Char91DotwellKnownChar93OauthProtectedResourceRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRouteWithChildren,
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
   VouchedRoute: VouchedRoute,
@@ -1257,6 +1364,7 @@ const rootRouteChildren: RootRouteChildren = {
     Char91DotwellKnownChar93OauthProtectedResourceRouteWithChildren,
   ApiChatRoute: ApiChatRoute,
   ApiFeedbackRoute: ApiFeedbackRoute,
+  ApiInngestRoute: ApiInngestRoute,
   ApiMcpRoute: ApiMcpRoute,
   OauthConsentRoute: OauthConsentRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
