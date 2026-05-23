@@ -365,7 +365,7 @@ function scoreRepoHistory(input: ScoreInput, sink: ScoreLineItem[]): number {
         continue
       }
       blockedCount++
-      blockedPts += -3 * eventDecayMultiplier(event.createdAt)
+      blockedPts += -2 * eventDecayMultiplier(event.createdAt)
     }
 
     for (const event of input.repoEvents) {
@@ -438,8 +438,8 @@ function scoreRepoHistory(input: ScoreInput, sink: ScoreLineItem[]): number {
 
   if (input.blockedCount > 0) {
     b.add(
-      `${input.blockedCount} blocked events (-3 each)`,
-      -3 * input.blockedCount
+      `${input.blockedCount} blocked events (-2 each)`,
+      -2 * input.blockedCount
     )
   }
 
@@ -465,8 +465,11 @@ function scoreRepoHistory(input: ScoreInput, sink: ScoreLineItem[]): number {
 function scoreRedFlags(input: ScoreInput, sink: ScoreLineItem[]): number {
   const b = new CategoryBuilder("redFlags", sink)
 
+  // Need a real sample before judging the ratio. Otherwise a maintainer who
+  // blocks 2 things to test the pipeline gets a redFlag deduction off two
+  // data points, which is meaningless signal.
   const total = input.blockedCount + input.allowedCount
-  if (total > 0) {
+  if (total >= 5) {
     const blockedRatio = input.blockedCount / total
     const pct = Math.round(blockedRatio * 100)
     if (blockedRatio > 0.75) b.add(`Blocked ratio ${pct}%`, -8)
