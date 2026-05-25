@@ -275,8 +275,7 @@ export const visibilityRouter = {
             targetGithubUsername: username,
             targetGithubUserId:
               repRows.find(
-                (r) =>
-                  r.githubUsername.toLowerCase() === username.toLowerCase()
+                (r) => r.githubUsername.toLowerCase() === username.toLowerCase()
               )?.githubUserId ?? undefined,
             metadata: { actor, source: "visibility_bulk" },
           })
@@ -487,17 +486,15 @@ async function addToList(opts: {
   opposite: ListTable
 }): Promise<string[]> {
   const inserted = await db.transaction(async (tx) => {
-    await tx
-      .delete(opts.opposite)
-      .where(
-        and(
-          eq(opts.opposite.repoId, opts.repoId),
-          lowerInArray(
-            opts.opposite.githubUsername,
-            opts.rows.map((r) => r.githubUsername)
-          )
+    await tx.delete(opts.opposite).where(
+      and(
+        eq(opts.opposite.repoId, opts.repoId),
+        lowerInArray(
+          opts.opposite.githubUsername,
+          opts.rows.map((r) => r.githubUsername)
         )
       )
+    )
     return tx
       .insert(opts.table)
       .values(

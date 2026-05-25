@@ -38,7 +38,7 @@ export function shouldPersistQuery(query: PersistableQuery): boolean {
 /** Pure: is this persisted blob still usable? Tested in isolation. */
 export function isPersistedStateUsable(
   raw: string | null,
-  now: number = Date.now(),
+  now: number = Date.now()
 ): PersistedState | null {
   if (!raw) return null
   try {
@@ -81,7 +81,9 @@ export function restorePersistedQueryCache(queryClient: QueryClient) {
  * Subscribe to cache changes and write the opt-in subset to localStorage,
  * debounced. Returns a teardown fn. No-op on the server.
  */
-export function startQueryCachePersistence(queryClient: QueryClient): () => void {
+export function startQueryCachePersistence(
+  queryClient: QueryClient
+): () => void {
   if (typeof window === "undefined") return () => undefined
 
   let timeoutId: number | undefined
@@ -138,7 +140,7 @@ export function startQueryCachePersistence(queryClient: QueryClient): () => void
 
 /** One-shot convenience: hydrate now + start persisting. */
 export function attachQueryClientPersistence(
-  queryClient: QueryClient,
+  queryClient: QueryClient
 ): () => void {
   restorePersistedQueryCache(queryClient)
   return startQueryCachePersistence(queryClient)

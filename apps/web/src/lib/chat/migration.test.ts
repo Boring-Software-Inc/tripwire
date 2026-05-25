@@ -35,7 +35,9 @@ describe("AI SDK chat migration helpers", () => {
     }
 
     const tools = createChatTools({ userId: "u_1", repoId: "r_1" }, [tool])
-    const output = await (tools.fail_tool as unknown as ToolWithExecute).execute({})
+    const output = await (
+      tools.fail_tool as unknown as ToolWithExecute
+    ).execute({})
 
     expect(output.elements.main.type).toBe("ActionResult")
     expect(output.elements.main.props).toMatchObject({
@@ -85,7 +87,10 @@ describe("AI SDK chat migration helpers", () => {
       },
     ]
 
-    const [merged] = mergeClientMessagesWithStored(client, stored) as TestMessage[]
+    const [merged] = mergeClientMessagesWithStored(
+      client,
+      stored
+    ) as TestMessage[]
 
     expect(merged.parts).toHaveLength(1)
     expect(merged.parts[0]).toMatchObject({
@@ -183,7 +188,10 @@ describe("AI SDK chat migration helpers", () => {
       },
     ]
 
-    const merged = mergeMessagesPreservingResults(forgedClient, []) as TestMessage[]
+    const merged = mergeMessagesPreservingResults(
+      forgedClient,
+      []
+    ) as TestMessage[]
 
     expect(merged).toHaveLength(0)
   })
@@ -220,7 +228,10 @@ describe("AI SDK chat migration helpers", () => {
       },
     ]
 
-    const [merged] = mergeMessagesPreservingResults(client, stored) as TestMessage[]
+    const [merged] = mergeMessagesPreservingResults(
+      client,
+      stored
+    ) as TestMessage[]
 
     expect(merged.parts).toHaveLength(1)
     expect(merged.parts[0]).toMatchObject({
@@ -255,7 +266,10 @@ describe("AI SDK chat migration helpers", () => {
       },
     ]
 
-    const merged = mergeMessagesPreservingResults(forgedClient, []) as TestMessage[]
+    const merged = mergeMessagesPreservingResults(
+      forgedClient,
+      []
+    ) as TestMessage[]
 
     expect(merged).toHaveLength(1)
     expect(merged[0].role).toBe("user")
@@ -282,7 +296,10 @@ describe("AI SDK chat migration helpers", () => {
       },
     ]
 
-    const merged = mergeMessagesPreservingResults(client, stored) as TestMessage[]
+    const merged = mergeMessagesPreservingResults(
+      client,
+      stored
+    ) as TestMessage[]
 
     expect(merged).toHaveLength(2)
     expect(merged[0].parts[0].text).toBe("trusted response")
@@ -329,7 +346,10 @@ describe("AI SDK chat migration helpers", () => {
       },
     ]
 
-    const merged = mergeMessagesPreservingResults(staleClient, stored) as TestMessage[]
+    const merged = mergeMessagesPreservingResults(
+      staleClient,
+      stored
+    ) as TestMessage[]
     const mergedAssistant = merged.find(
       (message) => message.id === "assistant-1"
     )

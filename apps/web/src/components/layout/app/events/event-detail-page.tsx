@@ -16,10 +16,7 @@ import type { RouterOutputs } from "#/integrations/trpc/router"
 import { useTRPC } from "#/integrations/trpc/react"
 import { useWorkspace, useWorkspacePath } from "#/providers/workspace-context"
 import { invalidateListCaches } from "#/lib/cache"
-import {
-  isCustomRuleName,
-  stripCustomRulePrefix,
-} from "#/lib/custom-rules"
+import { isCustomRuleName, stripCustomRulePrefix } from "#/lib/custom-rules"
 import { formatRelativeTime } from "#/lib/format"
 import { toastFromError } from "#/lib/toast-error"
 
@@ -59,7 +56,7 @@ export function EventDetailPage() {
   const targetUsername = event?.targetGithubUsername
   const isAlreadyBlacklisted =
     blacklistQuery.data?.some(
-      (entry) => entry.githubUsername === targetUsername,
+      (entry) => entry.githubUsername === targetUsername
     ) ?? false
 
   const githubUser = useGitHubUserFormatted(targetUsername ?? undefined)
@@ -164,7 +161,12 @@ export function EventDetailPage() {
           </span>
         </div>
 
-        <EventHero event={event} eventId={eventId} sevColor={sevColor} username={username} />
+        <EventHero
+          event={event}
+          eventId={eventId}
+          sevColor={sevColor}
+          username={username}
+        />
 
         {actionBanner ? (
           <div className="flex items-center gap-2 px-2">
@@ -343,9 +345,7 @@ function EventHero({
     <>
       <EventIssueDotCircleIcon12 color={sevColor} />
       {fullName || "unknown/repo"}{" "}
-      <span className="font-mono text-tw-text-secondary">
-        {ref || "#???"}
-      </span>
+      <span className="font-mono text-tw-text-secondary">{ref || "#???"}</span>
       {ghUrl ? (
         <EventPageExternalLinkIcon11 className="ml-0.5 opacity-60 transition-opacity group-hover:opacity-100" />
       ) : null}
@@ -513,8 +513,7 @@ function ContributorStats({
     {
       label: "Account age",
       value: user.accountAge,
-      bad:
-        user.accountAge.includes("day") || user.accountAge.includes("month"),
+      bad: user.accountAge.includes("day") || user.accountAge.includes("month"),
     },
     {
       label: "Public repos",
@@ -748,7 +747,7 @@ function isAlreadyActioned(action: string | undefined): boolean {
 
 function getActionedLabel(
   action: string | undefined,
-  severity?: string | null,
+  severity?: string | null
 ): string {
   // Legacy events emitted pipeline_blocked for warn/log outcomes too;
   // fall back to severity so historical rows render the right verb.
@@ -771,7 +770,7 @@ function getActionedLabel(
 
 function getEventTitle(
   action: string,
-  severity: string | null | undefined,
+  severity: string | null | undefined
 ): string {
   const titles: Record<string, string> = {
     pipeline_blocked: "Content blocked",
@@ -802,7 +801,7 @@ function formatRuleName(ruleName: string): string {
 function buildGitHubRefUrl(
   fullName: string | null | undefined,
   ref: string | null | undefined,
-  contentType: string | null | undefined,
+  contentType: string | null | undefined
 ): string | null {
   if (!fullName) return null
   const base = `https://github.com/${fullName}`

@@ -132,7 +132,9 @@ export function buildWebSiteSchema({
  * JSON-LD that classifies tripwire as a SoftwareApplication. Lets
  * search engines render rich product cards.
  */
-export function buildSoftwareApplicationSchema(siteUrl: string = siteConfig.url) {
+export function buildSoftwareApplicationSchema(
+  siteUrl: string = siteConfig.url
+) {
   return {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
@@ -153,7 +155,7 @@ export function buildSoftwareApplicationSchema(siteUrl: string = siteConfig.url)
  */
 export function summarizeText(
   input: string | null | undefined,
-  fallback = siteConfig.defaultDescription,
+  fallback = siteConfig.defaultDescription
 ): string {
   if (!input) return fallback
 

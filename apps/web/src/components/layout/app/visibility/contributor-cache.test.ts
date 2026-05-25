@@ -71,28 +71,19 @@ describe("matchContributorsListForRepo", () => {
   it("matches when the key starts with the prefix and input has the repoId", () => {
     const matcher = matchContributorsListForRepo(prefix, "repo-a")
     expect(
-      matcher([
-        ...prefix,
-        { input: { repoId: "repo-a", sort: "score" } },
-      ]),
+      matcher([...prefix, { input: { repoId: "repo-a", sort: "score" } }])
     ).toBe(true)
   })
 
   it("rejects when the repoId in the input does not match", () => {
     const matcher = matchContributorsListForRepo(prefix, "repo-a")
-    expect(
-      matcher([...prefix, { input: { repoId: "repo-b" } }]),
-    ).toBe(false)
+    expect(matcher([...prefix, { input: { repoId: "repo-b" } }])).toBe(false)
   })
 
   it("rejects when the key prefix differs from the procedure prefix", () => {
     const matcher = matchContributorsListForRepo(prefix, "repo-a")
     expect(
-      matcher([
-        "visibility",
-        "otherQuery",
-        { input: { repoId: "repo-a" } },
-      ]),
+      matcher(["visibility", "otherQuery", { input: { repoId: "repo-a" } }])
     ).toBe(false)
   })
 

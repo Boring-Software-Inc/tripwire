@@ -60,11 +60,13 @@ function createStubClient(initial: Array<[readonly unknown[], unknown]> = []) {
 
 describe("patchOptimistic — exact queryKey", () => {
   it("applies the updater to the named slot", () => {
-    const { client, data } = createStubClient([[["repos", "abc"], { count: 3 }]])
+    const { client, data } = createStubClient([
+      [["repos", "abc"], { count: 3 }],
+    ])
     patchOptimistic<{ count: number }>(
       client,
       { queryKey: ["repos", "abc"] },
-      (current) => ({ count: current.count + 1 }),
+      (current) => ({ count: current.count + 1 })
     )
     expect(data.get(JSON.stringify(["repos", "abc"]))).toEqual({ count: 4 })
   })
@@ -74,7 +76,7 @@ describe("patchOptimistic — exact queryKey", () => {
     patchOptimistic<{ count: number }>(
       client,
       { queryKey: ["repos", "missing"] },
-      (current) => ({ count: current.count + 1 }),
+      (current) => ({ count: current.count + 1 })
     )
     expect(data.get(JSON.stringify(["repos", "missing"]))).toBeUndefined()
   })
@@ -86,7 +88,7 @@ describe("patchOptimistic — exact queryKey", () => {
     const { rollback } = patchOptimistic<{ count: number }>(
       client,
       { queryKey: ["repos", "abc"] },
-      (current) => ({ count: current.count + 100 }),
+      (current) => ({ count: current.count + 100 })
     )
     expect(data.get(JSON.stringify(["repos", "abc"]))).toEqual({ count: 103 })
     rollback()
@@ -110,13 +112,13 @@ describe("patchOptimistic — predicate", () => {
           key[1] !== null &&
           (key[1] as { repoId?: unknown }).repoId === "r1",
       },
-      (current) => ({ items: [...current.items, 42] }),
+      (current) => ({ items: [...current.items, 42] })
     )
     expect(data.get(JSON.stringify(["list", { repoId: "r1" }]))).toEqual({
       items: [1, 42],
     })
     expect(
-      data.get(JSON.stringify(["list", { repoId: "r1", sort: "name" }])),
+      data.get(JSON.stringify(["list", { repoId: "r1", sort: "name" }]))
     ).toEqual({ items: [2, 42] })
     expect(data.get(JSON.stringify(["list", { repoId: "r2" }]))).toEqual({
       items: [99],
@@ -138,7 +140,7 @@ describe("patchOptimistic — predicate", () => {
           key[1] !== null &&
           (key[1] as { repoId?: unknown }).repoId === "r1",
       },
-      (current) => ({ items: [...current.items, 999] }),
+      (current) => ({ items: [...current.items, 999] })
     )
     rollback()
     for (const [key, value] of initial) {

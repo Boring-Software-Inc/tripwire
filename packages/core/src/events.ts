@@ -88,8 +88,7 @@ export async function logEvent(options: LogEventOptions) {
  */
 export async function logEvents(eventList: LogEventOptions[]) {
   const filtered = eventList.filter(
-    (e) =>
-      !e.targetGithubUsername || !isBotOrGhost(e.targetGithubUsername)
+    (e) => !e.targetGithubUsername || !isBotOrGhost(e.targetGithubUsername)
   )
   if (filtered.length === 0) return
 
@@ -136,9 +135,7 @@ type ReputationUpdateHook = (event: ReputationUpdatedEvent) => unknown
 
 let reputationUpdateHook: ReputationUpdateHook | null = null
 
-export function registerReputationUpdateHook(
-  hook: ReputationUpdateHook
-): void {
+export function registerReputationUpdateHook(hook: ReputationUpdateHook): void {
   reputationUpdateHook = hook
 }
 

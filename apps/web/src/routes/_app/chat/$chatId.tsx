@@ -13,11 +13,7 @@ import { CommandConfirmation } from "#/components/layout/app/chat/command-confir
 import { ChevronLeftStrokeIcon14 } from "@tripwire/ui/icons/app-chrome-icons"
 import { uiMessagesFromStored } from "#/lib/chat/conversation-stored"
 import { Provider as ChatStoreProvider } from "@ai-sdk-tools/store"
-import {
-  buildSeo,
-  formatPageTitle,
-  PRIVATE_ROUTE_HEADERS,
-} from "#/lib/seo"
+import { buildSeo, formatPageTitle, PRIVATE_ROUTE_HEADERS } from "#/lib/seo"
 
 function ChatRoute() {
   return (
@@ -32,7 +28,7 @@ export const Route = createFileRoute("/_app/chat/$chatId")({
   // a warm cache when the user navigates in from anywhere.
   loader: ({ context, params }) => {
     void context.queryClient.prefetchQuery(
-      context.trpc.chats.get.queryOptions({ chatId: params.chatId }),
+      context.trpc.chats.get.queryOptions({ chatId: params.chatId })
     )
   },
   component: ChatRoute,

@@ -36,7 +36,7 @@ export async function recordGitHubWebhookEvent({
 /** Marks a previously-recorded webhook delivery as processed (clears any prior error). */
 export async function markGitHubWebhookEventProcessed(
   deliveryId: string,
-  at = Date.now(),
+  at = Date.now()
 ): Promise<void> {
   await db
     .update(githubWebhookEvent)
@@ -47,7 +47,7 @@ export async function markGitHubWebhookEventProcessed(
 /** Records a processing failure so the row surfaces in logs / dashboards. */
 export async function markGitHubWebhookEventFailed(
   deliveryId: string,
-  errorMessage: string,
+  errorMessage: string
 ): Promise<void> {
   await db
     .update(githubWebhookEvent)

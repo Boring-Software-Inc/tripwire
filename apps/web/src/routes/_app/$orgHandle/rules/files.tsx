@@ -1,10 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { RulesFilesPanel } from "#/components/layout/app/rules/panels/rules-extra-panels"
-import {
-  buildSeo,
-  formatPageTitle,
-  PRIVATE_ROUTE_HEADERS,
-} from "#/lib/seo"
+import { buildSeo, formatPageTitle, PRIVATE_ROUTE_HEADERS } from "#/lib/seo"
 
 export const Route = createFileRoute("/_app/$orgHandle/rules/files")({
   component: RulesFilesPanel,

@@ -53,8 +53,7 @@ const statusLabel = {
 }
 
 const statusStyle = {
-  whitelisted:
-    "border border-tw-success/20 bg-tw-success/10 text-tw-success",
+  whitelisted: "border border-tw-success/20 bg-tw-success/10 text-tw-success",
   blacklisted: "border border-tw-error/20 bg-tw-error/10 text-tw-error",
   normal: "text-tw-text-muted",
 }
@@ -154,7 +153,7 @@ export function ContributorsTable({
         ),
         size: 80,
         cell: ({ getValue }) => (
-          <span className="text-[12px] tabular-nums text-tw-text-secondary">
+          <span className="text-[12px] text-tw-text-secondary tabular-nums">
             {formatCompact(getValue())}
           </span>
         ),
@@ -201,7 +200,7 @@ export function ContributorsTable({
         ),
         size: 90,
         cell: ({ getValue }) => (
-          <span className="text-[12px] tabular-nums text-tw-text-secondary">
+          <span className="text-[12px] text-tw-text-secondary tabular-nums">
             {formatCompact(getValue())}
           </span>
         ),
@@ -357,4 +356,3 @@ function SortHeader({
     </Button>
   )
 }
-

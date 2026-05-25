@@ -181,9 +181,7 @@ export async function githubApi(
   // Compose caller's signal (if any) with a 12s timeout so every call
   // gets cancellation + a deadline. Caller can still pass their own
   // signal in options.signal — both fire whichever comes first.
-  const composedSignal = createGitHubRequestSignal(
-    options.signal ?? undefined,
-  )
+  const composedSignal = createGitHubRequestSignal(options.signal ?? undefined)
 
   const res = await fetch(`https://api.github.com${endpoint}`, {
     ...options,

@@ -8,16 +8,16 @@ describe("signalCompositeKey", () => {
     // `\0` delimiter (matches diffkit) so a signalKey containing spaces
     // can't accidentally collide with another (queryKey, signalKey) pair.
     expect(signalCompositeKey(["github", "viewer"], "user:torvalds")).toBe(
-      `${JSON.stringify(["github", "viewer"])}\0user:torvalds`,
+      `${JSON.stringify(["github", "viewer"])}\0user:torvalds`
     )
-    expect(
-      signalCompositeKey(["github", "viewer"], "user:torvalds"),
-    ).toBe(signalCompositeKey(["github", "viewer"], "user:torvalds"))
+    expect(signalCompositeKey(["github", "viewer"], "user:torvalds")).toBe(
+      signalCompositeKey(["github", "viewer"], "user:torvalds")
+    )
   })
 
   it("distinguishes the same signalKey across different queryKeys", () => {
     expect(signalCompositeKey(["github", "a"], "user:x")).not.toBe(
-      signalCompositeKey(["github", "b"], "user:x"),
+      signalCompositeKey(["github", "b"], "user:x")
     )
   })
 })
@@ -28,7 +28,7 @@ describe("collectKeysToInvalidate", () => {
     const result = collectKeysToInvalidate(
       [{ queryKey: ["github", "a"], signalKeys: ["user:torvalds"] }],
       [{ signalKey: "user:torvalds", updatedAt: 1_000 }],
-      lastSeen,
+      lastSeen
     )
     expect(result).toEqual([])
     expect(lastSeen.size).toBe(1)
@@ -39,12 +39,12 @@ describe("collectKeysToInvalidate", () => {
     collectKeysToInvalidate(
       [{ queryKey: ["github", "a"], signalKeys: ["user:torvalds"] }],
       [{ signalKey: "user:torvalds", updatedAt: 1_000 }],
-      lastSeen,
+      lastSeen
     )
     const second = collectKeysToInvalidate(
       [{ queryKey: ["github", "a"], signalKeys: ["user:torvalds"] }],
       [{ signalKey: "user:torvalds", updatedAt: 2_000 }],
-      lastSeen,
+      lastSeen
     )
     expect(second).toEqual(["user:torvalds"])
   })
@@ -54,12 +54,12 @@ describe("collectKeysToInvalidate", () => {
     collectKeysToInvalidate(
       [{ queryKey: ["github", "a"], signalKeys: ["user:x"] }],
       [{ signalKey: "user:x", updatedAt: 1_000 }],
-      lastSeen,
+      lastSeen
     )
     const second = collectKeysToInvalidate(
       [{ queryKey: ["github", "a"], signalKeys: ["user:x"] }],
       [{ signalKey: "user:x", updatedAt: 1_000 }],
-      lastSeen,
+      lastSeen
     )
     expect(second).toEqual([])
   })
@@ -70,7 +70,7 @@ describe("collectKeysToInvalidate", () => {
     collectKeysToInvalidate(
       [{ queryKey: ["github", "a"], signalKeys: ["user:x"] }],
       [{ signalKey: "user:x", updatedAt: 1_000 }],
-      lastSeen,
+      lastSeen
     )
     // Query B mounts later and asks about the same signal at t=1000.
     // It should seed its own composite entry, not consider the signal "new".
@@ -80,7 +80,7 @@ describe("collectKeysToInvalidate", () => {
         { queryKey: ["github", "b"], signalKeys: ["user:x"] },
       ],
       [{ signalKey: "user:x", updatedAt: 1_000 }],
-      lastSeen,
+      lastSeen
     )
     expect(result).toEqual([])
     expect(lastSeen.size).toBe(2)
@@ -91,7 +91,7 @@ describe("collectKeysToInvalidate", () => {
     const result = collectKeysToInvalidate(
       [{ queryKey: ["github", "a"], signalKeys: ["user:torvalds"] }],
       [{ signalKey: "user:somebody-else", updatedAt: 1_000 }],
-      lastSeen,
+      lastSeen
     )
     expect(result).toEqual([])
     expect(lastSeen.size).toBe(0)
@@ -106,7 +106,7 @@ describe("collectKeysToInvalidate", () => {
         { queryKey: ["github", "b"], signalKeys: ["user:x"] },
       ],
       [{ signalKey: "user:x", updatedAt: 1_000 }],
-      lastSeen,
+      lastSeen
     )
     // Signal bumps; both queries should invalidate but the returned key set is deduped.
     const result = collectKeysToInvalidate(
@@ -115,7 +115,7 @@ describe("collectKeysToInvalidate", () => {
         { queryKey: ["github", "b"], signalKeys: ["user:x"] },
       ],
       [{ signalKey: "user:x", updatedAt: 2_000 }],
-      lastSeen,
+      lastSeen
     )
     expect(result).toEqual(["user:x"])
   })

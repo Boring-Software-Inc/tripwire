@@ -3,11 +3,7 @@ import {
   IntegrationsPage,
   IntegrationsPageSkeleton,
 } from "#/components/layout/app/integrations/integrations-page"
-import {
-  buildSeo,
-  formatPageTitle,
-  PRIVATE_ROUTE_HEADERS,
-} from "#/lib/seo"
+import { buildSeo, formatPageTitle, PRIVATE_ROUTE_HEADERS } from "#/lib/seo"
 
 export const Route = createFileRoute("/_app/$orgHandle/integrations")({
   component: IntegrationsPage,

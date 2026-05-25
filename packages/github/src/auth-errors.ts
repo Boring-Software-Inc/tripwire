@@ -45,7 +45,9 @@ export function compactGitHubErrorMessage(error: unknown): string {
   const wrapperMessage =
     typeof error.message === "string" ? (error.message as string) : ""
   const bodyMessage = getGitHubApiMessage(
-    isRecord(error.response) ? (error.response as { data?: unknown }).data : null,
+    isRecord(error.response)
+      ? (error.response as { data?: unknown }).data
+      : null
   )
   return `${wrapperMessage} ${bodyMessage}`.trim()
 }

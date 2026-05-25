@@ -52,9 +52,7 @@ export const scoreUser = inngest.createFunction(
       return { repoId, username, score }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
-      console.warn(
-        `[score-user] skipped @${username} (repo ${repoId}): ${msg}`
-      )
+      console.warn(`[score-user] skipped @${username} (repo ${repoId}): ${msg}`)
       return { repoId, username, score: null, skipped: true }
     }
   }

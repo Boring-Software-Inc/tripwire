@@ -1,16 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { Step2Page } from "#/components/layout/onboarding/step2-page"
-import {
-  buildSeo,
-  formatPageTitle,
-  PRIVATE_ROUTE_HEADERS,
-} from "#/lib/seo"
+import { buildSeo, formatPageTitle, PRIVATE_ROUTE_HEADERS } from "#/lib/seo"
 
 export const Route = createFileRoute("/onboarding/step/2")({
   // Prefetch the repo list — page renders against a warm cache on arrival.
   loader: ({ context }) => {
     void context.queryClient.prefetchQuery(
-      context.trpc.orgs.myRepos.queryOptions(),
+      context.trpc.orgs.myRepos.queryOptions()
     )
   },
   component: Step2Page,

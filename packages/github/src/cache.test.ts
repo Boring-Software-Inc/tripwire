@@ -18,10 +18,10 @@ vi.mock("@tanstack/react-start/server", () => ({
 }))
 
 function createMemoryStore(
-  initialEntries: GitHubCacheStoreEntry[] = [],
+  initialEntries: GitHubCacheStoreEntry[] = []
 ): GitHubCacheStore {
   const entries = new Map(
-    initialEntries.map((entry) => [entry.cacheKey, structuredClone(entry)]),
+    initialEntries.map((entry) => [entry.cacheKey, structuredClone(entry)])
   )
 
   return {
@@ -38,7 +38,7 @@ function createMemoryStore(
 }
 
 function buildEntry(
-  overrides: Partial<GitHubCacheStoreEntry> = {},
+  overrides: Partial<GitHubCacheStoreEntry> = {}
 ): GitHubCacheStoreEntry {
   return {
     cacheKey: "torvalds::user.profile::null",
@@ -139,7 +139,7 @@ describe("getOrRevalidateGitHubResource", () => {
       () =>
         new Promise<GitHubFetchResult<Array<{ id: number }>>>((resolve) => {
           resolveFetch = resolve
-        }),
+        })
     )
 
     const promiseA = getOrRevalidateGitHubResource({
@@ -203,7 +203,7 @@ describe("getOrRevalidateGitHubResource", () => {
         store,
         now: () => 150,
         fetcher: vi.fn(),
-      }),
+      })
     ).resolves.toEqual([{ fullName: "torvalds/linux" }])
 
     await expect(
@@ -214,7 +214,7 @@ describe("getOrRevalidateGitHubResource", () => {
         store,
         now: () => 150,
         fetcher: vi.fn(),
-      }),
+      })
     ).resolves.toEqual([{ fullName: "tj/commander.js" }])
   })
 
@@ -224,8 +224,7 @@ describe("getOrRevalidateGitHubResource", () => {
         resource: "pull.detail",
         cacheKey:
           'octocat::pull.detail::{"owner":"octocat","repo":"hello","pullNumber":42}',
-        paramsJson:
-          '{"owner":"octocat","repo":"hello","pullNumber":42}',
+        paramsJson: '{"owner":"octocat","repo":"hello","pullNumber":42}',
         scope: "octocat",
         payloadJson: JSON.stringify({ title: "Old title" }),
         fetchedAt: 1_000,
@@ -429,7 +428,7 @@ describe("getOrRevalidateGitHubResource", () => {
       "torvalds",
       "user.profile",
       undefined,
-      store,
+      store
     )
     expect(result).toEqual({ login: "torvalds" })
   })
@@ -440,7 +439,7 @@ describe("getOrRevalidateGitHubResource", () => {
       "unknown",
       "user.profile",
       undefined,
-      store,
+      store
     )
     expect(result).toBeNull()
   })
@@ -459,7 +458,7 @@ describe("getOrRevalidateGitHubResource", () => {
         fetcher: vi.fn(async () => {
           throw new Error("network unreachable")
         }),
-      }),
+      })
     ).rejects.toThrow("network unreachable")
 
     const after = await store.get("torvalds::user.profile::null")
@@ -517,7 +516,7 @@ describe("getGitHubResourceLocalFirst", () => {
       () =>
         new Promise<GitHubFetchResult<{ login: string }>>((resolve) => {
           resolveFetch = resolve
-        }),
+        })
     )
 
     const result = await getGitHubResourceLocalFirst<{ login: string }>({

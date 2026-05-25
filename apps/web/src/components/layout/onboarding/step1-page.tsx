@@ -31,7 +31,7 @@ export function Step1Page() {
       },
       onError: (err) =>
         toastFromError(err, { fallbackTitle: "Couldn't continue" }),
-    }),
+    })
   )
 
   return (
@@ -54,8 +54,8 @@ export function Step1Page() {
           through your rule pipeline.
         </Bullet>
         <Bullet>
-          Backfill historical PRs and issues so the dashboard's useful from
-          day one.
+          Backfill historical PRs and issues so the dashboard's useful from day
+          one.
         </Bullet>
       </ul>
     </StepShell>

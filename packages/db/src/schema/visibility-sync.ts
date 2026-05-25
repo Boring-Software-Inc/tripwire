@@ -53,10 +53,7 @@ export const visibilitySyncRuns = pgTable(
   },
   (t) => [
     index("visibility_sync_repo_created_idx").on(t.repoId, t.createdAt),
-    index("visibility_sync_requester_status_idx").on(
-      t.requestedById,
-      t.status
-    ),
+    index("visibility_sync_requester_status_idx").on(t.requestedById, t.status),
   ]
 )
 

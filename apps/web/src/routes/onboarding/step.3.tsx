@@ -6,11 +6,7 @@ import { StepShell } from "#/components/layout/onboarding/step-shell"
 import { toastFromError } from "#/lib/toast-error"
 import { Checkbox } from "@tripwire/ui/checkbox"
 import { Button } from "@tripwire/ui/button"
-import {
-  buildSeo,
-  formatPageTitle,
-  PRIVATE_ROUTE_HEADERS,
-} from "#/lib/seo"
+import { buildSeo, formatPageTitle, PRIVATE_ROUTE_HEADERS } from "#/lib/seo"
 
 export const Route = createFileRoute("/onboarding/step/3")({
   component: Step3Page,
@@ -189,11 +185,7 @@ function Field({ label, hint, children }: FieldProps) {
   )
 }
 
-function Pills<T extends string>({
-  options,
-  value,
-  onChange,
-}: PillsProps<T>) {
+function Pills<T extends string>({ options, value, onChange }: PillsProps<T>) {
   return (
     <div className="flex flex-wrap gap-1.5">
       {options.map((o) => (

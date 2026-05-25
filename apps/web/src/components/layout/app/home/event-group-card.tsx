@@ -52,7 +52,7 @@ export function EventGroupCard({ group, onOpenEvent }: EventGroupCardProps) {
         variant="ghost"
         type="button"
         onClick={() => onOpenEvent?.(first)}
-        className="group cursor-pointer text-left focus:outline-none px-0"
+        className="group cursor-pointer px-0 text-left focus:outline-none"
       >
         <div className="flex w-full flex-col gap-1 rounded-[10px] bg-tw-inner p-2 transition-colors group-hover:bg-[#FAFAFA26]">
           {users.length === 1 && first.preview ? (

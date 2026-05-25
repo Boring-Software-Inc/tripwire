@@ -10,7 +10,7 @@ function buildRepoPayload(
     repo: string
     sender: string
     extra: Record<string, unknown>
-  }> = {},
+  }> = {}
 ) {
   return {
     repository: {
@@ -25,16 +25,16 @@ function buildRepoPayload(
 describe("githubRevalidationSignalKeys", () => {
   it("lowercases user keys so case-insensitive logins collapse to one slot", () => {
     expect(githubRevalidationSignalKeys.user({ username: "Torvalds" })).toBe(
-      "user:torvalds",
+      "user:torvalds"
     )
     expect(githubRevalidationSignalKeys.user({ username: "TORVALDS" })).toBe(
-      "user:torvalds",
+      "user:torvalds"
     )
   })
 
   it("lowercases repo keys for the same reason", () => {
     expect(
-      githubRevalidationSignalKeys.repo({ owner: "Torvalds", repo: "Linux" }),
+      githubRevalidationSignalKeys.repo({ owner: "Torvalds", repo: "Linux" })
     ).toBe("repo:torvalds/linux")
   })
 })
@@ -45,10 +45,10 @@ describe("getGitHubWebhookRevalidationSignalKeys", () => {
       "installationAccess",
     ])
     expect(
-      getGitHubWebhookRevalidationSignalKeys("installation_repositories", {}),
+      getGitHubWebhookRevalidationSignalKeys("installation_repositories", {})
     ).toEqual(["installationAccess"])
     expect(
-      getGitHubWebhookRevalidationSignalKeys("github_app_authorization", {}),
+      getGitHubWebhookRevalidationSignalKeys("github_app_authorization", {})
     ).toEqual(["installationAccess"])
   })
 
@@ -57,14 +57,14 @@ describe("getGitHubWebhookRevalidationSignalKeys", () => {
       extra: { pull_request: { user: { login: "alice" } } },
     })
     expect(
-      getGitHubWebhookRevalidationSignalKeys("pull_request", payload),
+      getGitHubWebhookRevalidationSignalKeys("pull_request", payload)
     ).toEqual(["repo:torvalds/linux", "user:alice"])
   })
 
   it("falls back to just the repo key when pull_request author cannot be resolved", () => {
     const payload = buildRepoPayload({ extra: { pull_request: {} } })
     expect(
-      getGitHubWebhookRevalidationSignalKeys("pull_request", payload),
+      getGitHubWebhookRevalidationSignalKeys("pull_request", payload)
     ).toEqual(["repo:torvalds/linux"])
   })
 
@@ -81,7 +81,7 @@ describe("getGitHubWebhookRevalidationSignalKeys", () => {
   it("returns repo + sender keys on issue_comment events", () => {
     const payload = buildRepoPayload({ sender: "Carol" })
     expect(
-      getGitHubWebhookRevalidationSignalKeys("issue_comment", payload),
+      getGitHubWebhookRevalidationSignalKeys("issue_comment", payload)
     ).toEqual(["repo:torvalds/linux", "user:carol"])
   })
 
@@ -100,7 +100,7 @@ describe("getGitHubWebhookRevalidationSignalKeys", () => {
 
   it("returns no keys for unsupported events", () => {
     expect(
-      getGitHubWebhookRevalidationSignalKeys("star", buildRepoPayload()),
+      getGitHubWebhookRevalidationSignalKeys("star", buildRepoPayload())
     ).toEqual([])
     expect(getGitHubWebhookRevalidationSignalKeys("fork", null)).toEqual([])
   })
@@ -109,7 +109,7 @@ describe("getGitHubWebhookRevalidationSignalKeys", () => {
     expect(
       getGitHubWebhookRevalidationSignalKeys("pull_request", {
         pull_request: {},
-      }),
+      })
     ).toEqual([])
   })
 })

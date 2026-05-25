@@ -176,9 +176,7 @@ function AdminOverviewPage() {
                   </div>
                   <div className="flex shrink-0 items-center gap-2 font-mono text-[11px]">
                     <ScoreChip score={c.score} />
-                    <span className="text-tw-error">
-                      {c.totalBlocks}B
-                    </span>
+                    <span className="text-tw-error">{c.totalBlocks}B</span>
                     <span className="text-tw-success">{c.totalAllows}A</span>
                   </div>
                 </Link>
@@ -199,10 +197,7 @@ function AdminOverviewPage() {
         ) : (
           <div className="divide-y divide-[#27272A]">
             {recent.data.map((e) => (
-              <div
-                key={e.id}
-                className="flex items-center gap-3 px-3 py-2.5"
-              >
+              <div key={e.id} className="flex items-center gap-3 px-3 py-2.5">
                 <span className="w-[100px] shrink-0 font-mono text-[11px] text-tw-text-tertiary">
                   {formatRelativeTime(e.createdAt)}
                 </span>
@@ -228,7 +223,13 @@ function AdminOverviewPage() {
   )
 }
 
-function StatTile({ label, value, Icon, hint, tone = "default" }: StatTileProps) {
+function StatTile({
+  label,
+  value,
+  Icon,
+  hint,
+  tone = "default",
+}: StatTileProps) {
   const valueTone =
     tone === "error"
       ? "text-tw-error"

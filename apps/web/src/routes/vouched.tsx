@@ -25,7 +25,7 @@ export const Route = createFileRoute("/vouched")({
   // start fresh.
   loader: ({ context }) => {
     void context.queryClient.prefetchQuery(
-      context.trpc.vouches.list.queryOptions({ limit: 50, offset: 0 }),
+      context.trpc.vouches.list.queryOptions({ limit: 50, offset: 0 })
     )
   },
   component: VouchedUsersPage,

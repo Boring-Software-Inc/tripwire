@@ -18,13 +18,19 @@ import {
 import "@xyflow/react/dist/style.css"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useTRPC } from "#/integrations/trpc/react"
-import { nodeTypes, nodeColors } from "#/components/layout/app/automations/node-types"
+import {
+  nodeTypes,
+  nodeColors,
+} from "#/components/layout/app/automations/node-types"
 import {
   rulePaletteGroups,
   type PaletteItem,
 } from "#/components/layout/app/rules/custom/rule-palette"
 import { onRuleMutation } from "#/lib/workflow/events"
-import { buildChangeSummary, type EditorSnapshot } from "#/lib/workflow/pending-changes"
+import {
+  buildChangeSummary,
+  type EditorSnapshot,
+} from "#/lib/workflow/pending-changes"
 import { PendingChangesToolbar } from "#/components/layout/app/automations/pending-changes-toolbar"
 import { RulePalettePanel } from "#/components/layout/app/rules/custom/rule-palette-panel"
 import {

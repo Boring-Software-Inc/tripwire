@@ -3,11 +3,7 @@ import {
   RuleBuilderPage,
   RuleBuilderPageSkeleton,
 } from "#/components/layout/app/rules/custom/rule-builder-page"
-import {
-  buildSeo,
-  formatPageTitle,
-  PRIVATE_ROUTE_HEADERS,
-} from "#/lib/seo"
+import { buildSeo, formatPageTitle, PRIVATE_ROUTE_HEADERS } from "#/lib/seo"
 
 export const Route = createFileRoute("/_app/$orgHandle/rules/custom/$ruleId")({
   component: RuleBuilderPage,
@@ -17,7 +13,7 @@ export const Route = createFileRoute("/_app/$orgHandle/rules/custom/$ruleId")({
     buildSeo({
       path: match.pathname,
       title: formatPageTitle(
-        params.ruleId === "new" ? "New custom rule" : "Edit custom rule",
+        params.ruleId === "new" ? "New custom rule" : "Edit custom rule"
       ),
       description:
         "Build or edit a repo-specific moderation rule with the visual editor.",

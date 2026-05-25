@@ -34,7 +34,7 @@ import { cachedFetchGitHub } from "./request"
  */
 async function cacheOrRefresh<TData>(
   options: GetOrRevalidateGitHubResourceOptions<TData>,
-  forceRefresh: boolean | undefined,
+  forceRefresh: boolean | undefined
 ): Promise<TData> {
   if (forceRefresh) {
     return getOrRevalidateGitHubResource<TData>({ ...options, freshForMs: 0 })
@@ -107,7 +107,7 @@ function transformSearchItemToPR(item: Record<string, unknown>): CachedPR {
   let timeToMergeMinutes: number | null = null
   if (mergedAt && createdAt) {
     timeToMergeMinutes = Math.round(
-      (new Date(mergedAt).getTime() - new Date(createdAt).getTime()) / 60_000,
+      (new Date(mergedAt).getTime() - new Date(createdAt).getTime()) / 60_000
     )
   }
 
@@ -142,14 +142,14 @@ function transformSearchItemToPR(item: Record<string, unknown>): CachedPR {
 /** Fetch full PR detail from the pulls endpoint (has additions/deletions/commits) */
 async function enrichPRWithDetails(
   token: string,
-  pr: CachedPR,
+  pr: CachedPR
 ): Promise<CachedPR> {
   try {
     const [owner, repo] = pr.repoFullName.split("/")
     if (!owner || !repo) return pr
     const detail = await githubApi(
       `/repos/${owner}/${repo}/pulls/${pr.number}`,
-      token,
+      token
     )
     if (!detail) return pr
     const mergedByUser = (detail.merged_by as Record<string, unknown>) ?? null
@@ -219,7 +219,7 @@ function syntheticMetadata() {
 function buildUserPRsSearchEndpoint(
   username: string,
   state: FetchOptions["state"] | "merged",
-  limit: number,
+  limit: number
 ): string {
   const stateFilter = state === "all" ? "" : `+is:${state}`
   const perPage = Math.max(limit, MIN_BATCH_SIZE)
@@ -234,13 +234,13 @@ function buildUserPRsSearchEndpoint(
 async function buildPRsPayload(
   token: string,
   rawData: { total_count?: number; items?: Record<string, unknown>[] } | null,
-  limit: number,
+  limit: number
 ): Promise<MergedPrsCachePayload> {
   const totalCount = (rawData?.total_count as number) ?? 0
   const rawItems = (rawData?.items as Record<string, unknown>[]) ?? []
   const basePrs = rawItems.map(transformSearchItemToPR)
   const enriched = await Promise.all(
-    basePrs.slice(0, limit).map((pr) => enrichPRWithDetails(token, pr)),
+    basePrs.slice(0, limit).map((pr) => enrichPRWithDetails(token, pr))
   )
   return { items: [...enriched, ...basePrs.slice(limit)], totalCount }
 }
@@ -254,7 +254,7 @@ async function buildPRsPayload(
 export async function fetchUserPRs(
   token: string,
   username: string,
-  opts: FetchOptions = {},
+  opts: FetchOptions = {}
 ): Promise<PRResult> {
   const limit = opts.limit ?? 5
   const state = opts.state ?? "merged"
@@ -265,7 +265,7 @@ export async function fetchUserPRs(
     try {
       searchResult = await githubApi(
         buildUserPRsSearchEndpoint(username, state, limit),
-        token,
+        token
       )
     } catch {
       // 422 = user has no searchable PR activity; other errors = API issue.
@@ -274,9 +274,10 @@ export async function fetchUserPRs(
     return buildPRsPayload(token, searchResult, limit)
   }
 
-  const fetcher = async (
-    conditionals: { etag?: string | null; lastModified?: string | null },
-  ): Promise<GitHubFetchResult<MergedPrsCachePayload>> => {
+  const fetcher = async (conditionals: {
+    etag?: string | null
+    lastModified?: string | null
+  }): Promise<GitHubFetchResult<MergedPrsCachePayload>> => {
     let result: GitHubFetchResult<{
       total_count?: number
       items?: Record<string, unknown>[]
@@ -285,7 +286,7 @@ export async function fetchUserPRs(
       result = await cachedFetchGitHub(
         buildUserPRsSearchEndpoint(username, "merged", limit),
         conditionals,
-        { token },
+        { token }
       )
     } catch {
       // Cache the empty result briefly so we don't hammer search on 422.
@@ -315,7 +316,7 @@ export async function fetchUserPRs(
       freshForMs: CACHE_TTL_MS,
       fetcher,
     },
-    opts.forceRefresh,
+    opts.forceRefresh
   )
 
   return {
@@ -333,21 +334,22 @@ export async function fetchUserPRs(
 export async function fetchUserRepos(
   token: string,
   username: string,
-  opts: FetchOptions = {},
+  opts: FetchOptions = {}
 ): Promise<RepoResult> {
   const limit = opts.limit ?? 5
   const scope = username.toLowerCase()
 
-  const fetcher = async (
-    conditionals: { etag?: string | null; lastModified?: string | null },
-  ): Promise<GitHubFetchResult<UserReposCachePayload>> => {
+  const fetcher = async (conditionals: {
+    etag?: string | null
+    lastModified?: string | null
+  }): Promise<GitHubFetchResult<UserReposCachePayload>> => {
     const perPage = Math.max(limit, MIN_BATCH_SIZE)
     const reposEndpoint = `/users/${encodeURIComponent(username)}/repos?per_page=${perPage}&sort=stargazers&direction=desc`
 
     const reposResult = await cachedFetchGitHub<Record<string, unknown>[]>(
       reposEndpoint,
       conditionals,
-      { token },
+      { token }
     )
 
     if (reposResult.kind === "not-modified") {
@@ -364,10 +366,7 @@ export async function fetchUserRepos(
     try {
       // Profile is supplementary — no conditional refresh (rate-limit
       // headers come from the repos call, which is what feeds adaptive freshness).
-      profile = await githubApi(
-        `/users/${encodeURIComponent(username)}`,
-        token,
-      )
+      profile = await githubApi(`/users/${encodeURIComponent(username)}`, token)
       if (profile?.public_repos) {
         totalCount = profile.public_repos as number
       }
@@ -391,7 +390,7 @@ export async function fetchUserRepos(
       freshForMs: CACHE_TTL_MS,
       fetcher,
     },
-    opts.forceRefresh,
+    opts.forceRefresh
   )
 
   return {
@@ -409,7 +408,7 @@ export async function fetchUserRepos(
 export async function fetchUserActivity(
   token: string,
   username: string,
-  opts: Pick<FetchOptions, "forceRefresh"> = {},
+  opts: Pick<FetchOptions, "forceRefresh"> = {}
 ): Promise<ActivityResult> {
   const scope = username.toLowerCase()
 
@@ -425,7 +424,7 @@ export async function fetchUserActivity(
         freshForMs: CACHE_TTL_MS,
         fetcher: graphqlFetcher,
       },
-      opts.forceRefresh,
+      opts.forceRefresh
     ),
     fetchUserContributions(token, username).catch(() => null),
   ])
@@ -443,15 +442,13 @@ export async function fetchUserActivity(
  * GitHub fetch. Used by the custom-rules simulator to render previews
  * for usernames seen in the event log.
  */
-export async function peekCachedUserProfile(
-  username: string,
-): Promise<{
+export async function peekCachedUserProfile(username: string): Promise<{
   profile: Record<string, unknown> | null
   githubUserId: number | null
 } | null> {
   const cached = await peekGitHubCache<UserReposCachePayload>(
     username.toLowerCase(),
-    "user.repos",
+    "user.repos"
   )
   if (!cached) return null
   return { profile: cached.profile, githubUserId: cached.githubUserId }
@@ -462,11 +459,11 @@ export async function peekCachedUserProfile(
  * on cache miss — does NOT trigger a GitHub fetch.
  */
 export async function peekCachedUserGraphql(
-  username: string,
+  username: string
 ): Promise<GitHubUserGraphQL | null> {
   return peekGitHubCache<GitHubUserGraphQL>(
     username.toLowerCase(),
-    "user.activity.graphql",
+    "user.activity.graphql"
   )
 }
 
@@ -493,12 +490,7 @@ export interface CommentThreadResult {
  * Bot detection — uses the GitHub user `type` field (authoritative) plus
  * a pattern fallback for older accounts that don't set type correctly.
  */
-const BOT_LOGIN_PATTERNS = [
-  /\[bot\]$/i,
-  /bot$/i,
-  /-bot$/i,
-  /^github-actions/i,
-]
+const BOT_LOGIN_PATTERNS = [/\[bot\]$/i, /bot$/i, /-bot$/i, /^github-actions/i]
 
 function isBot(login: string, userType?: string): boolean {
   if (userType === "Bot") return true
@@ -514,18 +506,18 @@ export async function fetchComments(
   owner: string,
   repo: string,
   issueNumber: number,
-  opts: { limit?: number; includeBots?: boolean } = {},
+  opts: { limit?: number; includeBots?: boolean } = {}
 ): Promise<CommentThreadResult> {
   const limit = opts.limit ?? 50
 
   const [issueComments, reviewComments] = await Promise.all([
     githubApi(
       `/repos/${owner}/${repo}/issues/${issueNumber}/comments?per_page=100`,
-      token,
+      token
     ).catch(() => []),
     githubApi(
       `/repos/${owner}/${repo}/pulls/${issueNumber}/comments?per_page=100`,
-      token,
+      token
     ).catch(() => []),
   ])
 
@@ -569,7 +561,7 @@ export async function fetchComments(
   const sorted = all
     .sort(
       (a, b) =>
-        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
     )
     .filter((c) => {
       if (seenIds.has(c.id)) return false
@@ -601,7 +593,7 @@ export async function fetchPRDetail(
   token: string,
   owner: string,
   repo: string,
-  prNumber: number,
+  prNumber: number
 ): Promise<PRDetailResult> {
   const [
     prData,
@@ -614,22 +606,22 @@ export async function fetchPRDetail(
     githubApi(`/repos/${owner}/${repo}/pulls/${prNumber}`, token),
     githubApi(
       `/repos/${owner}/${repo}/pulls/${prNumber}/files?per_page=100`,
-      token,
+      token
     ).catch(() => []),
     githubApi(`/repos/${owner}/${repo}/pulls/${prNumber}/reviews`, token).catch(
-      () => [],
+      () => []
     ),
     githubApi(
       `/repos/${owner}/${repo}/pulls/${prNumber}/commits?per_page=100`,
-      token,
+      token
     ).catch(() => []),
     githubApi(
       `/repos/${owner}/${repo}/issues/${prNumber}/comments?per_page=100`,
-      token,
+      token
     ).catch(() => []),
     githubApi(
       `/repos/${owner}/${repo}/pulls/${prNumber}/comments?per_page=100`,
-      token,
+      token
     ).catch(() => []),
   ])
 
@@ -643,7 +635,7 @@ export async function fetchPRDetail(
   let timeToMergeMinutes: number | null = null
   if (mergedAt && createdAt) {
     timeToMergeMinutes = Math.round(
-      (new Date(mergedAt).getTime() - new Date(createdAt).getTime()) / 60_000,
+      (new Date(mergedAt).getTime() - new Date(createdAt).getTime()) / 60_000
     )
   }
 
@@ -689,7 +681,7 @@ export async function fetchPRDetail(
       additions: (f.additions as number) ?? 0,
       deletions: (f.deletions as number) ?? 0,
       changes: (f.changes as number) ?? 0,
-    }),
+    })
   )
 
   const reviewerMap = new Map<
@@ -756,7 +748,7 @@ export async function fetchPRDetail(
   const comments = allComments
     .sort(
       (a, b) =>
-        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
     )
     .filter((c) => {
       if (seenIds.has(c.id)) return false

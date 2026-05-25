@@ -4,11 +4,7 @@ import {
   useRandomThinkingVariant,
 } from "@tripwire/ui/unicode-spinner"
 import { useThinkingPhrase } from "@tripwire/ai/components"
-import type {
-  UIMessage,
-  MessagePart,
-  ToolResultPart,
-} from "#/types/chat"
+import type { UIMessage, MessagePart, ToolResultPart } from "#/types/chat"
 import { MarkdownText } from "#/components/layout/app/chat/markdown-text"
 import { useAIChat } from "#/providers/chat-context"
 import type { ActionResultData } from "#/types/chat"
@@ -513,4 +509,3 @@ function MessagePartRenderer({
       return null
   }
 }
-

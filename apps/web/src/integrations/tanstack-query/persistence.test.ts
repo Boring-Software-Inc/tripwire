@@ -14,7 +14,7 @@ describe("shouldPersistQuery", () => {
         state: { status: "success", data: { foo: 1 } },
         meta: { persist: true },
         queryKey: ["a"],
-      }),
+      })
     ).toBe(true)
   })
 
@@ -23,14 +23,14 @@ describe("shouldPersistQuery", () => {
       shouldPersistQuery({
         state: { status: "success", data: { foo: 1 } },
         queryKey: ["a"],
-      }),
+      })
     ).toBe(false)
     expect(
       shouldPersistQuery({
         state: { status: "success", data: { foo: 1 } },
         meta: { persist: false },
         queryKey: ["a"],
-      }),
+      })
     ).toBe(false)
   })
 
@@ -40,14 +40,14 @@ describe("shouldPersistQuery", () => {
         state: { status: "pending" },
         meta: { persist: true },
         queryKey: ["a"],
-      }),
+      })
     ).toBe(false)
     expect(
       shouldPersistQuery({
         state: { status: "error" },
         meta: { persist: true },
         queryKey: ["a"],
-      }),
+      })
     ).toBe(false)
   })
 
@@ -57,14 +57,14 @@ describe("shouldPersistQuery", () => {
         state: { status: "success", data: null },
         meta: { persist: true },
         queryKey: ["a"],
-      }),
+      })
     ).toBe(false)
     expect(
       shouldPersistQuery({
         state: { status: "success" },
         meta: { persist: true },
         queryKey: ["a"],
-      }),
+      })
     ).toBe(false)
   })
 
@@ -76,14 +76,14 @@ describe("shouldPersistQuery", () => {
         state: { status: "success", data: { foo: 1 } },
         meta: { persist: "tab" },
         queryKey: ["a"],
-      }),
+      })
     ).toBe(false)
     expect(
       shouldPersistQuery({
         state: { status: "success", data: { foo: 1 } },
         meta: { persist: 1 },
         queryKey: ["a"],
-      }),
+      })
     ).toBe(false)
   })
 })
@@ -94,7 +94,7 @@ describe("isPersistedStateUsable", () => {
       version: number
       persistedAt: number
       clientState: unknown
-    }> = {},
+    }> = {}
   ) {
     return JSON.stringify({
       version: overrides.version ?? 1,
@@ -129,9 +129,7 @@ describe("isPersistedStateUsable", () => {
 
   it("returns null when persistedAt is missing or wrong type", () => {
     expect(
-      isPersistedStateUsable(
-        JSON.stringify({ version: 1, clientState: {} }),
-      ),
+      isPersistedStateUsable(JSON.stringify({ version: 1, clientState: {} }))
     ).toBeNull()
     expect(
       isPersistedStateUsable(
@@ -139,8 +137,8 @@ describe("isPersistedStateUsable", () => {
           version: 1,
           persistedAt: "yesterday",
           clientState: {},
-        }),
-      ),
+        })
+      )
     ).toBeNull()
   })
 

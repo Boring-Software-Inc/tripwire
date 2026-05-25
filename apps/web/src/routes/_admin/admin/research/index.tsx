@@ -9,7 +9,7 @@ export const Route = createFileRoute("/_admin/admin/research/")({
   // Prefetch the research-runs list so the page paints from cache.
   loader: ({ context }) => {
     void context.queryClient.prefetchQuery(
-      context.trpc.research.list.queryOptions({ limit: 50 }),
+      context.trpc.research.list.queryOptions({ limit: 50 })
     )
   },
   component: ResearchRunsPage,
@@ -72,16 +72,16 @@ function ResearchRunsPage() {
                 {run.name}
               </Link>
               <StatusBadge status={run.status} />
-              <span className="text-right text-[12px] tabular-nums text-tw-text-secondary">
+              <span className="text-right text-[12px] text-tw-text-secondary tabular-nums">
                 {run.stats.requested}
               </span>
-              <span className="text-right text-[12px] tabular-nums text-tw-text-secondary">
+              <span className="text-right text-[12px] text-tw-text-secondary tabular-nums">
                 {run.stats.completed}
               </span>
-              <span className="text-right text-[12px] tabular-nums text-tw-text-secondary">
+              <span className="text-right text-[12px] text-tw-text-secondary tabular-nums">
                 {run.stats.errored}
               </span>
-              <span className="text-right text-[12px] tabular-nums text-tw-text-secondary">
+              <span className="text-right text-[12px] text-tw-text-secondary tabular-nums">
                 {run.stats.prs}
               </span>
               <span className="text-[11px] text-tw-text-tertiary">
@@ -113,9 +113,7 @@ function StatusBadge({ status }: StatusBadgeProps) {
             ? "text-tw-error"
             : "text-tw-text-tertiary"
   return (
-    <span
-      className={`font-mono text-[11px] tracking-wide capitalize ${tone}`}
-    >
+    <span className={`font-mono text-[11px] tracking-wide capitalize ${tone}`}>
       {status}
     </span>
   )

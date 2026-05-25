@@ -6,7 +6,7 @@ const { buildStreamUrl, invalidateMatching, isServerMessage } = __internal
 describe("buildStreamUrl", () => {
   it("encodes signal keys as a comma-separated query param", () => {
     expect(buildStreamUrl(["user:torvalds", "repo:torvalds/linux"])).toBe(
-      "/api/github/signals/stream?keys=user%3Atorvalds%2Crepo%3Atorvalds%2Flinux",
+      "/api/github/signals/stream?keys=user%3Atorvalds%2Crepo%3Atorvalds%2Flinux"
     )
   })
 
@@ -20,7 +20,7 @@ describe("buildStreamUrl", () => {
 describe("isServerMessage", () => {
   it("accepts well-formed {type:'signals', keys:string[]}", () => {
     expect(
-      isServerMessage({ type: "signals", keys: ["user:x", "repo:y/z"] }),
+      isServerMessage({ type: "signals", keys: ["user:x", "repo:y/z"] })
     ).toBe(true)
   })
 
@@ -53,7 +53,7 @@ describe("invalidateMatching", () => {
   }
 
   function createMockClient(
-    statesByKey: Record<string, MockState | undefined>,
+    statesByKey: Record<string, MockState | undefined>
   ) {
     const invalidated: ReadonlyArray<unknown>[] = []
     const client = {
@@ -91,7 +91,7 @@ describe("invalidateMatching", () => {
     const count = invalidateMatching(
       client,
       [targetA, targetB],
-      ["user:torvalds"],
+      ["user:torvalds"]
     )
 
     expect(count).toBe(1)
@@ -110,11 +110,7 @@ describe("invalidateMatching", () => {
       },
     })
 
-    const count = invalidateMatching(
-      client,
-      [target],
-      ["user:x"],
-    )
+    const count = invalidateMatching(client, [target], ["user:x"])
 
     expect(count).toBe(0)
     expect(invalidated).toEqual([])
@@ -132,11 +128,7 @@ describe("invalidateMatching", () => {
       },
     })
 
-    const count = invalidateMatching(
-      client,
-      [target],
-      ["user:x"],
-    )
+    const count = invalidateMatching(client, [target], ["user:x"])
 
     expect(count).toBe(0)
     expect(invalidated).toEqual([])
@@ -149,11 +141,7 @@ describe("invalidateMatching", () => {
     }
     const { client, invalidated } = createMockClient({})
 
-    const count = invalidateMatching(
-      client,
-      [target],
-      ["user:x"],
-    )
+    const count = invalidateMatching(client, [target], ["user:x"])
 
     expect(count).toBe(0)
     expect(invalidated).toEqual([])

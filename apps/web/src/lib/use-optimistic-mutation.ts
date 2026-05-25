@@ -8,11 +8,11 @@ export type OptimisticPatchClient = {
   getQueryData(queryKey: QueryKey): unknown
   setQueryData(
     queryKey: QueryKey,
-    updater: unknown | ((current: unknown) => unknown),
+    updater: unknown | ((current: unknown) => unknown)
   ): unknown
   setQueriesData(
     filters: { predicate: (query: { queryKey: QueryKey }) => boolean },
-    updater: unknown | ((current: unknown) => unknown),
+    updater: unknown | ((current: unknown) => unknown)
   ): unknown
   getQueriesData(filters: {
     predicate: (query: { queryKey: QueryKey }) => boolean
@@ -45,7 +45,7 @@ export type OptimisticPatchHandle = {
 export function patchOptimistic<TData>(
   queryClient: OptimisticPatchClient,
   target: OptimisticPatchTarget,
-  updater: (current: TData) => TData,
+  updater: (current: TData) => TData
 ): OptimisticPatchHandle {
   const snapshots: Array<[QueryKey, unknown]> = []
   const safeUpdater = (current: unknown) => {
@@ -65,7 +65,7 @@ export function patchOptimistic<TData>(
     }
     queryClient.setQueriesData(
       { predicate: (query) => target.predicate(query.queryKey) },
-      safeUpdater,
+      safeUpdater
     )
   }
 

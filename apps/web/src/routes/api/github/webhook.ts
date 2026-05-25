@@ -51,13 +51,13 @@ async function safeMarkProcessed(deliveryId: string | null): Promise<void> {
 
 async function safeMarkFailed(
   deliveryId: string | null,
-  err: unknown,
+  err: unknown
 ): Promise<void> {
   if (!deliveryId) return
   try {
     await markGitHubWebhookEventFailed(
       deliveryId,
-      err instanceof Error ? err.message : String(err),
+      err instanceof Error ? err.message : String(err)
     )
   } catch (logErr) {
     console.error("[Webhook] failed to record processing error:", logErr)
@@ -102,7 +102,7 @@ async function handler({ request }: { request: Request }) {
       // Fail open: better to process twice than to silently drop the webhook.
       console.error(
         "[Webhook] failed to record delivery, processing anyway:",
-        err,
+        err
       )
     }
     if (!isNewDelivery) {
@@ -162,7 +162,7 @@ async function handleRepoEvent(
   payload: any,
   ctx: WebhookCtx,
   // biome-ignore lint/suspicious/noExplicitAny: webhook payload is dynamically shaped
-  repo: any,
+  repo: any
 ): Promise<void> {
   switch (event) {
     case "pull_request": {
@@ -176,7 +176,7 @@ async function handleRepoEvent(
         if (repoRow) {
           const bountyHit = await checkFakeBountyReference(
             repoRow.id,
-            prContent,
+            prContent
           )
           if (bountyHit) {
             await handleFakeBountyCatch({
@@ -198,7 +198,7 @@ async function handleRepoEvent(
           ctx,
           payload.pull_request.number,
           payload.pull_request.title,
-          payload.pull_request.body ?? undefined,
+          payload.pull_request.body ?? undefined
         )
       }
       break
@@ -210,7 +210,7 @@ async function handleRepoEvent(
           ctx,
           payload.issue.number,
           payload.issue.title,
-          payload.issue.body ?? undefined,
+          payload.issue.body ?? undefined
         )
       }
       break
@@ -223,7 +223,7 @@ async function handleRepoEvent(
           ctx,
           payload.comment.id,
           payload.issue.number,
-          payload.comment.body ?? undefined,
+          payload.comment.body ?? undefined
         )
       }
       break

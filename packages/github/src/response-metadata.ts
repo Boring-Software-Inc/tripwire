@@ -22,7 +22,9 @@ export type GitHubFetchResult<TData> =
   | { kind: "not-modified"; metadata: GitHubResponseMetadata }
   | { kind: "success"; data: TData; metadata: GitHubResponseMetadata }
 
-export function parseNullableInt(value: string | null | undefined): number | null {
+export function parseNullableInt(
+  value: string | null | undefined
+): number | null {
   if (!value) return null
   const parsed = Number.parseInt(value, 10)
   return Number.isFinite(parsed) ? parsed : null
@@ -30,7 +32,7 @@ export function parseNullableInt(value: string | null | undefined): number | nul
 
 export function createGitHubResponseMetadata(
   statusCode: number,
-  headers: Record<string, string | null | undefined>,
+  headers: Record<string, string | null | undefined>
 ): GitHubResponseMetadata {
   return {
     etag: headers.etag ?? null,

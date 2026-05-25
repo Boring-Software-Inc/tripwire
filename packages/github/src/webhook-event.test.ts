@@ -121,7 +121,10 @@ describe("recordGitHubWebhookEvent", () => {
       receivedAt: 500,
     })
     const valuesCall = recorded.find((c) => c.kind === "values") as
-      | { kind: "values"; values: { signalKeysJson: string; receivedAt: number } }
+      | {
+          kind: "values"
+          values: { signalKeysJson: string; receivedAt: number }
+        }
       | undefined
     expect(valuesCall).toBeDefined()
     expect(JSON.parse(valuesCall?.values.signalKeysJson ?? "[]")).toEqual([
@@ -138,9 +141,9 @@ describe("recordGitHubWebhookEvent", () => {
       event: "pull_request",
       signalKeys: [],
     })
-    const conflict = recorded.find(
-      (c) => c.kind === "onConflictDoNothing",
-    ) as { kind: "onConflictDoNothing"; target: { target: unknown } } | undefined
+    const conflict = recorded.find((c) => c.kind === "onConflictDoNothing") as
+      | { kind: "onConflictDoNothing"; target: { target: unknown } }
+      | undefined
     expect(conflict).toBeDefined()
     // Drizzle's onConflictDoNothing takes `{ target: column }` — the call
     // arg captured here is that wrapper object.

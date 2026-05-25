@@ -50,8 +50,8 @@ export function AutomationsPage() {
   const [tab, setTab] = useQueryState(
     "tab",
     parseAsStringEnum(["workflows", "reports"] as const).withDefault(
-      "workflows",
-    ),
+      "workflows"
+    )
   )
 
   const [isCreating, setIsCreating] = useState(false)
@@ -59,7 +59,7 @@ export function AutomationsPage() {
 
   // Pending toggle changes (not yet saved)
   const [pendingToggles, setPendingToggles] = useState<Map<string, boolean>>(
-    new Map(),
+    new Map()
   )
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -69,7 +69,7 @@ export function AutomationsPage() {
   const workflowsQuery = useQuery({
     ...trpc.workflows.list.queryOptions(
       { repoId: repo?.id ?? "" },
-      { enabled: !!repo?.id },
+      { enabled: !!repo?.id }
     ),
     meta: { persist: true },
   })
@@ -98,7 +98,7 @@ export function AutomationsPage() {
           }
           navigate({ to: `/${orgHandle}/automations/${wf.id}` })
         },
-      },
+      }
     )
   }
 
@@ -119,7 +119,7 @@ export function AutomationsPage() {
             })
           }
         },
-      },
+      }
     )
   }
 
@@ -140,7 +140,7 @@ export function AutomationsPage() {
   const handleSaveToggles = async () => {
     setSaving(true)
     const promises = Array.from(pendingToggles.entries()).map(([id, enabled]) =>
-      toggleWf.mutateAsync({ id, enabled }),
+      toggleWf.mutateAsync({ id, enabled })
     )
     await Promise.all(promises)
     setPendingToggles(new Map())

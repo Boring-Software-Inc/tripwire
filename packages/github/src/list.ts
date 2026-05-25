@@ -87,7 +87,10 @@ export function listAllPullRequests(
   owner: string,
   repo: string,
   opts?: {
-    onPage?: (items: GitHubPullRequestMin[], page: number) => void | Promise<void>
+    onPage?: (
+      items: GitHubPullRequestMin[],
+      page: number
+    ) => void | Promise<void>
   }
 ): Promise<GitHubPullRequestMin[]> {
   return paginate<GitHubPullRequestMin>(

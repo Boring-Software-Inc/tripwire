@@ -9,8 +9,7 @@
  * here when a new cached read needs invalidation.
  */
 export const githubRevalidationSignalKeys = {
-  user: (input: { username: string }) =>
-    `user:${input.username.toLowerCase()}`,
+  user: (input: { username: string }) => `user:${input.username.toLowerCase()}`,
   repo: (input: { owner: string; repo: string }) =>
     `repo:${input.owner.toLowerCase()}/${input.repo.toLowerCase()}`,
   installationAccess: "installationAccess",
@@ -63,7 +62,7 @@ function getIssueAuthorLogin(payload: unknown) {
  */
 export function getGitHubWebhookRevalidationSignalKeys(
   event: string,
-  payload: unknown,
+  payload: unknown
 ): string[] {
   if (
     event === "installation" ||

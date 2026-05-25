@@ -8,10 +8,7 @@
 
 import { eq, inArray } from "drizzle-orm"
 import { db } from "@tripwire/db/client"
-import {
-  githubResponseCache,
-  githubRevalidationSignal,
-} from "@tripwire/db"
+import { githubResponseCache, githubRevalidationSignal } from "@tripwire/db"
 import {
   type GitHubConditionalHeaders,
   type GitHubFetchResult,
@@ -61,7 +58,7 @@ export type GetOrRevalidateGitHubResourceOptions<TData> = {
   freshForMs: number
   signalKeys?: string[]
   fetcher: (
-    conditionals: GitHubConditionalHeaders,
+    conditionals: GitHubConditionalHeaders
   ) => Promise<GitHubFetchResult<TData>>
   store?: GitHubCacheStore
   inFlightCache?: Map<string, Promise<unknown>>
@@ -115,7 +112,7 @@ function normalizeJsonValue(value: unknown): unknown {
       .sort()
       .reduce<Record<string, unknown>>((acc, key) => {
         const normalized = normalizeJsonValue(
-          (value as Record<string, unknown>)[key],
+          (value as Record<string, unknown>)[key]
         )
         if (typeof normalized !== "undefined") {
           acc[key] = normalized
@@ -165,7 +162,7 @@ function getAdaptiveFreshForMs(
   metadata: Pick<
     GitHubResponseMetadata,
     "rateLimitRemaining" | "rateLimitReset"
-  >,
+  >
 ) {
   if (
     typeof metadata.rateLimitRemaining !== "number" ||
@@ -180,14 +177,14 @@ function getAdaptiveFreshForMs(
       typeof untilReset === "number"
         ? Math.max(
             untilReset - currentTime + GITHUB_RATE_LIMIT_RESET_BUFFER_MS,
-            0,
+            0
           )
         : 0
 
     return Math.max(
       baseFreshForMs,
       GITHUB_RATE_LIMIT_CRITICAL_FRESH_FLOOR_MS,
-      resetExtendedFreshForMs,
+      resetExtendedFreshForMs
     )
   }
 
@@ -209,20 +206,16 @@ function getErrorResponseHeaders(error: unknown) {
 }
 
 function normalizeUnknownHeaders(
-  headers: Record<string, unknown> | null | undefined,
+  headers: Record<string, unknown> | null | undefined
 ) {
   if (!headers) return {}
   return Object.entries(headers).reduce<Record<string, string | null>>(
     (acc, [key, value]) => {
       acc[key.toLowerCase()] =
-        typeof value === "string"
-          ? value
-          : value == null
-            ? null
-            : String(value)
+        typeof value === "string" ? value : value == null ? null : String(value)
       return acc
     },
-    {},
+    {}
   )
 }
 
@@ -256,12 +249,12 @@ function getRateLimitedStaleFreshUntil(currentTime: number, error: unknown) {
   }
 
   const resetAtMs = getRateLimitResetMs(
-    parseNullableInt(headers["x-ratelimit-reset"]),
+    parseNullableInt(headers["x-ratelimit-reset"])
   )
   if (typeof resetAtMs === "number") {
     return Math.max(
       currentTime + GITHUB_STALE_IF_RATE_LIMITED_FALLBACK_MS,
-      resetAtMs + GITHUB_RATE_LIMIT_RESET_BUFFER_MS,
+      resetAtMs + GITHUB_RATE_LIMIT_RESET_BUFFER_MS
     )
   }
 
@@ -308,7 +301,7 @@ function getDefaultGitHubCacheStore(): GitHubCacheStore {
 }
 
 async function getLatestGitHubRevalidationSignalUpdatedAt(
-  signalKeys: string[],
+  signalKeys: string[]
 ) {
   if (signalKeys.length === 0) return null
 
@@ -323,16 +316,14 @@ async function getLatestGitHubRevalidationSignalUpdatedAt(
 
 export async function markGitHubRevalidationSignals(
   signalKeys: string[],
-  at = Date.now(),
+  at = Date.now()
 ) {
   if (signalKeys.length === 0) return 0
 
   const uniqueSignalKeys = Array.from(new Set(signalKeys))
   await db
     .insert(githubRevalidationSignal)
-    .values(
-      uniqueSignalKeys.map((signalKey) => ({ signalKey, updatedAt: at })),
-    )
+    .values(uniqueSignalKeys.map((signalKey) => ({ signalKey, updatedAt: at })))
     .onConflictDoUpdate({
       target: githubRevalidationSignal.signalKey,
       set: { updatedAt: at },
@@ -357,7 +348,7 @@ export async function getGitHubRevalidationSignals(signalKeys: string[]) {
 export async function bustGitHubCache(
   scope: string,
   resource: string,
-  params?: unknown,
+  params?: unknown
 ) {
   const store = getDefaultGitHubCacheStore()
   const paramsJson = stableSerialize(params)
@@ -376,7 +367,7 @@ export async function peekGitHubCache<TData>(
   scope: string,
   resource: string,
   params?: unknown,
-  storeOverride?: GitHubCacheStore,
+  storeOverride?: GitHubCacheStore
 ): Promise<TData | null> {
   const store = storeOverride ?? getDefaultGitHubCacheStore()
   const paramsJson = stableSerialize(params)
@@ -421,8 +412,8 @@ export async function getOrRevalidateGitHubResource<TData>({
       signalKeys.length > 0 ? await getLatestSignalUpdatedAt(signalKeys) : null
     const isSignalNewerThanCache = Boolean(
       existingEntry &&
-        typeof latestSignalUpdatedAt === "number" &&
-        latestSignalUpdatedAt > existingEntry.fetchedAt,
+      typeof latestSignalUpdatedAt === "number" &&
+      latestSignalUpdatedAt > existingEntry.fetchedAt
     )
 
     if (
@@ -466,13 +457,14 @@ export async function getOrRevalidateGitHubResource<TData>({
     if (result.kind === "not-modified") {
       if (!existingEntry) {
         throw new Error(
-          `GitHub returned 304 without a cached payload for ${resource}.`,
+          `GitHub returned 304 without a cached payload for ${resource}.`
         )
       }
       const refreshedEntry = {
         ...existingEntry,
         etag: result.metadata.etag ?? existingEntry.etag,
-        lastModified: result.metadata.lastModified ?? existingEntry.lastModified,
+        lastModified:
+          result.metadata.lastModified ?? existingEntry.lastModified,
         fetchedAt: currentTime,
         freshUntil:
           currentTime +
@@ -489,7 +481,7 @@ export async function getOrRevalidateGitHubResource<TData>({
       merge && existingEntry
         ? merge(
             parseCachedPayload<TData>(existingEntry.payloadJson),
-            result.data,
+            result.data
           )
         : result.data
 
@@ -537,7 +529,7 @@ export async function getGitHubResourceLocalFirst<TData>(
   options: GetOrRevalidateGitHubResourceOptions<TData> & {
     /** Called after a background revalidate completes AND the cached data changed. Best-effort. */
     onBackgroundRefreshSettled?: () => Promise<void> | void
-  },
+  }
 ): Promise<{ data: TData; meta: GitHubLocalFirstMeta }> {
   const {
     scope,
@@ -560,8 +552,8 @@ export async function getGitHubResourceLocalFirst<TData>(
     signalKeys.length > 0 ? await getLatestSignalUpdatedAt(signalKeys) : null
   const isSignalNewerThanCache = Boolean(
     existingEntry &&
-      typeof latestSignalUpdatedAt === "number" &&
-      latestSignalUpdatedAt > existingEntry.fetchedAt,
+    typeof latestSignalUpdatedAt === "number" &&
+    latestSignalUpdatedAt > existingEntry.fetchedAt
   )
 
   // Fresh: serve cached, no refresh.

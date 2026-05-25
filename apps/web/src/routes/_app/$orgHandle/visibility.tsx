@@ -3,11 +3,7 @@ import {
   VisibilityPage,
   VisibilityPageSkeleton,
 } from "#/components/layout/app/visibility/visibility-page"
-import {
-  buildSeo,
-  formatPageTitle,
-  PRIVATE_ROUTE_HEADERS,
-} from "#/lib/seo"
+import { buildSeo, formatPageTitle, PRIVATE_ROUTE_HEADERS } from "#/lib/seo"
 
 export const Route = createFileRoute("/_app/$orgHandle/visibility")({
   component: VisibilityPage,

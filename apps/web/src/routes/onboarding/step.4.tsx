@@ -4,11 +4,7 @@ import { useTRPC } from "#/integrations/trpc/react"
 import { StepShell } from "#/components/layout/onboarding/step-shell"
 import { toastFromError } from "#/lib/toast-error"
 import { Spinner } from "@tripwire/ui/spinner"
-import {
-  buildSeo,
-  formatPageTitle,
-  PRIVATE_ROUTE_HEADERS,
-} from "#/lib/seo"
+import { buildSeo, formatPageTitle, PRIVATE_ROUTE_HEADERS } from "#/lib/seo"
 
 export const Route = createFileRoute("/onboarding/step/4")({
   component: Step4Page,
@@ -17,7 +13,8 @@ export const Route = createFileRoute("/onboarding/step/4")({
     buildSeo({
       path: match.pathname,
       title: formatPageTitle("Backfilling history"),
-      description: "Backfilling your repo's PR and issue history so the Visibility dashboard is populated when you land.",
+      description:
+        "Backfilling your repo's PR and issue history so the Visibility dashboard is populated when you land.",
       robots: "noindex",
     }),
 })
@@ -113,8 +110,8 @@ function Step4Page() {
         />
       ) : (
         <div className="text-[13px] text-tw-text-secondary">
-          No main repo selected. You can sync any repo later from the
-          Visibility tab.
+          No main repo selected. You can sync any repo later from the Visibility
+          tab.
         </div>
       )}
 

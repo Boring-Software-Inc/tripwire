@@ -299,7 +299,7 @@ function HomeFloatingBar() {
               createdAt: Date
               updatedAt: Date
             }>
-          | undefined,
+          | undefined
       ) => [
         {
           id: chatId,
@@ -309,7 +309,7 @@ function HomeFloatingBar() {
           updatedAt: new Date(),
         },
         ...(old ?? []).slice(0, 4),
-      ],
+      ]
     )
 
     try {
@@ -391,7 +391,7 @@ function RecentChats() {
         queryClient.setQueryData(
           listQueryKey,
           (old: typeof chats | undefined) =>
-            old ? old.filter((c) => c.id !== chatId) : [],
+            old ? old.filter((c) => c.id !== chatId) : []
         )
         return { previous }
       },
@@ -403,7 +403,7 @@ function RecentChats() {
       onSettled: () => {
         queryClient.invalidateQueries({ queryKey: listQueryKey })
       },
-    }),
+    })
   )
 
   const deleteAllChats = useMutation(
@@ -423,7 +423,7 @@ function RecentChats() {
       onSettled: () => {
         queryClient.invalidateQueries({ queryKey: listQueryKey })
       },
-    }),
+    })
   )
 
   if (chats.length === 0) return null

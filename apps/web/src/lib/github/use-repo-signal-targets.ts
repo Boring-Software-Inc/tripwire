@@ -10,7 +10,7 @@ import type { GitHubSignalStreamTarget } from "./use-signal-stream"
  * key list.
  */
 export function useRepoSignalKeys(
-  repoFullName: string | null | undefined,
+  repoFullName: string | null | undefined
 ): readonly string[] {
   return useMemo(() => {
     if (!repoFullName) return []
@@ -32,7 +32,7 @@ export function useRepoSignalKeys(
 export function useRepoSignalTargets(
   repoFullName: string | null | undefined,
   queryKeys: readonly QueryKey[],
-  extraSignalKeys: readonly string[] = [],
+  extraSignalKeys: readonly string[] = []
 ): GitHubSignalStreamTarget[] {
   const repoKeys = useRepoSignalKeys(repoFullName)
   const queryKeysKey = JSON.stringify(queryKeys)
@@ -41,6 +41,5 @@ export function useRepoSignalTargets(
     const signalKeys = [...repoKeys, ...extraSignalKeys]
     if (signalKeys.length === 0) return []
     return queryKeys.map((queryKey) => ({ queryKey, signalKeys }))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [repoKeys, queryKeysKey, extraKeysKey])
 }

@@ -18,11 +18,7 @@ import {
   DialogClose,
 } from "@tripwire/ui/dialog"
 import { SessionMonitorIcon16 } from "@tripwire/ui/icons/app-chrome-icons"
-import {
-  buildSeo,
-  formatPageTitle,
-  PRIVATE_ROUTE_HEADERS,
-} from "#/lib/seo"
+import { buildSeo, formatPageTitle, PRIVATE_ROUTE_HEADERS } from "#/lib/seo"
 
 export const Route = createFileRoute("/_app/settings/account")({
   component: AccountSettingsPage,

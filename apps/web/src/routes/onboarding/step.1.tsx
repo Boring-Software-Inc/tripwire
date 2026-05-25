@@ -1,10 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { Step1Page } from "#/components/layout/onboarding/step1-page"
-import {
-  buildSeo,
-  formatPageTitle,
-  PRIVATE_ROUTE_HEADERS,
-} from "#/lib/seo"
+import { buildSeo, formatPageTitle, PRIVATE_ROUTE_HEADERS } from "#/lib/seo"
 
 export const Route = createFileRoute("/onboarding/step/1")({
   component: Step1Page,

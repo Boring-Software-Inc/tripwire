@@ -9,7 +9,7 @@ export const Route = createFileRoute("/_admin/admin/research/$runId")({
   // Prefetch the run status so the page paints from cache.
   loader: ({ context, params }) => {
     void context.queryClient.prefetchQuery(
-      context.trpc.research.status.queryOptions({ runId: params.runId }),
+      context.trpc.research.status.queryOptions({ runId: params.runId })
     )
   },
   component: ResearchRunDetailPage,
@@ -128,7 +128,7 @@ function Stat({ label, value, children }: StatProps) {
       <span className="text-[10px] tracking-wide text-tw-text-tertiary uppercase">
         {label}
       </span>
-      <div className="text-[15px] leading-tight font-semibold tabular-nums text-tw-text-primary">
+      <div className="text-[15px] leading-tight font-semibold text-tw-text-primary tabular-nums">
         {children ?? value}
       </div>
     </div>

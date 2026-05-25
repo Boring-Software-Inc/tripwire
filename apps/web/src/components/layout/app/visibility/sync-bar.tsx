@@ -82,9 +82,9 @@ export function SyncBar({ repoId, repoFullName }: SyncBarProps) {
               <span className="text-tw-text-primary">
                 {repoFullName ?? "this repo"}
               </span>{" "}
-              and backfill them into Visibility. This runs in the background
-              and usually takes 1–5 minutes depending on repo size. You can
-              close this tab — the sync continues server-side.
+              and backfill them into Visibility. This runs in the background and
+              usually takes 1–5 minutes depending on repo size. You can close
+              this tab — the sync continues server-side.
             </DialogDescription>
           </div>
           <div className="flex justify-end gap-2 rounded-b-xl border-t border-tw-border bg-tw-bg/50 px-5 py-4">
@@ -108,19 +108,22 @@ export function SyncBar({ repoId, repoFullName }: SyncBarProps) {
 
 interface BodyProps {
   status: "never" | "queued" | "running" | "completed" | "errored"
-  last: {
-    status: string
-    startedAt: Date | null
-    completedAt: Date | null
-    createdAt: Date
-    stats: {
-      prs: number
-      issues: number
-      contributors: number
-      eventsInserted: number
-    }
-    errorMessage: string | null
-  } | null | undefined
+  last:
+    | {
+        status: string
+        startedAt: Date | null
+        completedAt: Date | null
+        createdAt: Date
+        stats: {
+          prs: number
+          issues: number
+          contributors: number
+          eventsInserted: number
+        }
+        errorMessage: string | null
+      }
+    | null
+    | undefined
   onSyncClick: () => void
   onRetryClick: () => void
   mutationPending: boolean

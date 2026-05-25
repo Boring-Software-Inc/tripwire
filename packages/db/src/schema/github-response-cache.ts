@@ -1,10 +1,4 @@
-import {
-  bigint,
-  index,
-  integer,
-  pgTable,
-  text,
-} from "drizzle-orm/pg-core"
+import { bigint, index, integer, pgTable, text } from "drizzle-orm/pg-core"
 
 /**
  * Read-through HTTP cache for GitHub API responses. One row per
@@ -34,7 +28,7 @@ export const githubResponseCache = pgTable(
   },
   (t) => [
     index("github_response_cache_scope_resource_idx").on(t.scope, t.resource),
-  ],
+  ]
 )
 
 /**
@@ -42,13 +36,10 @@ export const githubResponseCache = pgTable(
  * cache reads compare `updatedAt` against `fetched_at` to decide
  * whether the cached entry is still valid.
  */
-export const githubRevalidationSignal = pgTable(
-  "github_revalidation_signal",
-  {
-    signalKey: text("signal_key").primaryKey(),
-    updatedAt: bigint("updated_at", { mode: "number" }).notNull(),
-  },
-)
+export const githubRevalidationSignal = pgTable("github_revalidation_signal", {
+  signalKey: text("signal_key").primaryKey(),
+  updatedAt: bigint("updated_at", { mode: "number" }).notNull(),
+})
 
 /**
  * Versioned namespace counters. Reserved for split-mode KV cache
@@ -79,7 +70,5 @@ export const githubWebhookEvent = pgTable(
     processedAt: bigint("processed_at", { mode: "number" }),
     errorMessage: text("error_message"),
   },
-  (t) => [
-    index("github_webhook_event_received_at_idx").on(t.receivedAt),
-  ],
+  (t) => [index("github_webhook_event_received_at_idx").on(t.receivedAt)]
 )

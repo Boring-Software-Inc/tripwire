@@ -87,8 +87,8 @@ export function UserProfilePage() {
         profileQueryOpts.queryKey,
         eventsQueryOpts.queryKey,
       ],
-      [githubRevalidationSignalKeys.user({ username })],
-    ),
+      [githubRevalidationSignalKeys.user({ username })]
+    )
   )
 
   const scoreData = scoreQuery.data

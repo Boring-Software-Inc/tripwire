@@ -111,27 +111,23 @@ export const syncRepoHistory = inngest.createFunction(
           count += chunk.length
         }
 
-        const contributors = new Set(
-          built.map((b) => b.username.toLowerCase())
-        )
+        const contributors = new Set(built.map((b) => b.username.toLowerCase()))
         return { eventsInserted: count, contributors: contributors.size }
       })
 
       // one-shot cleanup of bot/ghost rows that leaked in before the
       // logEvent-level filter existed
       await step.run("purge-bots", async () => {
-        await db
-          .delete(githubReputation)
-          .where(
-            and(
-              eq(githubReputation.repoId, loaded.repoId),
-              sql`(
+        await db.delete(githubReputation).where(
+          and(
+            eq(githubReputation.repoId, loaded.repoId),
+            sql`(
                 lower(${githubReputation.githubUsername}) = 'ghost'
                 or lower(${githubReputation.githubUsername}) like '%[bot]'
                 or lower(${githubReputation.githubUsername}) like '%bot'
               )`
-            )
           )
+        )
       })
 
       await step.run("update-reputation", async () => {

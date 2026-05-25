@@ -17,8 +17,8 @@ const RuleBuilderEditor = lazy(() =>
   import("#/components/layout/app/rules/custom/rule-builder-editor").then(
     (m) => ({
       default: m.RuleBuilderEditor,
-    }),
-  ),
+    })
+  )
 )
 
 function EditorSkeleton() {
@@ -46,8 +46,8 @@ export function RuleBuilderPage() {
       {
         enabled: !isNew,
         staleTime: 60_000,
-      },
-    ),
+      }
+    )
   )
 
   if (!repo?.id) {

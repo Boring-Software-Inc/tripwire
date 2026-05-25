@@ -212,7 +212,9 @@ export function CustomRulesTab({ repoId, orgHandle }: CustomRulesTabProps) {
                       {rule.nodeCount} node{rule.nodeCount !== 1 ? "s" : ""}
                     </span>
                     {rule.simulatedAt && (
-                      <span>Simulated {formatRelativeTime(rule.simulatedAt)}</span>
+                      <span>
+                        Simulated {formatRelativeTime(rule.simulatedAt)}
+                      </span>
                     )}
                     {!rule.simulatedAt && (
                       <span className="text-amber-300/70">Not simulated</span>

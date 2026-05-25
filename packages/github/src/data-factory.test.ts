@@ -34,18 +34,18 @@ const cacheMock = {
 vi.mock("./cache", () => ({
   getOrRevalidateGitHubResource: (...args: unknown[]) =>
     (cacheMock.getOrRevalidateGitHubResource as (...a: unknown[]) => unknown)(
-      ...args,
+      ...args
     ),
   getGitHubResourceLocalFirst: (...args: unknown[]) =>
     (cacheMock.getGitHubResourceLocalFirst as (...a: unknown[]) => unknown)(
-      ...args,
+      ...args
     ),
   peekGitHubCache: (...args: unknown[]) =>
     (cacheMock.peekGitHubCache as (...a: unknown[]) => unknown)(...args),
   createGitHubResponseMetadata: (...args: unknown[]) =>
-    (
-      cacheMock.createGitHubResponseMetadata as (...a: unknown[]) => unknown
-    )(...args),
+    (cacheMock.createGitHubResponseMetadata as (...a: unknown[]) => unknown)(
+      ...args
+    ),
 }))
 
 import {
@@ -155,9 +155,13 @@ describe("fetchUserRepos", () => {
       if (u.includes("/users/torvalds/repos")) {
         return new Response(
           JSON.stringify([
-            { name: "linux", full_name: "torvalds/linux", stargazers_count: 100 },
+            {
+              name: "linux",
+              full_name: "torvalds/linux",
+              stargazers_count: 100,
+            },
           ]),
-          { status: 200, headers: { etag: '"e1"' } },
+          { status: 200, headers: { etag: '"e1"' } }
         )
       }
       return new Response("[]", { status: 200 })
@@ -172,7 +176,10 @@ describe("fetchUserRepos", () => {
 
     try {
       let capturedFetcher:
-        | ((c: { etag?: string | null; lastModified?: string | null }) => Promise<{
+        | ((c: {
+            etag?: string | null
+            lastModified?: string | null
+          }) => Promise<{
             kind: string
             data: unknown
           }>)
@@ -197,7 +204,7 @@ describe("fetchUserRepos", () => {
               isRevalidating: false,
             },
           }
-        },
+        }
       )
 
       await fetchUserRepos("token", "torvalds", { limit: 5 })
@@ -206,7 +213,7 @@ describe("fetchUserRepos", () => {
       // Profile call still goes through githubApi
       expect(githubApiMock).toHaveBeenCalledWith(
         "/users/torvalds",
-        expect.any(String),
+        expect.any(String)
       )
     } finally {
       globalThis.fetch = ORIGINAL_FETCH
@@ -223,7 +230,10 @@ describe("fetchUserRepos", () => {
 
     try {
       let capturedFetcher:
-        | ((c: { etag?: string | null; lastModified?: string | null }) => Promise<{
+        | ((c: {
+            etag?: string | null
+            lastModified?: string | null
+          }) => Promise<{
             kind: string
           }>)
         | undefined
@@ -247,7 +257,7 @@ describe("fetchUserRepos", () => {
               isRevalidating: false,
             },
           }
-        },
+        }
       )
 
       const { fetchUserPRs } = await import("./data-factory")
@@ -322,7 +332,7 @@ describe("peek helpers", () => {
     const result = await peekCachedUserProfile("Torvalds")
     expect(cacheMock.peekGitHubCache).toHaveBeenCalledWith(
       "torvalds",
-      "user.repos",
+      "user.repos"
     )
     expect(result).toEqual({
       profile: { login: "torvalds" },
@@ -341,7 +351,7 @@ describe("peek helpers", () => {
     const result = await peekCachedUserGraphql("torvalds")
     expect(cacheMock.peekGitHubCache).toHaveBeenCalledWith(
       "torvalds",
-      "user.activity.graphql",
+      "user.activity.graphql"
     )
     expect(result).toEqual({ orgs: ["github"] })
   })

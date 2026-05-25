@@ -1,10 +1,6 @@
 import { Button } from "./button"
 import { ContextUsageRingIcon } from "./icons/context-usage-ring-icon"
-import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from "./hover-card"
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "./hover-card"
 import { Progress } from "./progress"
 import {
   cn,

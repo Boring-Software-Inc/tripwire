@@ -19,7 +19,7 @@ export type GitHubConditionals = {
  */
 export function createGitHubRequestSignal(
   callerSignal?: AbortSignal,
-  timeoutMs: number = GITHUB_REQUEST_TIMEOUT_MS,
+  timeoutMs: number = GITHUB_REQUEST_TIMEOUT_MS
 ): AbortSignal {
   const timeoutSignal = AbortSignal.timeout(timeoutMs)
   if (!callerSignal) return timeoutSignal
@@ -31,7 +31,7 @@ export function createGitHubRequestSignal(
  * GitHub can answer 304 when the resource hasn't changed.
  */
 export function buildConditionalHeaders(
-  conditionals: GitHubConditionals,
+  conditionals: GitHubConditionals
 ): Record<string, string> {
   const headers: Record<string, string> = {}
   if (conditionals.etag) headers["if-none-match"] = conditionals.etag
@@ -139,7 +139,7 @@ export type GitHubFetchOptions = {
  */
 export async function fetchGitHubResponse<TData = unknown>(
   endpoint: string,
-  options: GitHubFetchOptions,
+  options: GitHubFetchOptions
 ): Promise<GitHubResponseEnvelope<TData | null>> {
   const {
     token,
@@ -206,7 +206,7 @@ import {
 export async function cachedFetchGitHub<TData>(
   endpoint: string,
   conditionals: GitHubConditionals,
-  options: Omit<GitHubFetchOptions, "conditionals">,
+  options: Omit<GitHubFetchOptions, "conditionals">
 ): Promise<GitHubFetchResult<TData>> {
   const envelope = await fetchGitHubResponse<TData>(endpoint, {
     ...options,

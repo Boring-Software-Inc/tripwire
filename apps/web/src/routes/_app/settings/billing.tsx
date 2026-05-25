@@ -3,11 +3,7 @@ import { Button } from "@tripwire/ui/button"
 import { useCustomer } from "autumn-js/react"
 import { useWorkspace } from "#/providers/workspace-context"
 import { PlusStrokeIcon14 } from "@tripwire/ui/icons/app-chrome-icons"
-import {
-  buildSeo,
-  formatPageTitle,
-  PRIVATE_ROUTE_HEADERS,
-} from "#/lib/seo"
+import { buildSeo, formatPageTitle, PRIVATE_ROUTE_HEADERS } from "#/lib/seo"
 
 export const Route = createFileRoute("/_app/settings/billing")({
   component: BillingSettingsPage,

@@ -12,9 +12,9 @@ export type GitHubSignalStreamTarget = {
  * Narrow contract makes the helper unit-testable with a 2-method stub.
  */
 type SignalAwareQueryClient = {
-  getQueryState(queryKey: QueryKey):
-    | { dataUpdatedAt: number; fetchStatus: string }
-    | undefined
+  getQueryState(
+    queryKey: QueryKey
+  ): { dataUpdatedAt: number; fetchStatus: string } | undefined
   invalidateQueries(filters: {
     queryKey: QueryKey
     exact?: boolean
@@ -48,7 +48,7 @@ function buildStreamUrl(keys: readonly string[]): string {
 function invalidateMatching(
   queryClient: SignalAwareQueryClient,
   targets: readonly GitHubSignalStreamTarget[],
-  receivedKeys: readonly string[],
+  receivedKeys: readonly string[]
 ): number {
   const set = new Set(receivedKeys)
   let count = 0
@@ -81,16 +81,16 @@ function invalidateMatching(
  * the poll alone keeps the experience usable — just with 20s latency.
  */
 export function useGitHubSignalStream(
-  targets: readonly GitHubSignalStreamTarget[],
+  targets: readonly GitHubSignalStreamTarget[]
 ) {
   const queryClient = useQueryClient()
 
   const allSignalKeys = useMemo(
     () =>
       Array.from(
-        new Set(targets.flatMap((target) => [...target.signalKeys])),
+        new Set(targets.flatMap((target) => [...target.signalKeys]))
       ).sort(),
-    [targets],
+    [targets]
   )
   const signalKeysKey = allSignalKeys.join(",")
 
@@ -118,7 +118,7 @@ export function useGitHubSignalStream(
       // path (auth failure, bad URL) needs us to handle it.
       const delay = Math.min(
         RECONNECT_BASE_DELAY_MS * 2 ** reconnectAttempt,
-        RECONNECT_MAX_DELAY_MS,
+        RECONNECT_MAX_DELAY_MS
       )
       reconnectAttempt += 1
       reconnectTimer = setTimeout(connect, delay)

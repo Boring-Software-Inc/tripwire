@@ -5,11 +5,7 @@ import { useTRPC } from "#/integrations/trpc/react"
 import { Button } from "@tripwire/ui/button"
 import { toastManager } from "@tripwire/ui/toast"
 import { toastFromError } from "#/lib/toast-error"
-import {
-  buildSeo,
-  formatPageTitle,
-  PRIVATE_ROUTE_HEADERS,
-} from "#/lib/seo"
+import { buildSeo, formatPageTitle, PRIVATE_ROUTE_HEADERS } from "#/lib/seo"
 
 export const Route = createFileRoute("/_app/settings/developers")({
   component: DevelopersSettingsPage,

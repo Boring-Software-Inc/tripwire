@@ -1,10 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { TemplatePreviewPage } from "#/components/layout/app/automations/automation-preview-page"
-import {
-  buildSeo,
-  formatPageTitle,
-  PRIVATE_ROUTE_HEADERS,
-} from "#/lib/seo"
+import { buildSeo, formatPageTitle, PRIVATE_ROUTE_HEADERS } from "#/lib/seo"
 
 export const Route = createFileRoute("/_app/$orgHandle/automations/preview")({
   validateSearch: (search: Record<string, unknown>) => ({

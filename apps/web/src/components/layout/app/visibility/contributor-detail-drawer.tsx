@@ -1,10 +1,6 @@
 import { useMemo } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import {
-  Dialog,
-  DialogPopup,
-  DialogTitle,
-} from "@tripwire/ui/dialog"
+import { Dialog, DialogPopup, DialogTitle } from "@tripwire/ui/dialog"
 import { Button } from "@tripwire/ui/button"
 import { ScrollArea } from "@tripwire/ui/scroll-area"
 import { useTRPC } from "#/integrations/trpc/react"
@@ -37,9 +33,7 @@ type DrawerAction = {
   variant: "outline" | "secondary" | "destructive-outline"
 }
 
-function drawerActionsFor(
-  status: ContributorRow["status"],
-): DrawerAction[] {
+function drawerActionsFor(status: ContributorRow["status"]): DrawerAction[] {
   const out: DrawerAction[] = []
   if (status === "whitelisted") {
     out.push({
@@ -113,7 +107,7 @@ export function ContributorDetailDrawer({
   // invalidates within ~1s of a webhook for this contributor.
   const eventsQueryOpts = trpc.events.list.queryOptions(
     { repoId, targetUsername: username, limit: 30 },
-    { enabled: !!contributor && open },
+    { enabled: !!contributor && open }
   )
   const eventsQuery = useQuery({
     ...eventsQueryOpts,
@@ -129,7 +123,7 @@ export function ContributorDetailDrawer({
             },
           ]
         : [],
-    [username, eventsQueryOpts.queryKey],
+    [username, eventsQueryOpts.queryKey]
   )
   useGitHubSignalStream(userSignalTargets)
 
@@ -142,13 +136,13 @@ export function ContributorDetailDrawer({
           {
             predicate: matchContributorsListForRepo(
               contributorsListPrefix,
-              vars.repoId,
+              vars.repoId
             ),
           },
           flipContributorStatuses(
             vars.usernames,
-            nextContributorStatus(vars.action),
-          ),
+            nextContributorStatus(vars.action)
+          )
         ),
       onError: (err, _vars, handle) => {
         handle?.rollback()
@@ -163,14 +157,22 @@ export function ContributorDetailDrawer({
         })
         onOpenChange(false)
       },
-    }),
+    })
   )
 
   if (!contributor) return null
 
   const stats = [
-    { label: "Allowed", value: contributor.totalAllows, tone: "neutral" as const },
-    { label: "Blocked", value: contributor.totalBlocks, tone: "danger" as const },
+    {
+      label: "Allowed",
+      value: contributor.totalAllows,
+      tone: "neutral" as const,
+    },
+    {
+      label: "Blocked",
+      value: contributor.totalBlocks,
+      tone: "danger" as const,
+    },
     {
       label: "Near miss",
       value: contributor.totalNearMisses,
@@ -195,8 +197,8 @@ export function ContributorDetailDrawer({
             <div className="flex items-center gap-2">
               <ScoreBadge score={contributor.score} size="sm" />
               <span className="text-[11px] text-tw-text-muted">
-                First seen {formatRelativeTime(contributor.firstSeenAt)} ·
-                last seen {formatRelativeTime(contributor.lastSeenAt)}
+                First seen {formatRelativeTime(contributor.firstSeenAt)} · last
+                seen {formatRelativeTime(contributor.lastSeenAt)}
               </span>
             </div>
           </div>

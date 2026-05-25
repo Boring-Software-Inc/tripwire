@@ -15,7 +15,7 @@ describe("buildConditionalHeaders", () => {
       buildConditionalHeaders({
         etag: '"abc"',
         lastModified: "Tue, 01 Apr 2025 10:00:00 GMT",
-      }),
+      })
     ).toEqual({
       "if-none-match": '"abc"',
       "if-modified-since": "Tue, 01 Apr 2025 10:00:00 GMT",
@@ -80,8 +80,8 @@ describe("parseGitHubRateLimitHeaders", () => {
     })
     expect(
       parseGitHubRateLimitHeaders(
-        new Headers({ "x-ratelimit-remaining": "notanumber" }),
-      ).remaining,
+        new Headers({ "x-ratelimit-remaining": "notanumber" })
+      ).remaining
     ).toBeNull()
   })
 })
@@ -119,7 +119,7 @@ describe("logGitHubRateLimit", () => {
         status: 200,
         limit: 5000,
         remaining: 4500,
-      }),
+      })
     )
     log.mockRestore()
   })
@@ -165,7 +165,7 @@ describe("fetchGitHubResponse", () => {
     }
     globalThis.fetch = (async (
       url: string | URL | Request,
-      init?: RequestInit,
+      init?: RequestInit
     ) => {
       captured.url = String(url)
       captured.init = init
@@ -180,7 +180,7 @@ describe("fetchGitHubResponse", () => {
       {
         token: "ghp_test",
         conditionals: { etag: '"prev"' },
-      },
+      }
     )
 
     expect(captured.url).toBe("https://api.github.com/users/torvalds")
@@ -240,16 +240,14 @@ describe("cachedFetchGitHub", () => {
     const result = await cachedFetchGitHub<{ login: string }>(
       "/users/torvalds",
       {},
-      { token: "ghp_test" },
+      { token: "ghp_test" }
     )
 
     expect(result.kind).toBe("success")
     if (result.kind === "success") {
       expect(result.data).toEqual({ login: "torvalds" })
       expect(result.metadata.etag).toBe('"e1"')
-      expect(result.metadata.lastModified).toBe(
-        "Tue, 01 Apr 2025 10:00:00 GMT",
-      )
+      expect(result.metadata.lastModified).toBe("Tue, 01 Apr 2025 10:00:00 GMT")
       expect(result.metadata.rateLimitRemaining).toBe(4999)
       expect(result.metadata.rateLimitReset).toBe(1712487600)
       expect(result.metadata.statusCode).toBe(200)
@@ -266,7 +264,7 @@ describe("cachedFetchGitHub", () => {
     const result = await cachedFetchGitHub(
       "/users/torvalds",
       { etag: '"e1"' },
-      { token: "ghp_test" },
+      { token: "ghp_test" }
     )
 
     expect(result.kind).toBe("not-modified")
@@ -308,7 +306,7 @@ describe("cachedFetchGitHub", () => {
     let capturedHeaders: Record<string, string> = {}
     globalThis.fetch = (async (
       _url: string | URL | Request,
-      init?: RequestInit,
+      init?: RequestInit
     ) => {
       capturedHeaders = (init?.headers as Record<string, string>) ?? {}
       return new Response("{}", { status: 200 })
@@ -317,7 +315,7 @@ describe("cachedFetchGitHub", () => {
     await cachedFetchGitHub(
       "/users/torvalds",
       { etag: '"prev"', lastModified: "Mon" },
-      { token: "ghp_test" },
+      { token: "ghp_test" }
     )
 
     expect(capturedHeaders["if-none-match"]).toBe('"prev"')

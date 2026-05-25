@@ -6,10 +6,7 @@ import { ChevronRightIndicatorIcon12 } from "@tripwire/ui/icons/app-chrome-icons
 import { RULE_META } from "@tripwire/db/schema/rule-meta"
 import { EmptyState } from "#/components/shared/empty-state"
 import { markEventsViewed } from "#/hooks/use-events-unread"
-import {
-  isCustomRuleName,
-  stripCustomRulePrefix,
-} from "#/lib/custom-rules"
+import { isCustomRuleName, stripCustomRulePrefix } from "#/lib/custom-rules"
 import { useGitHubSignalStream } from "#/lib/github/use-signal-stream"
 import { useRepoSignalTargets } from "#/lib/github/use-repo-signal-targets"
 import { routes } from "#/lib/routes"
@@ -341,7 +338,7 @@ export function EventsPage() {
       eventsQueryOpts.queryKey,
       severityQueryOpts.queryKey,
       countsQueryOpts.queryKey,
-    ]),
+    ])
   )
 
   const events = (eventsQuery.data?.events ?? []) as unknown as Event[]

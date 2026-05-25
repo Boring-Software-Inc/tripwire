@@ -3,11 +3,7 @@ import {
   EventDetailPage,
   EventDetailPageSkeleton,
 } from "#/components/layout/app/events/event-detail-page"
-import {
-  buildSeo,
-  formatPageTitle,
-  PRIVATE_ROUTE_HEADERS,
-} from "#/lib/seo"
+import { buildSeo, formatPageTitle, PRIVATE_ROUTE_HEADERS } from "#/lib/seo"
 
 export const Route = createFileRoute("/_app/$orgHandle/events/$eventId")({
   // Prefetch the event detail so the page paints against a warm cache.
@@ -15,7 +11,7 @@ export const Route = createFileRoute("/_app/$orgHandle/events/$eventId")({
   // and re-use the entry that page already populated.
   loader: ({ context, params }) => {
     void context.queryClient.prefetchQuery(
-      context.trpc.events.get.queryOptions({ eventId: params.eventId }),
+      context.trpc.events.get.queryOptions({ eventId: params.eventId })
     )
   },
   component: EventDetailPage,

@@ -44,7 +44,7 @@ export function broadcastSignalKeys(keys: string[]): void {
  */
 export function subscribeToSignals(
   signalKeys: readonly string[],
-  onMatch: (matchedKeys: string[]) => void,
+  onMatch: (matchedKeys: string[]) => void
 ): () => void {
   if (signalKeys.length === 0) {
     return () => undefined

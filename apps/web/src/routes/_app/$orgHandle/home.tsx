@@ -3,11 +3,7 @@ import {
   HomePage,
   HomePageSkeleton,
 } from "#/components/layout/app/home/home-page"
-import {
-  buildSeo,
-  formatPageTitle,
-  PRIVATE_ROUTE_HEADERS,
-} from "#/lib/seo"
+import { buildSeo, formatPageTitle, PRIVATE_ROUTE_HEADERS } from "#/lib/seo"
 
 export const Route = createFileRoute("/_app/$orgHandle/home")({
   component: HomePage,

@@ -47,9 +47,7 @@ export function CreateOrgDialog({ open, onOpenChange }: CreateOrgDialogProps) {
         showCloseButton={false}
         className="max-w-sm"
       >
-        {open ? (
-          <CreateOrgForm onClose={() => onOpenChange(false)} />
-        ) : null}
+        {open ? <CreateOrgForm onClose={() => onOpenChange(false)} /> : null}
       </DialogPopup>
     </Dialog>
   )

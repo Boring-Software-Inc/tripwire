@@ -26,14 +26,12 @@ vi.mock("crypto", () => ({
 vi.mock("@tripwire/env/server", () => ({
   env: {
     GITHUB_APP_ID: "12345",
-    GITHUB_APP_PRIVATE_KEY: "-----BEGIN RSA PRIVATE KEY-----\nmock\n-----END RSA PRIVATE KEY-----",
+    GITHUB_APP_PRIVATE_KEY:
+      "-----BEGIN RSA PRIVATE KEY-----\nmock\n-----END RSA PRIVATE KEY-----",
   },
 }))
 
-import {
-  getInstallationToken,
-  invalidateInstallationToken,
-} from "./app"
+import { getInstallationToken, invalidateInstallationToken } from "./app"
 
 let originalFetch: typeof global.fetch
 
@@ -54,7 +52,7 @@ function buildTokenResponse(token: string, expiresInMs = 60 * 60 * 1000) {
         JSON.stringify({
           token,
           expires_at: new Date(Date.now() + expiresInMs).toISOString(),
-        }),
+        })
       ),
     json: () =>
       Promise.resolve({
@@ -76,7 +74,7 @@ describe("getInstallationToken", () => {
         new Promise<Response>((resolve) => {
           fetchCount++
           resolveFetch = resolve
-        }),
+        })
     ) as typeof fetch
 
     // Fire three concurrent calls.
@@ -142,7 +140,7 @@ describe("getInstallationToken", () => {
         ok: false,
         status: 500,
         text: () => Promise.resolve("oops"),
-      } as unknown as Response),
+      } as unknown as Response)
     ) as typeof fetch
 
     await expect(getInstallationToken(installationId)).rejects.toBeDefined()

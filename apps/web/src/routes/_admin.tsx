@@ -85,13 +85,8 @@ function AdminTopNav() {
           Admin
         </span>
         <nav className="flex items-center gap-0.5">
-          <Link
-            to="/admin"
-            className={tabClass(currentPath === "/admin")}
-          >
-            <LayoutDashboard
-              className={iconClass(currentPath === "/admin")}
-            />
+          <Link to="/admin" className={tabClass(currentPath === "/admin")}>
+            <LayoutDashboard className={iconClass(currentPath === "/admin")} />
             <span className={labelClass(currentPath === "/admin")}>
               Overview
             </span>
@@ -101,14 +96,10 @@ function AdminTopNav() {
             className={tabClass(currentPath.startsWith("/admin/research"))}
           >
             <FlaskConical
-              className={iconClass(
-                currentPath.startsWith("/admin/research")
-              )}
+              className={iconClass(currentPath.startsWith("/admin/research"))}
             />
             <span
-              className={labelClass(
-                currentPath.startsWith("/admin/research")
-              )}
+              className={labelClass(currentPath.startsWith("/admin/research"))}
             >
               Research
             </span>
@@ -118,9 +109,7 @@ function AdminTopNav() {
             className={tabClass(currentPath.startsWith("/admin/reputation"))}
           >
             <ShieldUser
-              className={iconClass(
-                currentPath.startsWith("/admin/reputation")
-              )}
+              className={iconClass(currentPath.startsWith("/admin/reputation"))}
             />
             <span
               className={labelClass(

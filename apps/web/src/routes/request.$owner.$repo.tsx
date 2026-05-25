@@ -14,7 +14,9 @@ export const Route = createFileRoute("/request/$owner/$repo")({
   head: ({ match, params }) =>
     buildSeo({
       path: match.pathname,
-      title: formatPageTitle(`Request access to ${params.owner}/${params.repo}`),
+      title: formatPageTitle(
+        `Request access to ${params.owner}/${params.repo}`
+      ),
       description: `Submit an unblock or access request to the maintainers of ${params.owner}/${params.repo}.`,
       robots: "noindex",
     }),

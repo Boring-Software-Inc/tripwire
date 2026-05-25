@@ -1,7 +1,10 @@
 import { useState, useCallback, useRef, useMemo, useEffect } from "react"
 import { Button } from "@tripwire/ui/button"
 import { onWorkflowMutation } from "#/lib/workflow/events"
-import { buildChangeSummary, type EditorSnapshot } from "#/lib/workflow/pending-changes"
+import {
+  buildChangeSummary,
+  type EditorSnapshot,
+} from "#/lib/workflow/pending-changes"
 import { PendingChangesToolbar } from "#/components/layout/app/automations/pending-changes-toolbar"
 import { PlayTriangleIcon13 } from "@tripwire/ui/icons/app-chrome-icons"
 import {

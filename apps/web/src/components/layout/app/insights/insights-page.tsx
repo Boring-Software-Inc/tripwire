@@ -44,7 +44,7 @@ export function InsightsPage() {
   const statsQuery = useQuery({
     ...trpc.events.stats.queryOptions(
       { repoId: repoId! },
-      { enabled: !!repoId, staleTime: 60 * 1000 },
+      { enabled: !!repoId, staleTime: 60 * 1000 }
     ),
     meta: { persist: true },
   })
@@ -52,7 +52,7 @@ export function InsightsPage() {
   const trendsQuery = useQuery({
     ...trpc.events.trends.queryOptions(
       { repoId: repoId!, months: 8 },
-      { enabled: !!repoId, staleTime: 60 * 1000 },
+      { enabled: !!repoId, staleTime: 60 * 1000 }
     ),
     meta: { persist: true },
   })
@@ -79,7 +79,7 @@ export function InsightsPage() {
   for (let i = 7; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
     allMonths.push(
-      d.toLocaleDateString("en-US", { month: "short", year: "2-digit" }),
+      d.toLocaleDateString("en-US", { month: "short", year: "2-digit" })
     )
   }
 

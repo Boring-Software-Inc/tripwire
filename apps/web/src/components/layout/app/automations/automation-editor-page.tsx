@@ -28,8 +28,8 @@ export function AutomationEditorPage() {
   const wfQuery = useQuery(
     trpc.workflows.get.queryOptions(
       { id: automationId },
-      { enabled: !!automationId },
-    ),
+      { enabled: !!automationId }
+    )
   )
 
   const updateWf = useMutation(trpc.workflows.update.mutationOptions())
@@ -61,7 +61,7 @@ export function AutomationEditorPage() {
               queryKey: trpc.workflows.get.queryKey({ id: automationId }),
             })
           },
-        },
+        }
       )
     }
     setEditingName(false)
@@ -97,7 +97,7 @@ export function AutomationEditorPage() {
             })
           }
         },
-      },
+      }
     )
   }
 

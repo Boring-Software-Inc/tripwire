@@ -41,7 +41,7 @@ export function Step2Page() {
       },
       onError: (err) =>
         toastFromError(err, { fallbackTitle: "Couldn't save main repo" }),
-    }),
+    })
   )
 
   const repos = reposQuery.data ?? []
@@ -60,9 +60,7 @@ export function Step2Page() {
       primaryLabel="Continue"
       primaryDisabled={!selectedId || mutation.isPending}
       primaryLoading={mutation.isPending}
-      onPrimary={() =>
-        selectedId && mutation.mutate({ repoId: selectedId })
-      }
+      onPrimary={() => selectedId && mutation.mutate({ repoId: selectedId })}
       secondaryLabel="Skip for now"
       onSecondary={() => navigate({ to: "/onboarding/step/3" })}
     >
@@ -103,9 +101,7 @@ function RepoOption({ fullName, selected, onClick }: RepoOptionProps) {
           selected ? "border-tw-accent bg-tw-accent" : "border-tw-border"
         }`}
       >
-        {selected ? (
-          <span className="size-1.5 rounded-full bg-white" />
-        ) : null}
+        {selected ? <span className="size-1.5 rounded-full bg-white" /> : null}
       </span>
     </Button>
   )

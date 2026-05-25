@@ -1,9 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router"
-import {
-  buildSeo,
-  formatPageTitle,
-  PRIVATE_ROUTE_HEADERS,
-} from "#/lib/seo"
+import { buildSeo, formatPageTitle, PRIVATE_ROUTE_HEADERS } from "#/lib/seo"
 
 function SearchPage() {
   return (

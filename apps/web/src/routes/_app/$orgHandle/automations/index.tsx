@@ -3,11 +3,7 @@ import {
   AutomationsPage,
   AutomationsPageSkeleton,
 } from "#/components/layout/app/automations/automations-page"
-import {
-  buildSeo,
-  formatPageTitle,
-  PRIVATE_ROUTE_HEADERS,
-} from "#/lib/seo"
+import { buildSeo, formatPageTitle, PRIVATE_ROUTE_HEADERS } from "#/lib/seo"
 
 export const Route = createFileRoute("/_app/$orgHandle/automations/")({
   component: AutomationsPage,

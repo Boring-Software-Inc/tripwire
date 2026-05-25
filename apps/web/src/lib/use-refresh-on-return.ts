@@ -32,7 +32,7 @@ export type VisibilityState = {
 
 export function nextVisibilityState(
   state: VisibilityState,
-  event: { hidden: boolean },
+  event: { hidden: boolean }
 ): { next: VisibilityState; shouldRefresh: boolean } {
   if (event.hidden) {
     // Going away — record that we've been hidden so the next visible

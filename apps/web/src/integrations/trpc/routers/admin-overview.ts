@@ -74,13 +74,8 @@ export const adminOverviewRouter = {
           startedAt: visibilitySyncRuns.startedAt,
         })
         .from(visibilitySyncRuns)
-        .innerJoin(
-          repositories,
-          eq(repositories.id, visibilitySyncRuns.repoId)
-        )
-        .where(
-          inArray(visibilitySyncRuns.status, ["queued", "running"])
-        )
+        .innerJoin(repositories, eq(repositories.id, visibilitySyncRuns.repoId))
+        .where(inArray(visibilitySyncRuns.status, ["queued", "running"]))
         .orderBy(desc(visibilitySyncRuns.createdAt))
         .limit(5),
       db
@@ -94,10 +89,7 @@ export const adminOverviewRouter = {
           lastSeenAt: githubReputation.lastSeenAt,
         })
         .from(githubReputation)
-        .leftJoin(
-          repositories,
-          eq(repositories.id, githubReputation.repoId)
-        )
+        .leftJoin(repositories, eq(repositories.id, githubReputation.repoId))
         .where(
           and(
             gte(githubReputation.totalBlocks, 1),

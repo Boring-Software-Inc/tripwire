@@ -30,7 +30,7 @@ interface SuggestedRow {
  */
 function isSelf<T extends SuggestedRow>(
   row: T,
-  selfGithubId: number | null,
+  selfGithubId: number | null
 ): boolean {
   return selfGithubId != null && row.githubUserId === selfGithubId
 }
@@ -47,11 +47,11 @@ export function SuggestedWhitelistPanel({ repoId, onSelect }: PanelProps) {
   })
   const query = useQuery({ ...queryOpts, meta: { persist: true } })
   useGitHubSignalStream(
-    useRepoSignalTargets(repo?.fullName, [queryOpts.queryKey]),
+    useRepoSignalTargets(repo?.fullName, [queryOpts.queryKey])
   )
   const rows = useMemo(
     () => (query.data ?? []).filter((c) => !isSelf(c, selfGithubId)),
-    [query.data, selfGithubId],
+    [query.data, selfGithubId]
   )
   const mutation = useMutation(
     trpc.visibility.bulkAction.mutationOptions({
@@ -59,7 +59,7 @@ export function SuggestedWhitelistPanel({ repoId, onSelect }: PanelProps) {
         patchOptimistic(
           queryClient,
           { queryKey: queryOpts.queryKey },
-          removeContributorRows(vars.usernames),
+          removeContributorRows(vars.usernames)
         ),
       onError: (err, _vars, handle) => {
         handle?.rollback()
@@ -71,7 +71,7 @@ export function SuggestedWhitelistPanel({ repoId, onSelect }: PanelProps) {
           title: `Whitelisted @${vars.usernames[0]}`,
         })
       },
-    }),
+    })
   )
 
   return (
@@ -121,11 +121,11 @@ export function RiskAlertsPanel({ repoId, onSelect }: PanelProps) {
   })
   const query = useQuery({ ...queryOpts, meta: { persist: true } })
   useGitHubSignalStream(
-    useRepoSignalTargets(repo?.fullName, [queryOpts.queryKey]),
+    useRepoSignalTargets(repo?.fullName, [queryOpts.queryKey])
   )
   const rows = useMemo(
     () => (query.data ?? []).filter((c) => !isSelf(c, selfGithubId)),
-    [query.data, selfGithubId],
+    [query.data, selfGithubId]
   )
   const mutation = useMutation(
     trpc.visibility.bulkAction.mutationOptions({
@@ -133,7 +133,7 @@ export function RiskAlertsPanel({ repoId, onSelect }: PanelProps) {
         patchOptimistic(
           queryClient,
           { queryKey: queryOpts.queryKey },
-          removeContributorRows(vars.usernames),
+          removeContributorRows(vars.usernames)
         ),
       onError: (err, _vars, handle) => {
         handle?.rollback()
@@ -145,7 +145,7 @@ export function RiskAlertsPanel({ repoId, onSelect }: PanelProps) {
           title: `Blocked @${vars.usernames[0]}`,
         })
       },
-    }),
+    })
   )
 
   return (
@@ -267,7 +267,9 @@ function PanelRow({
       </Button>
       <ScoreBadge score={score} size="sm" />
       <Button
-        variant={actionTone === "positive" ? "secondary" : "destructive-outline"}
+        variant={
+          actionTone === "positive" ? "secondary" : "destructive-outline"
+        }
         size="xs"
         loading={loading}
         onClick={onAction}

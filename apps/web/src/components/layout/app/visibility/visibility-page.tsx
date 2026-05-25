@@ -71,14 +71,14 @@ export function VisibilityPage() {
       limit: 100,
       offset: 0,
     },
-    { enabled: !!repoId, staleTime: 30_000 },
+    { enabled: !!repoId, staleTime: 30_000 }
   )
   const listQuery = useQuery({
     ...listQueryOpts,
     meta: { persist: true },
   })
   useGitHubSignalStream(
-    useRepoSignalTargets(repo?.fullName, [listQueryOpts.queryKey]),
+    useRepoSignalTargets(repo?.fullName, [listQueryOpts.queryKey])
   )
 
   const contributorsListPrefix = trpc.visibility.listContributors.queryKey()
@@ -93,13 +93,13 @@ export function VisibilityPage() {
           {
             predicate: matchContributorsListForRepo(
               contributorsListPrefix,
-              vars.repoId,
+              vars.repoId
             ),
           },
           flipContributorStatuses(
             vars.usernames,
-            nextContributorStatus(vars.action),
-          ),
+            nextContributorStatus(vars.action)
+          )
         ),
       onError: (err, _vars, handle) => {
         handle?.rollback()
@@ -107,14 +107,13 @@ export function VisibilityPage() {
       },
       onSuccess: (data, vars) => {
         setSelection({})
-        const verb =
-          vars.action === "whitelist" ? "Whitelisted" : "Blacklisted"
+        const verb = vars.action === "whitelist" ? "Whitelisted" : "Blacklisted"
         toastManager.add({
           type: "success",
           title: `${verb} ${data.count} contributor${data.count === 1 ? "" : "s"}`,
         })
       },
-    }),
+    })
   )
 
   const rows = listQuery.data?.items ?? []
@@ -124,13 +123,13 @@ export function VisibilityPage() {
       Object.entries(selection)
         .filter(([, v]) => v)
         .map(([k]) => k),
-    [selection],
+    [selection]
   )
   const selectedCount = selectedUsernames.length
 
   const activeContributor = useMemo(
     () => rows.find((r) => r.githubUsername === activeUsername) ?? null,
-    [rows, activeUsername],
+    [rows, activeUsername]
   )
 
   if (!isLoading && repos.length === 0) {
@@ -187,7 +186,7 @@ export function VisibilityPage() {
             className="h-8 min-w-[180px] flex-1 rounded-md border border-tw-border bg-tw-inner px-2.5 text-[13px] text-tw-text-primary placeholder:text-tw-text-muted focus:border-tw-text-tertiary focus:outline-none"
           />
           <StatusToggle value={statusFilter} onChange={setStatusFilter} />
-          <span className="ml-auto text-[12px] tabular-nums text-tw-text-muted">
+          <span className="ml-auto text-[12px] text-tw-text-muted tabular-nums">
             {formatCompact(total)} contributors
           </span>
         </div>

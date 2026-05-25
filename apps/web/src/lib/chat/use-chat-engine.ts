@@ -30,10 +30,7 @@ export interface ChatEngine {
   isQuotaExhausted: boolean
   sendMessage: (content: string) => void
   /** Resolved when the AI finishes sending the response. */
-  addToolApprovalResponse: (response: {
-    id: string
-    approved: boolean
-  }) => void
+  addToolApprovalResponse: (response: { id: string; approved: boolean }) => void
   setMessages: ReturnType<typeof useChat<UIMessage>>["setMessages"]
   appendOptimisticMessage: (message: UIMessage) => void
   replaceOptimisticMessage: (id: string, message: UIMessage) => void

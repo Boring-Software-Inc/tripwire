@@ -54,7 +54,7 @@ export function TemplatePreviewPage() {
           }
           navigate({ to: `/${orgHandle}/automations/${wf.id}` })
         },
-      },
+      }
     )
   }
 

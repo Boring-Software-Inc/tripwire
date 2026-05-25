@@ -33,12 +33,14 @@ describe("compactGitHubErrorMessage", () => {
       message: "Request failed",
       body: "Bad credentials",
     })
-    expect(compactGitHubErrorMessage(err)).toBe("Request failed Bad credentials")
+    expect(compactGitHubErrorMessage(err)).toBe(
+      "Request failed Bad credentials"
+    )
   })
 
   it("returns just the wrapper message when no response body is present", () => {
     expect(compactGitHubErrorMessage(buildApiError({ message: "boom" }))).toBe(
-      "boom",
+      "boom"
     )
   })
 
@@ -54,8 +56,8 @@ describe("shouldReauthorizeGitHubApp", () => {
   it("returns true on 401 (token revoked / expired)", () => {
     expect(
       shouldReauthorizeGitHubApp(
-        buildApiError({ status: 401, body: "Bad credentials" }),
-      ),
+        buildApiError({ status: 401, body: "Bad credentials" })
+      )
     ).toBe(true)
   })
 
@@ -65,8 +67,8 @@ describe("shouldReauthorizeGitHubApp", () => {
         buildApiError({
           status: 403,
           body: "Installation has been suspended.",
-        }),
-      ),
+        })
+      )
     ).toBe(true)
   })
 
@@ -76,8 +78,8 @@ describe("shouldReauthorizeGitHubApp", () => {
         buildApiError({
           status: 403,
           body: "App has new permissions that must be granted.",
-        }),
-      ),
+        })
+      )
     ).toBe(true)
   })
 
@@ -87,8 +89,8 @@ describe("shouldReauthorizeGitHubApp", () => {
         buildApiError({
           status: 403,
           body: "Permission change is pending owner approval.",
-        }),
-      ),
+        })
+      )
     ).toBe(true)
   })
 
@@ -98,8 +100,8 @@ describe("shouldReauthorizeGitHubApp", () => {
         buildApiError({
           status: 403,
           body: "Resource not accessible by integration",
-        }),
-      ),
+        })
+      )
     ).toBe(false)
   })
 
@@ -109,8 +111,8 @@ describe("shouldReauthorizeGitHubApp", () => {
         buildApiError({
           status: 422,
           body: "Installation requires new permission",
-        }),
-      ),
+        })
+      )
     ).toBe(true)
   })
 
@@ -120,14 +122,14 @@ describe("shouldReauthorizeGitHubApp", () => {
         buildApiError({
           status: 422,
           body: "Validation Failed: title cannot be blank",
-        }),
-      ),
+        })
+      )
     ).toBe(false)
   })
 
   it("returns true when the wrapper Error.message contains 'bad credentials' (no status field)", () => {
     expect(
-      shouldReauthorizeGitHubApp(new Error("GitHub API: Bad credentials")),
+      shouldReauthorizeGitHubApp(new Error("GitHub API: Bad credentials"))
     ).toBe(true)
   })
 
@@ -136,49 +138,43 @@ describe("shouldReauthorizeGitHubApp", () => {
     // docs link instead of plain text — same root cause.
     expect(
       shouldReauthorizeGitHubApp(
-        new Error("Bad credentials - https://docs.github.com/rest"),
-      ),
+        new Error("Bad credentials - https://docs.github.com/rest")
+      )
     ).toBe(true)
   })
 
   it("returns true on refresh-token failure with invalid_grant marker", () => {
     expect(
       shouldReauthorizeGitHubApp(
-        new Error(
-          "GitHub App user token request failed: invalid_grant",
-        ),
-      ),
+        new Error("GitHub App user token request failed: invalid_grant")
+      )
     ).toBe(true)
   })
 
   it("returns true on refresh-token failure with bad_refresh_token marker", () => {
     expect(
       shouldReauthorizeGitHubApp(
-        new Error(
-          "GitHub App user token request failed: bad_refresh_token",
-        ),
-      ),
+        new Error("GitHub App user token request failed: bad_refresh_token")
+      )
     ).toBe(true)
   })
 
   it("returns false on transient 5xx errors (not a credential problem)", () => {
     expect(
       shouldReauthorizeGitHubApp(
-        buildApiError({ status: 500, body: "Internal Server Error" }),
-      ),
+        buildApiError({ status: 500, body: "Internal Server Error" })
+      )
     ).toBe(false)
     expect(
       shouldReauthorizeGitHubApp(
-        buildApiError({ status: 502, body: "Bad Gateway" }),
-      ),
+        buildApiError({ status: 502, body: "Bad Gateway" })
+      )
     ).toBe(false)
   })
 
   it("returns false on network errors / non-API errors", () => {
     expect(shouldReauthorizeGitHubApp(new Error("ECONNRESET"))).toBe(false)
-    expect(shouldReauthorizeGitHubApp(new Error("Network timeout"))).toBe(
-      false,
-    )
+    expect(shouldReauthorizeGitHubApp(new Error("Network timeout"))).toBe(false)
   })
 
   it("returns false on null / undefined / non-error input", () => {
@@ -191,7 +187,9 @@ describe("shouldReauthorizeGitHubApp", () => {
     // Guard: the OAuth-refresh branch requires the specific
     // "GitHub App user token request failed:" prefix.
     expect(
-      shouldReauthorizeGitHubApp(new Error("server failed to load refresh_token")),
+      shouldReauthorizeGitHubApp(
+        new Error("server failed to load refresh_token")
+      )
     ).toBe(false)
   })
 })

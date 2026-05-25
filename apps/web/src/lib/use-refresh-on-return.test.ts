@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest"
-import { nextVisibilityState, type VisibilityState } from "./use-refresh-on-return"
+import {
+  nextVisibilityState,
+  type VisibilityState,
+} from "./use-refresh-on-return"
 
 describe("nextVisibilityState", () => {
   it("on initial visible state (no prior hidden), does nothing", () => {

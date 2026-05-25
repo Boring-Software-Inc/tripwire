@@ -127,7 +127,7 @@ export function TopNav({ askOpen, onToggleAsk }: TopNavProps) {
   // Repo-wide signal stream so the nav badge updates within ~1s of a
   // webhook arriving (no need to navigate to the events page first).
   useGitHubSignalStream(
-    useRepoSignalTargets(repo?.fullName, [countsQueryOpts.queryKey]),
+    useRepoSignalTargets(repo?.fullName, [countsQueryOpts.queryKey])
   )
 
   // Only show blocked + near misses in badge (actionable items)

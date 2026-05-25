@@ -3,11 +3,7 @@ import { JSONUIProvider, Renderer } from "@json-render/react"
 import { Button } from "@tripwire/ui/button"
 import { UnicodeSpinner } from "@tripwire/ui/unicode-spinner"
 import { registry } from "@tripwire/ui"
-import type {
-  ActionResultData,
-  MessagePart,
-  RenderSpec,
-} from "#/types/chat"
+import type { ActionResultData, MessagePart, RenderSpec } from "#/types/chat"
 import {
   formatToolArgs,
   formatToolName,
@@ -17,7 +13,10 @@ import {
   getToolCallId,
   getToolInput,
 } from "#/lib/chat/format"
-import { getBriefActionText, renderInlineText } from "#/components/layout/app/chat/chips"
+import {
+  getBriefActionText,
+  renderInlineText,
+} from "#/components/layout/app/chat/chips"
 import { MarkdownText } from "#/components/layout/app/chat/markdown-text"
 import {
   BatchResultErrorRingIcon14,

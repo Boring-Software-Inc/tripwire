@@ -23,7 +23,7 @@ export type ContributorAction =
  * same way during optimistic updates.
  */
 export function nextContributorStatus(
-  action: ContributorAction,
+  action: ContributorAction
 ): "whitelisted" | "blacklisted" | "normal" {
   if (action === "whitelist") return "whitelisted"
   if (action === "blacklist") return "blacklisted"
@@ -45,7 +45,7 @@ export function flipContributorStatuses<
     items: current.items.map((row) =>
       targetSet.has(row.githubUsername.toLowerCase())
         ? { ...row, status: nextStatus }
-        : row,
+        : row
     ),
   })
 }
@@ -61,7 +61,7 @@ export function removeContributorRows<
   const targetSet = new Set(targetUsernames.map((u) => u.toLowerCase()))
   return (current: TList): TList =>
     current.filter(
-      (row) => !targetSet.has(row.githubUsername.toLowerCase()),
+      (row) => !targetSet.has(row.githubUsername.toLowerCase())
     ) as TList
 }
 
@@ -77,7 +77,7 @@ export function removeContributorRows<
  */
 export function matchContributorsListForRepo(
   prefix: readonly unknown[],
-  repoId: string,
+  repoId: string
 ) {
   return (queryKey: QueryKey): boolean => {
     if (!Array.isArray(queryKey)) return false
