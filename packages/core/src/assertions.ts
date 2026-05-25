@@ -44,6 +44,29 @@ export async function assertRepoOwner(userId: string, repoId: string) {
 }
 
 /**
+ * Confirm `repoId` belongs to the Better Auth organization `baOrgId`.
+ * Used to defend against cross-org repo references slipping into a chat
+ * tool call: even if a user is a member of both orgs A and B, a tool
+ * invoked in A's chat must not be able to read B's repo by passing the
+ * other repoId.
+ */
+export async function assertRepoBelongsToOrg(repoId: string, baOrgId: string) {
+  const [row] = await db
+    .select({ id: repositories.id })
+    .from(repositories)
+    .innerJoin(organizations, eq(repositories.orgId, organizations.id))
+    .where(
+      and(
+        eq(repositories.id, repoId),
+        eq(organizations.betterAuthOrgId, baOrgId)
+      )
+    )
+    .limit(1)
+  if (!row) throw NOT_FOUND()
+  return row
+}
+
+/**
  * Confirm `userId` owns the repo that emitted `eventId`. Returns the event,
  * its repo, and the owning org.
  */

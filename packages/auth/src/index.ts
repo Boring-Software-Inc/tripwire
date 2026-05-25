@@ -187,7 +187,11 @@ export const auth = betterAuth({
       },
     }),
     autumnPlugin({
-      customerScope: "user",
+      // Bill per organization so a Pro upgrade on one workspace doesn't
+      // grant Pro entitlements across every org the user belongs to.
+      // Legacy user-level Pro is grandfathered via the `metadata.isPersonal`
+      // check in `getOrgPlanId` — see apps/web/src/lib/billing.ts.
+      customerScope: "organization",
     }),
     admin(),
     mcp({
@@ -217,6 +221,14 @@ export const auth = betterAuth({
                 name: `${user.name}'s Workspace`,
                 slug,
                 userId: user.id,
+                // `metadata.isPersonal` marks this as the user's auto-created
+                // workspace so the billing layer can grandfather legacy
+                // user-level Pro subscriptions to it forever — see
+                // `getOrgPlanId` in apps/web/src/lib/billing.ts.
+                metadata: {
+                  isPersonal: true,
+                  personalForUserId: user.id,
+                },
               },
             })
           } catch (err) {

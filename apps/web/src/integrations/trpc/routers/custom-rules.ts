@@ -1,7 +1,7 @@
 import { z } from "zod"
 import { and, eq, desc, sql } from "drizzle-orm"
 import { TRPCError } from "@trpc/server"
-import { authedProcedure } from "../init"
+import { authedProcedure, orgProcedure } from "../init"
 import { assertRepoOwner } from "@tripwire/core"
 import { db } from "@tripwire/db/client"
 import { customRules, events } from "@tripwire/db"
@@ -18,7 +18,7 @@ import {
   updateCustomRuleSchema,
   customRuleDefinitionSchema,
 } from "@tripwire/core"
-import { getUserPlanId } from "#/lib/billing"
+import { getOrgPlanId } from "#/lib/billing"
 import {
   peekCachedUserGraphql,
   peekCachedUserProfile,
@@ -84,12 +84,12 @@ export const customRulesRouter = {
       return rule
     }),
 
-  create: authedProcedure
+  create: orgProcedure
     .input(createCustomRuleSchema)
     .mutation(async ({ input, ctx }) => {
       await assertRepoOwner(ctx.user.id, input.repoId)
 
-      const planId = await getUserPlanId(ctx.user.id)
+      const planId = await getOrgPlanId(ctx.activeOrgId)
       const limits = getCustomRuleLimits(planId)
 
       const existingCount = await db
@@ -407,8 +407,8 @@ export const customRulesRouter = {
       }
     }),
 
-  limits: authedProcedure.query(async ({ ctx }) => {
-    const planId = await getUserPlanId(ctx.user.id)
+  limits: orgProcedure.query(async ({ ctx }) => {
+    const planId = await getOrgPlanId(ctx.activeOrgId)
     const limits = getCustomRuleLimits(planId)
     return { ...limits, planId }
   }),

@@ -18,6 +18,8 @@ import { buildSystemPrompt } from "@tripwire/ai"
 import { memoryProvider } from "@tripwire/ai/memory"
 import { createTripwireAgent } from "@tripwire/ai/agent"
 import { createContext, assertRepoOwner } from "#/integrations/trpc/init"
+import { assertRepoBelongsToOrg } from "@tripwire/core"
+import { auth } from "@tripwire/auth"
 import { autumn } from "@tripwire/auth/autumn"
 import { db } from "@tripwire/db/client"
 import {
@@ -102,18 +104,23 @@ function jsonError(
   })
 }
 
-async function checkQuota(userId: string) {
+/**
+ * Autumn quota check, keyed to the active org. We create the customer
+ * lazily on first request so the flip to per-org billing doesn't require
+ * a sweep over every existing org.
+ */
+async function checkQuota(orgId: string) {
   try {
     return await autumn.check({
-      customerId: userId,
+      customerId: orgId,
       featureId: "ai_credits",
       withPreview: true,
     })
   } catch (checkErr: unknown) {
     if (!isCustomerNotFoundError(checkErr)) throw checkErr
-    await autumn.customers.getOrCreate({ customerId: userId })
+    await autumn.customers.getOrCreate({ customerId: orgId })
     return autumn.check({
-      customerId: userId,
+      customerId: orgId,
       featureId: "ai_credits",
       withPreview: true,
     })
@@ -128,10 +135,22 @@ export const Route = createFileRoute("/api/chat")({
         if (!ctx.user) return jsonError(401, { error: "Unauthorized" })
         const user = ctx.user
 
+        // The active org is the billing subject — Autumn charges credits
+        // to its customer (the org), not to the signed-in user. Without
+        // an active org we have no Autumn customer to check against.
+        const session = await auth.api.getSession({ headers: request.headers })
+        const activeOrgId = session?.session?.activeOrganizationId ?? null
+        if (!activeOrgId) {
+          return jsonError(400, {
+            error: "no_active_org",
+            message: "Switch to a workspace before chatting.",
+          })
+        }
+
         try {
           let quota: AutumnQuotaCheck
           try {
-            quota = await checkQuota(user.id)
+            quota = await checkQuota(activeOrgId)
           } catch (checkErr) {
             // Autumn down/misconfigured: fail closed rather than grant free credits.
             console.error(
@@ -217,6 +236,18 @@ export const Route = createFileRoute("/api/chat")({
           } catch {
             return jsonError(403, { error: "repo_not_accessible" })
           }
+          // Defense in depth: even though the user owns the repo, ensure
+          // it belongs to the org the chat is scoped to. Without this, a
+          // user who's a member of A and B could attach a repoId from B
+          // to a chat created in A.
+          try {
+            await assertRepoBelongsToOrg(resolvedRepoId, activeOrgId)
+          } catch {
+            return jsonError(403, {
+              error: "repo_not_in_active_org",
+              message: "This repository isn't in your active workspace.",
+            })
+          }
 
           const [repo] = await db
             .select()
@@ -256,6 +287,7 @@ export const Route = createFileRoute("/api/chat")({
             {
               userId: user.id,
               userName: user.name ?? user.email ?? "User",
+              orgId: activeOrgId,
               repoId: resolvedRepoId,
             },
             tripwireTools
@@ -354,7 +386,7 @@ export const Route = createFileRoute("/api/chat")({
             abortSignal: request.signal,
             onFinish: async ({ totalUsage }) => {
               await trackCreditUsage({
-                customerId: user.id,
+                customerId: activeOrgId,
                 modelId: aiModel,
                 userName: user.name ?? undefined,
                 userEmail: user.email ?? undefined,
@@ -364,7 +396,7 @@ export const Route = createFileRoute("/api/chat")({
             },
             onError: ({ error }) => {
               logCreditUsageError({
-                customerId: user.id,
+                customerId: activeOrgId,
                 modelId: aiModel,
                 userName: user.name ?? undefined,
                 userEmail: user.email ?? undefined,
@@ -403,6 +435,7 @@ export const Route = createFileRoute("/api/chat")({
                 .values({
                   id: conversationId,
                   userId: user.id,
+                  organizationId: activeOrgId,
                   repoId: resolvedRepoId,
                   messages: asConversationStoredMessages(finishedMessages),
                   title: "New chat",
@@ -414,7 +447,10 @@ export const Route = createFileRoute("/api/chat")({
                     repoId: resolvedRepoId,
                     updatedAt: new Date(),
                   },
-                  setWhere: eq(conversations.userId, user.id),
+                  setWhere: and(
+                    eq(conversations.userId, user.id),
+                    eq(conversations.organizationId, activeOrgId)
+                  ),
                 })
                 .catch((err) => {
                   console.error("[chat] Failed to persist server stream:", err)

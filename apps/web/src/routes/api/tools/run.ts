@@ -72,9 +72,13 @@ export const Route = createFileRoute("/api/tools/run")({
         }
 
         try {
+          if (!ctx.activeOrgId) {
+            return jsonError(400, "No active organization")
+          }
           const spec = await runToolForChat(tool, parsed.data, {
             userId: ctx.user.id,
             userName: ctx.user.name ?? ctx.user.email ?? undefined,
+            orgId: ctx.activeOrgId,
             repoId,
           })
           return new Response(JSON.stringify({ ok: true, spec }), {
