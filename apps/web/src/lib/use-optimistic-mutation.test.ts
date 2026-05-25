@@ -1,35 +1,37 @@
-import { describe, expect, it, vi } from "vitest"
+import { describe, expect, it } from "vitest"
 import {
-  type OptimisticMutationQueryClient,
-  runOptimisticMutation,
+  flipContributorStatuses,
+  matchesContributorsListForRepo,
+  type OptimisticPatchClient,
+  nextContributorStatus,
+  patchOptimistic,
+  removeContributorRows,
 } from "./use-optimistic-mutation"
 
 /**
- * Build an in-memory QueryClient stub that just stores keyed values.
- * Exposes the same minimal surface `runOptimisticMutation` needs +
- * an `invalidated` log so tests can assert what was invalidated.
+ * Minimal in-memory QueryClient surface. Keys are JSON-stringified so
+ * tuple-shaped keys can index into a plain Map; we keep a parallel map
+ * of the original tuples for predicate walks + rollback round-trips.
  */
-function createStubClient(initial: Map<string, unknown> = new Map()) {
-  const data = new Map(initial)
+function createStubClient(initial: Array<[readonly unknown[], unknown]> = []) {
+  const data = new Map<string, unknown>()
   const keyByJson = new Map<string, readonly unknown[]>()
-  for (const [json, _value] of initial) {
-    keyByJson.set(json, JSON.parse(json))
+  for (const [key, value] of initial) {
+    const json = JSON.stringify(key)
+    data.set(json, value)
+    keyByJson.set(json, key)
   }
-  const invalidated: string[] = []
 
-  function applyUpdater(json: string, updater: unknown) {
+  const applyUpdater = (json: string, updater: unknown) => {
     const next =
       typeof updater === "function"
         ? (updater as (current: unknown) => unknown)(data.get(json))
         : updater
-    if (next === undefined) {
-      // Match react-query semantics: returning undefined leaves the cache untouched.
-      return
-    }
+    if (next === undefined) return
     data.set(json, next)
   }
 
-  const client: OptimisticMutationQueryClient = {
+  const client: OptimisticPatchClient = {
     getQueryData(queryKey) {
       return data.get(JSON.stringify(queryKey))
     },
@@ -56,282 +58,183 @@ function createStubClient(initial: Map<string, unknown> = new Map()) {
       }
       return undefined
     },
-    async invalidateQueries({ queryKey }) {
-      invalidated.push(JSON.stringify(queryKey))
-    },
   }
-  return { client, data, invalidated }
+  return { client, data }
 }
 
-describe("runOptimisticMutation", () => {
-  it("applies optimistic updates before calling mutationFn", async () => {
-    const { client, data } = createStubClient(
-      new Map([[JSON.stringify(["repos", "abc"]), { count: 3 }]]),
+describe("patchOptimistic — exact queryKey", () => {
+  it("applies the updater to the named slot", () => {
+    const { client, data } = createStubClient([[["repos", "abc"], { count: 3 }]])
+    patchOptimistic<{ count: number }>(
+      client,
+      { queryKey: ["repos", "abc"] },
+      (current) => ({ count: current.count + 1 }),
     )
-    let observedDuringMutation: unknown
-    const mutationFn = vi.fn(async () => {
-      observedDuringMutation = data.get(JSON.stringify(["repos", "abc"]))
-      return { ok: true }
-    })
-
-    await runOptimisticMutation(client, {
-      mutationFn,
-      updates: [
-        {
-          queryKey: ["repos", "abc"],
-          updater: (current: { count: number }) => ({ count: current.count + 1 }),
-        },
-      ],
-    })
-
-    expect(observedDuringMutation).toEqual({ count: 4 })
-    expect(mutationFn).toHaveBeenCalledOnce()
+    expect(data.get(JSON.stringify(["repos", "abc"]))).toEqual({ count: 4 })
   })
 
-  it("skips invalidation when optimistic updates were applied AND the mutation succeeded", async () => {
-    const { client, invalidated } = createStubClient(
-      new Map([[JSON.stringify(["repos", "abc"]), { count: 3 }]]),
-    )
-
-    await runOptimisticMutation(client, {
-      mutationFn: async () => ({ ok: true }),
-      updates: [
-        {
-          queryKey: ["repos", "abc"],
-          updater: (current: { count: number }) => ({ count: current.count + 1 }),
-        },
-      ],
-    })
-
-    expect(invalidated).toEqual([])
-  })
-
-  it("invalidates the configured prefix when NO optimistic updates were applied", async () => {
-    const { client, invalidated } = createStubClient()
-
-    await runOptimisticMutation(client, {
-      mutationFn: async () => ({ ok: true }),
-      invalidateQueryKey: ["repos"],
-    })
-
-    expect(invalidated).toEqual([JSON.stringify(["repos"])])
-  })
-
-  it("defaults the invalidation prefix to ['github'] when none is specified", async () => {
-    const { client, invalidated } = createStubClient()
-
-    await runOptimisticMutation(client, {
-      mutationFn: async () => ({ ok: true }),
-    })
-
-    expect(invalidated).toEqual([JSON.stringify(["github"])])
-  })
-
-  it("rolls back to the prior snapshot when mutationFn throws", async () => {
-    const before = { count: 3 }
-    const { client, data } = createStubClient(
-      new Map([[JSON.stringify(["repos", "abc"]), before]]),
-    )
-
-    const result = await runOptimisticMutation(client, {
-      mutationFn: async () => {
-        throw new Error("network down")
-      },
-      updates: [
-        {
-          queryKey: ["repos", "abc"],
-          updater: (current: { count: number }) => ({ count: current.count + 1 }),
-        },
-      ],
-    })
-
-    expect(result).toBeUndefined()
-    expect(data.get(JSON.stringify(["repos", "abc"]))).toBe(before)
-  })
-
-  it("rolls back when isSuccess returns false (treats result-as-failure same as throw)", async () => {
-    const before = { count: 3 }
-    const { client, data } = createStubClient(
-      new Map([[JSON.stringify(["repos", "abc"]), before]]),
-    )
-
-    const result = await runOptimisticMutation(client, {
-      mutationFn: async () => ({ ok: false, error: "denied" }),
-      isSuccess: (r: { ok: boolean }) => r.ok,
-      updates: [
-        {
-          queryKey: ["repos", "abc"],
-          updater: (current: { count: number }) => ({ count: current.count + 1 }),
-        },
-      ],
-    })
-
-    expect(result).toEqual({ ok: false, error: "denied" })
-    expect(data.get(JSON.stringify(["repos", "abc"]))).toBe(before)
-  })
-
-  it("does not touch query slots that haven't been populated yet", async () => {
+  it("skips slots that are not loaded yet", () => {
     const { client, data } = createStubClient()
-    const updaterSpy = vi.fn((current: { count: number }) => ({
-      count: current.count + 1,
-    }))
-
-    await runOptimisticMutation(client, {
-      mutationFn: async () => ({ ok: true }),
-      updates: [{ queryKey: ["repos", "uncached"], updater: updaterSpy }],
-    })
-
-    // No prior entry → updater is never called, cache still empty.
-    expect(updaterSpy).not.toHaveBeenCalled()
-    expect(data.size).toBe(0)
-  })
-
-  it("rolls back multiple snapshots independently", async () => {
-    const before1 = { v: 1 }
-    const before2 = { v: 2 }
-    const { client, data } = createStubClient(
-      new Map([
-        [JSON.stringify(["a"]), before1],
-        [JSON.stringify(["b"]), before2],
-      ]),
+    patchOptimistic<{ count: number }>(
+      client,
+      { queryKey: ["repos", "missing"] },
+      (current) => ({ count: current.count + 1 }),
     )
+    // setQueryData still gets called, but the safe-updater swallows undefined.
+    expect(data.get(JSON.stringify(["repos", "missing"]))).toBeUndefined()
+  })
 
-    await runOptimisticMutation(client, {
-      mutationFn: async () => {
-        throw new Error("nope")
+  it("rollback restores the prior value exactly", () => {
+    const { client, data } = createStubClient([
+      [["repos", "abc"], { count: 3 }],
+    ])
+    const { rollback } = patchOptimistic<{ count: number }>(
+      client,
+      { queryKey: ["repos", "abc"] },
+      (current) => ({ count: current.count + 100 }),
+    )
+    expect(data.get(JSON.stringify(["repos", "abc"]))).toEqual({ count: 103 })
+    rollback()
+    expect(data.get(JSON.stringify(["repos", "abc"]))).toEqual({ count: 3 })
+  })
+})
+
+describe("patchOptimistic — predicate", () => {
+  it("applies the updater to every matching slot", () => {
+    const { client, data } = createStubClient([
+      [["list", { repoId: "r1" }], { items: [1] }],
+      [["list", { repoId: "r1", sort: "name" }], { items: [2] }],
+      [["list", { repoId: "r2" }], { items: [99] }],
+    ])
+    patchOptimistic<{ items: number[] }>(
+      client,
+      {
+        predicate: (key) =>
+          Array.isArray(key) && JSON.stringify(key).includes(`"repoId":"r1"`),
       },
-      updates: [
-        {
-          queryKey: ["a"],
-          updater: (c: { v: number }) => ({ v: c.v + 100 }),
-        },
-        {
-          queryKey: ["b"],
-          updater: (c: { v: number }) => ({ v: c.v + 100 }),
-        },
+      (current) => ({ items: [...current.items, 42] }),
+    )
+    expect(data.get(JSON.stringify(["list", { repoId: "r1" }]))).toEqual({
+      items: [1, 42],
+    })
+    expect(
+      data.get(JSON.stringify(["list", { repoId: "r1", sort: "name" }])),
+    ).toEqual({ items: [2, 42] })
+    expect(data.get(JSON.stringify(["list", { repoId: "r2" }]))).toEqual({
+      items: [99],
+    })
+  })
+
+  it("rollback restores every touched slot to its prior value", () => {
+    const initial: Array<[readonly unknown[], unknown]> = [
+      [["list", { repoId: "r1" }], { items: [1] }],
+      [["list", { repoId: "r1", sort: "name" }], { items: [2] }],
+    ]
+    const { client, data } = createStubClient(initial)
+    const { rollback } = patchOptimistic<{ items: number[] }>(
+      client,
+      {
+        predicate: (key) =>
+          Array.isArray(key) && JSON.stringify(key).includes(`"repoId":"r1"`),
+      },
+      (current) => ({ items: [...current.items, 999] }),
+    )
+    rollback()
+    for (const [key, value] of initial) {
+      expect(data.get(JSON.stringify(key))).toEqual(value)
+    }
+  })
+})
+
+describe("matchesContributorsListForRepo", () => {
+  it("matches listContributors keys with the requested repoId", () => {
+    const matcher = matchesContributorsListForRepo("repo-a")
+    expect(
+      matcher([
+        "visibility",
+        "listContributors",
+        { input: { repoId: "repo-a", sort: "score" } },
+      ]),
+    ).toBe(true)
+  })
+
+  it("rejects listContributors keys for a different repo", () => {
+    const matcher = matchesContributorsListForRepo("repo-a")
+    expect(
+      matcher([
+        "visibility",
+        "listContributors",
+        { input: { repoId: "repo-b" } },
+      ]),
+    ).toBe(false)
+  })
+
+  it("rejects keys for unrelated queries even when the repoId substring matches", () => {
+    const matcher = matchesContributorsListForRepo("repo-a")
+    expect(matcher(["visibility", "otherQuery", { repoId: "repo-a" }])).toBe(
+      false,
+    )
+  })
+
+  it("rejects short keys", () => {
+    const matcher = matchesContributorsListForRepo("repo-a")
+    expect(matcher(["listContributors"])).toBe(false)
+  })
+})
+
+describe("nextContributorStatus", () => {
+  it("maps whitelist verbs to whitelisted", () => {
+    expect(nextContributorStatus("whitelist")).toBe("whitelisted")
+  })
+  it("maps blacklist verbs to blacklisted", () => {
+    expect(nextContributorStatus("blacklist")).toBe("blacklisted")
+  })
+  it("maps both remove verbs back to normal", () => {
+    expect(nextContributorStatus("removeWhitelist")).toBe("normal")
+    expect(nextContributorStatus("removeBlacklist")).toBe("normal")
+  })
+})
+
+describe("flipContributorStatuses", () => {
+  it("flips only rows whose username matches (case-insensitive)", () => {
+    const list = {
+      items: [
+        { githubUsername: "Alice", status: "normal" },
+        { githubUsername: "bob", status: "normal" },
       ],
-    })
-
-    expect(data.get(JSON.stringify(["a"]))).toBe(before1)
-    expect(data.get(JSON.stringify(["b"]))).toBe(before2)
+      total: 2,
+    }
+    const updated = flipContributorStatuses(["alice"], "whitelisted")(list)
+    expect(updated.items[0].status).toBe("whitelisted")
+    expect(updated.items[1].status).toBe("normal")
   })
 
-  it("returns the mutationFn result on success so callers can chain on it", async () => {
-    const { client } = createStubClient()
-    const result = await runOptimisticMutation(client, {
-      mutationFn: async () => ({ ok: true, value: 42 }),
-    })
-    expect(result).toEqual({ ok: true, value: 42 })
+  it("returns a new array/object — does not mutate input", () => {
+    const list = {
+      items: [{ githubUsername: "alice", status: "normal" }],
+    }
+    const updated = flipContributorStatuses(["alice"], "whitelisted")(list)
+    expect(updated).not.toBe(list)
+    expect(updated.items).not.toBe(list.items)
+    expect(list.items[0].status).toBe("normal")
+  })
+})
+
+describe("removeContributorRows", () => {
+  it("drops only rows whose username matches", () => {
+    const rows = [
+      { githubUsername: "alice" },
+      { githubUsername: "bob" },
+      { githubUsername: "Carol" },
+    ]
+    expect(removeContributorRows(["carol"])(rows)).toEqual([
+      { githubUsername: "alice" },
+      { githubUsername: "bob" },
+    ])
   })
 
-  it("returns the (unsuccessful) result when isSuccess says no — caller can branch on error", async () => {
-    const { client } = createStubClient()
-    const result = await runOptimisticMutation(client, {
-      mutationFn: async () => ({ ok: false, error: "denied" }),
-      isSuccess: (r: { ok: boolean }) => r.ok,
-    })
-    expect(result).toEqual({ ok: false, error: "denied" })
-  })
-
-  describe("predicate-based updates", () => {
-    it("applies the updater to every cache slot whose queryKey matches the predicate", async () => {
-      // Two list variants (different search params) that both contain the
-      // same row. A single predicate update patches both.
-      const list1 = {
-        items: [{ name: "torvalds", status: "neutral" }],
-      }
-      const list2 = {
-        items: [
-          { name: "torvalds", status: "neutral" },
-          { name: "linus", status: "neutral" },
-        ],
-      }
-      const { client, data } = createStubClient(
-        new Map<string, unknown>([
-          [JSON.stringify(["contributors", { repoId: "r1", search: "" }]), list1],
-          [JSON.stringify(["contributors", { repoId: "r1", search: "tor" }]), list2],
-          [JSON.stringify(["events"]), { unrelated: true }],
-        ]),
-      )
-
-      await runOptimisticMutation(client, {
-        mutationFn: async () => ({ ok: true }),
-        updates: [
-          {
-            predicate: (queryKey) =>
-              JSON.stringify(queryKey).includes('"repoId":"r1"'),
-            updater: (current: { items: Array<{ name: string; status: string }> }) => ({
-              items: current.items.map((row) =>
-                row.name === "torvalds" ? { ...row, status: "whitelisted" } : row,
-              ),
-            }),
-          },
-        ],
-      })
-
-      const patched1 = data.get(
-        JSON.stringify(["contributors", { repoId: "r1", search: "" }]),
-      ) as { items: Array<{ name: string; status: string }> }
-      const patched2 = data.get(
-        JSON.stringify(["contributors", { repoId: "r1", search: "tor" }]),
-      ) as { items: Array<{ name: string; status: string }> }
-      expect(patched1.items[0]?.status).toBe("whitelisted")
-      expect(patched2.items[0]?.status).toBe("whitelisted")
-      // Unrelated query left alone.
-      expect(data.get(JSON.stringify(["events"]))).toEqual({ unrelated: true })
-    })
-
-    it("rolls back every matched slot to its original snapshot on failure", async () => {
-      const before1 = { items: [{ name: "a", status: "neutral" }] }
-      const before2 = { items: [{ name: "a", status: "neutral" }] }
-      const { client, data } = createStubClient(
-        new Map([
-          [JSON.stringify(["contributors", { variant: "1" }]), before1],
-          [JSON.stringify(["contributors", { variant: "2" }]), before2],
-        ]),
-      )
-
-      await runOptimisticMutation(client, {
-        mutationFn: async () => {
-          throw new Error("nope")
-        },
-        updates: [
-          {
-            predicate: (queryKey) =>
-              Array.isArray(queryKey) && queryKey[0] === "contributors",
-            updater: (current: {
-              items: Array<{ name: string; status: string }>
-            }) => ({
-              items: current.items.map((row) => ({ ...row, status: "whitelisted" })),
-            }),
-          },
-        ],
-      })
-
-      expect(
-        data.get(JSON.stringify(["contributors", { variant: "1" }])),
-      ).toBe(before1)
-      expect(
-        data.get(JSON.stringify(["contributors", { variant: "2" }])),
-      ).toBe(before2)
-    })
-
-    it("treats a predicate-based update as 'optimistic was applied' even if zero slots matched (no immediate invalidation)", async () => {
-      // Edge case: caller marked the mutation as optimistic but nothing
-      // was actually patched (e.g. the relevant list isn't mounted right now).
-      // We still skip invalidation so we don't trigger an unnecessary fetch —
-      // the signal-stream will bring fresh data when needed.
-      const { client, invalidated } = createStubClient()
-      await runOptimisticMutation(client, {
-        mutationFn: async () => ({ ok: true }),
-        updates: [
-          {
-            predicate: () => false,
-            updater: (current: unknown) => current,
-          },
-        ],
-      })
-      expect(invalidated).toEqual([])
-    })
+  it("returns an empty array when nothing remains", () => {
+    const rows = [{ githubUsername: "alice" }]
+    expect(removeContributorRows(["alice"])(rows)).toEqual([])
   })
 })

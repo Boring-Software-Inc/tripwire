@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router"
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@tripwire/ui/button"
 import { ChevronRightIndicatorIcon12 } from "@tripwire/ui/icons/app-chrome-icons"
 import { RULE_META } from "@tripwire/db/schema/rule-meta"
@@ -10,8 +10,8 @@ import {
   isCustomRuleName,
   stripCustomRulePrefix,
 } from "#/lib/custom-rules"
-import { githubRevalidationSignalKeys } from "#/lib/github/revalidation"
 import { useGitHubSignalStream } from "#/lib/github/use-signal-stream"
+import { useRepoSignalTargets } from "#/lib/github/use-repo-signal-targets"
 import { routes } from "#/lib/routes"
 import { useTRPC } from "#/integrations/trpc/react"
 import { useWorkspace } from "#/providers/workspace-context"
@@ -334,26 +334,15 @@ export function EventsPage() {
     meta: { persist: true },
   })
 
-  // Subscribe to repo-wide signals — any webhook event for this repo bumps
-  // the signal and the SSE/poll layer invalidates all three queries within
-  // ~1s. Replaces the previous 30s `refetchInterval` blanket-poll.
-  const signalTargets = useMemo(() => {
-    if (!repo) return []
-    const [owner, name] = repo.fullName.split("/")
-    if (!owner || !name) return []
-    const repoSignal = githubRevalidationSignalKeys.repo({ owner, repo: name })
-    return [
-      { queryKey: eventsQueryOpts.queryKey, signalKeys: [repoSignal] },
-      { queryKey: severityQueryOpts.queryKey, signalKeys: [repoSignal] },
-      { queryKey: countsQueryOpts.queryKey, signalKeys: [repoSignal] },
-    ]
-  }, [
-    repo,
-    eventsQueryOpts.queryKey,
-    severityQueryOpts.queryKey,
-    countsQueryOpts.queryKey,
-  ])
-  useGitHubSignalStream(signalTargets)
+  // Repo-wide signal subscription — any webhook for this repo invalidates
+  // all three queries within ~1s. Replaces the previous 30s refetchInterval.
+  useGitHubSignalStream(
+    useRepoSignalTargets(repo?.fullName, [
+      eventsQueryOpts.queryKey,
+      severityQueryOpts.queryKey,
+      countsQueryOpts.queryKey,
+    ]),
+  )
 
   const events = (eventsQuery.data?.events ?? []) as unknown as Event[]
   const total = eventsQuery.data?.total ?? 0

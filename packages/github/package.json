@@ -15,7 +15,8 @@
     "./cache": "./src/cache.ts",
     "./request": "./src/request.ts",
     "./signal-broker": "./src/signal-broker.ts",
-    "./auth-errors": "./src/auth-errors.ts"
+    "./auth-errors": "./src/auth-errors.ts",
+    "./webhook-event": "./src/webhook-event.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

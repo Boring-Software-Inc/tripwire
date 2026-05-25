@@ -1,174 +1,151 @@
-import { type QueryKey, useQueryClient } from "@tanstack/react-query"
-import { useCallback } from "react"
+import type { QueryKey } from "@tanstack/react-query"
 
 /**
- * One optimistic patch. Two forms:
- *
- * - **Exact key**: target one specific query by its `queryKey`. Use when
- *   the caller knows the precise key (e.g. a singleton viewer query).
- * - **Predicate**: walk every query in the cache and apply the updater to
- *   each match. Use when several variants of a list exist (different
- *   filter/sort/pagination params) and they all need the same patch.
- *
- * In both cases the updater receives the current cached value (skipped
- * entirely when the slot hasn't loaded yet) and returns the new value.
- * Returning `current` leaves the cache untouched.
+ * Subset of QueryClient we touch. Defined so tests can pass a stub
+ * without standing up a real react-query setup.
  */
-export type OptimisticUpdate =
-  | {
-      queryKey: QueryKey
-      // biome-ignore lint/suspicious/noExplicitAny: updater accepts any cached shape
-      updater: (current: any) => any
-    }
-  | {
-      predicate: (queryKey: QueryKey) => boolean
-      // biome-ignore lint/suspicious/noExplicitAny: updater accepts any cached shape
-      updater: (current: any) => any
-    }
-
-export type OptimisticMutateOptions<TResult> = {
-  /** The server call, e.g. `() => trpc.visibility.bulkAction.mutate({...})`. */
-  mutationFn: () => Promise<TResult>
-  /** Optimistic cache patches applied synchronously before the server call. */
-  updates?: OptimisticUpdate[]
-  /**
-   * Query key prefix to invalidate on success. Only used when no optimistic
-   * updates were applied — otherwise we trust the optimistic state + let the
-   * signal stream / poll bring canonical data when the server-side mutation
-   * has fully propagated. Default: `["github"]`.
-   */
-  invalidateQueryKey?: QueryKey
-  /**
-   * Custom success predicate. Default: `Boolean(result)`. Lets callers treat
-   * `{ ok: false, error: "..." }` results as failures (triggering rollback)
-   * without throwing.
-   */
-  isSuccess?: (result: TResult) => boolean
-}
-
-/**
- * Subset of QueryClient we need. Defined so unit tests can pass a stub
- * without dragging in a real react-query setup.
- */
-export type OptimisticMutationQueryClient = {
+export type OptimisticPatchClient = {
   getQueryData(queryKey: QueryKey): unknown
   setQueryData(
     queryKey: QueryKey,
     updater: unknown | ((current: unknown) => unknown),
   ): unknown
-  /** react-query's predicate-based bulk update — walks the cache and updates matches. */
   setQueriesData(
     filters: { predicate: (query: { queryKey: QueryKey }) => boolean },
     updater: unknown | ((current: unknown) => unknown),
   ): unknown
-  /** Snapshot every query matching the predicate as [queryKey, data] pairs for rollback. */
   getQueriesData(filters: {
     predicate: (query: { queryKey: QueryKey }) => boolean
   }): Array<[QueryKey, unknown]>
-  invalidateQueries(filters: { queryKey: QueryKey }): Promise<void>
+}
+
+export type OptimisticPatchTarget =
+  | { queryKey: QueryKey }
+  | { predicate: (queryKey: QueryKey) => boolean }
+
+export type OptimisticPatchHandle = {
+  /** Restore every cache slot this patch touched to its prior value. */
+  rollback: () => void
 }
 
 /**
- * Generic optimistic-mutation runner. Different from a vanilla
- * `useMutation({ onMutate, onError, onSuccess })` in two ways:
+ * Snapshot every matching cache slot, apply the updater, return a
+ * rollback fn that restores the prior values exactly. Designed for
+ * `useMutation({ onMutate / onError / onSuccess })` — capture the
+ * handle from `onMutate`, call `handle.rollback()` from `onError`.
  *
- * 1. **Skip-invalidate-when-optimistic-was-applied.** When the optimistic
- *    cache already reflects the post-mutation state, fetching again
- *    immediately can flash stale server data back into the UI (the server
- *    hasn't propagated the write yet — tRPC returned but the read path
- *    may still see the pre-write row). With the signal-stream wiring in
- *    place, the webhook driven by the mutation will bring fresh data
- *    when the server is actually consistent.
+ * - `{ queryKey }` patches one specific slot.
+ * - `{ predicate }` walks every cached query and updates each match —
+ *   use when multiple variants of a list (different sort/filter/page)
+ *   need the same patch.
  *
- * 2. **Rollback restores prior snapshots exactly.** On failure, we put
- *    back what was there — not a re-fetch (which could blank the UI
- *    while the network roundtrip runs).
- *
- * For mutations that DON'T do optimistic updates, this falls through to
- * a standard `await mutationFn() → invalidateQueries(invalidateQueryKey)`.
+ * Returning `current` from the updater (or never being called when
+ * `current === undefined`) leaves the slot untouched.
  */
-export async function runOptimisticMutation<TResult>(
-  queryClient: OptimisticMutationQueryClient,
-  options: OptimisticMutateOptions<TResult>,
-): Promise<TResult | undefined> {
-  const {
-    mutationFn,
-    updates = [],
-    invalidateQueryKey = ["github"],
-    isSuccess = (result: TResult) => Boolean(result),
-  } = options
-
-  const hasOptimisticUpdates = updates.length > 0
-
-  /**
-   * Snapshots accumulate per matching (queryKey, prior-data) pair so we
-   * can restore the EXACT prior shape on failure. For predicate updates
-   * we resolve the matches up front rather than re-evaluating later —
-   * the cache could change underneath us mid-mutation.
-   */
-  const snapshots: Array<{ queryKey: QueryKey; data: unknown }> = []
-
-  for (const update of updates) {
-    if ("queryKey" in update) {
-      snapshots.push({
-        queryKey: update.queryKey,
-        data: queryClient.getQueryData(update.queryKey),
-      })
-      queryClient.setQueryData(update.queryKey, (current: unknown) => {
-        if (current === undefined) return current
-        return update.updater(current)
-      })
-    } else {
-      const matches = queryClient.getQueriesData({
-        predicate: (query) => update.predicate(query.queryKey),
-      })
-      for (const [queryKey, data] of matches) {
-        snapshots.push({ queryKey, data })
-      }
-      queryClient.setQueriesData(
-        { predicate: (query) => update.predicate(query.queryKey) },
-        (current: unknown) => {
-          if (current === undefined) return current
-          return update.updater(current)
-        },
-      )
-    }
+export function patchOptimistic<TData>(
+  queryClient: OptimisticPatchClient,
+  target: OptimisticPatchTarget,
+  updater: (current: TData) => TData,
+): OptimisticPatchHandle {
+  const snapshots: Array<[QueryKey, unknown]> = []
+  const safeUpdater = (current: unknown) => {
+    if (current === undefined) return current
+    return updater(current as TData)
   }
 
-  try {
-    const result = await mutationFn()
+  if ("queryKey" in target) {
+    snapshots.push([target.queryKey, queryClient.getQueryData(target.queryKey)])
+    queryClient.setQueryData(target.queryKey, safeUpdater)
+  } else {
+    const matches = queryClient.getQueriesData({
+      predicate: (query) => target.predicate(query.queryKey),
+    })
+    for (const [queryKey, data] of matches) {
+      snapshots.push([queryKey, data])
+    }
+    queryClient.setQueriesData(
+      { predicate: (query) => target.predicate(query.queryKey) },
+      safeUpdater,
+    )
+  }
 
-    if (isSuccess(result)) {
-      if (!hasOptimisticUpdates) {
-        await queryClient.invalidateQueries({
-          queryKey: invalidateQueryKey,
-        })
+  return {
+    rollback: () => {
+      for (const [queryKey, data] of snapshots) {
+        queryClient.setQueryData(queryKey, data)
       }
-      return result
-    }
-
-    // isSuccess returned false → treat as failure, rollback.
-    for (const snapshot of snapshots) {
-      queryClient.setQueryData(snapshot.queryKey, snapshot.data)
-    }
-    return result
-  } catch {
-    for (const snapshot of snapshots) {
-      queryClient.setQueryData(snapshot.queryKey, snapshot.data)
-    }
-    return undefined
+    },
   }
 }
 
-/** React-bound thin wrapper — picks up the QueryClient from context. */
-export function useOptimisticMutation() {
-  const queryClient = useQueryClient()
+/**
+ * Build a predicate that matches every tRPC `listContributors` cache
+ * variant for one repo, regardless of search/sort/filter/pagination
+ * params. Used by the bulk-action optimistic patches in visibility +
+ * the contributor drawer — exact key isn't enough because the table
+ * may have several open at once with different filters.
+ */
+export function matchesContributorsListForRepo(repoId: string) {
+  return (queryKey: QueryKey): boolean => {
+    if (!Array.isArray(queryKey) || queryKey.length < 2) return false
+    const serialized = JSON.stringify(queryKey)
+    return (
+      serialized.includes("listContributors") &&
+      serialized.includes(`"repoId":"${repoId}"`)
+    )
+  }
+}
 
-  const mutate = useCallback(
-    <TResult>(options: OptimisticMutateOptions<TResult>) =>
-      runOptimisticMutation(queryClient as unknown as OptimisticMutationQueryClient, options),
-    [queryClient],
-  )
+export type ContributorAction =
+  | "whitelist"
+  | "blacklist"
+  | "removeWhitelist"
+  | "removeBlacklist"
 
-  return { mutate }
+/**
+ * Translate a `bulkAction` verb into the steady-state contributor
+ * status it produces. Shared so visibility-page + drawer flip rows the
+ * same way during optimistic updates.
+ */
+export function nextContributorStatus(
+  action: ContributorAction,
+): "whitelisted" | "blacklisted" | "normal" {
+  if (action === "whitelist") return "whitelisted"
+  if (action === "blacklist") return "blacklisted"
+  return "normal"
+}
+
+/**
+ * Updater that flips status on every row whose username is in the
+ * target set. Composes with `patchOptimistic({ predicate: ... })`.
+ */
+export function flipContributorStatuses<
+  TList extends {
+    items: Array<{ githubUsername: string; status: string }>
+  },
+>(targetUsernames: readonly string[], nextStatus: string) {
+  const targetSet = new Set(targetUsernames.map((u) => u.toLowerCase()))
+  return (current: TList): TList => ({
+    ...current,
+    items: current.items.map((row) =>
+      targetSet.has(row.githubUsername.toLowerCase())
+        ? { ...row, status: nextStatus }
+        : row,
+    ),
+  })
+}
+
+/**
+ * Remove every row whose username matches. Used by the recommendation
+ * panels — whitelisting a "suggested whitelist" row should make it
+ * disappear from THAT panel's list immediately.
+ */
+export function removeContributorRows<
+  TList extends Array<{ githubUsername: string }>,
+>(targetUsernames: readonly string[]) {
+  const targetSet = new Set(targetUsernames.map((u) => u.toLowerCase()))
+  return (current: TList): TList =>
+    current.filter(
+      (row) => !targetSet.has(row.githubUsername.toLowerCase()),
+    ) as TList
 }

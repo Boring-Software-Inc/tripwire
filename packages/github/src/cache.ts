@@ -3,9 +3,15 @@
  * with: stable cache keys, request-scoped in-flight dedup, conditional
  * refresh via ETag/If-Modified-Since, signal-based stale invalidation,
  * adaptive freshness when GitHub budget is low, and stale-if-rate-limited
- * fallback. Ported from diffkit's github-cache.ts. v1 omits KV split-mode
- * + local-first; those land in later phases.
+ * fallback. Ported from diffkit's github-cache.ts.
  */
+
+import { eq, inArray } from "drizzle-orm"
+import { db } from "@tripwire/db/client"
+import {
+  githubResponseCache,
+  githubRevalidationSignal,
+} from "@tripwire/db"
 
 export type GitHubConditionalHeaders = {
   etag?: string | null
@@ -272,18 +278,7 @@ function getRateLimitedStaleFreshUntil(currentTime: number, error: unknown) {
   return currentTime + GITHUB_STALE_IF_RATE_LIMITED_FALLBACK_MS
 }
 
-/**
- * Default Drizzle-backed store. Lazy-imports `@tripwire/db/client` so this
- * module is safe to import from client bundles (the import never resolves
- * unless `get`/`upsert`/`delete` is called).
- */
-async function getDefaultGitHubCacheStore(): Promise<GitHubCacheStore> {
-  const [{ eq }, { db }, { githubResponseCache }] = await Promise.all([
-    import("drizzle-orm"),
-    import("@tripwire/db/client"),
-    import("@tripwire/db"),
-  ])
-
+function getDefaultGitHubCacheStore(): GitHubCacheStore {
   return {
     async get(cacheKey) {
       const [entry] = await db
@@ -327,12 +322,6 @@ async function getLatestGitHubRevalidationSignalUpdatedAt(
 ) {
   if (signalKeys.length === 0) return null
 
-  const [{ inArray }, { db }, { githubRevalidationSignal }] = await Promise.all([
-    import("drizzle-orm"),
-    import("@tripwire/db/client"),
-    import("@tripwire/db"),
-  ])
-
   const signals = await db
     .select({ updatedAt: githubRevalidationSignal.updatedAt })
     .from(githubRevalidationSignal)
@@ -349,11 +338,6 @@ export async function markGitHubRevalidationSignals(
   if (signalKeys.length === 0) return 0
 
   const uniqueSignalKeys = Array.from(new Set(signalKeys))
-  const [{ db }, { githubRevalidationSignal }] = await Promise.all([
-    import("@tripwire/db/client"),
-    import("@tripwire/db"),
-  ])
-
   await db
     .insert(githubRevalidationSignal)
     .values(
@@ -367,89 +351,10 @@ export async function markGitHubRevalidationSignals(
   return uniqueSignalKeys.length
 }
 
-/**
- * Records a webhook delivery for idempotency + audit/replay. Insert is
- * idempotent on `deliveryId` — GitHub retries reuse the same
- * `X-GitHub-Delivery` UUID, so the second attempt is a no-op. Returns
- * true when a NEW row was inserted (i.e. this is the first time we've
- * seen this delivery and the caller should process it).
- */
-export async function recordGitHubWebhookEvent({
-  deliveryId,
-  event,
-  signalKeys,
-  receivedAt = Date.now(),
-}: {
-  deliveryId: string
-  event: string
-  signalKeys: string[]
-  receivedAt?: number
-}): Promise<boolean> {
-  const [{ db }, { githubWebhookEvent }] = await Promise.all([
-    import("@tripwire/db/client"),
-    import("@tripwire/db"),
-  ])
-
-  const inserted = await db
-    .insert(githubWebhookEvent)
-    .values({
-      deliveryId,
-      event,
-      signalKeysJson: JSON.stringify(signalKeys),
-      receivedAt,
-    })
-    .onConflictDoNothing({ target: githubWebhookEvent.deliveryId })
-    .returning({ id: githubWebhookEvent.id })
-
-  return inserted.length > 0
-}
-
-/** Marks a previously-recorded webhook delivery as processed (clears any prior error). */
-export async function markGitHubWebhookEventProcessed(
-  deliveryId: string,
-  at = Date.now(),
-): Promise<void> {
-  const [{ eq }, { db }, { githubWebhookEvent }] = await Promise.all([
-    import("drizzle-orm"),
-    import("@tripwire/db/client"),
-    import("@tripwire/db"),
-  ])
-
-  await db
-    .update(githubWebhookEvent)
-    .set({ processedAt: at, errorMessage: null })
-    .where(eq(githubWebhookEvent.deliveryId, deliveryId))
-}
-
-/** Records a processing failure on the webhook row so it surfaces in logs. */
-export async function markGitHubWebhookEventFailed(
-  deliveryId: string,
-  errorMessage: string,
-): Promise<void> {
-  const [{ eq }, { db }, { githubWebhookEvent }] = await Promise.all([
-    import("drizzle-orm"),
-    import("@tripwire/db/client"),
-    import("@tripwire/db"),
-  ])
-
-  await db
-    .update(githubWebhookEvent)
-    .set({ errorMessage: errorMessage.slice(0, 2000) })
-    .where(eq(githubWebhookEvent.deliveryId, deliveryId))
-}
-
 export async function getGitHubRevalidationSignals(signalKeys: string[]) {
   if (signalKeys.length === 0) return []
 
   const uniqueSignalKeys = Array.from(new Set(signalKeys))
-  const [{ inArray }, { db }, { githubRevalidationSignal }] = await Promise.all(
-    [
-      import("drizzle-orm"),
-      import("@tripwire/db/client"),
-      import("@tripwire/db"),
-    ],
-  )
-
   return db
     .select({
       signalKey: githubRevalidationSignal.signalKey,
@@ -464,7 +369,7 @@ export async function bustGitHubCache(
   resource: string,
   params?: unknown,
 ) {
-  const store = await getDefaultGitHubCacheStore()
+  const store = getDefaultGitHubCacheStore()
   const paramsJson = stableSerialize(params)
   const cacheKey = buildGitHubCacheKey({ scope, resource, paramsJson })
   await store.delete(cacheKey)
@@ -483,7 +388,7 @@ export async function peekGitHubCache<TData>(
   params?: unknown,
   storeOverride?: GitHubCacheStore,
 ): Promise<TData | null> {
-  const store = storeOverride ?? (await getDefaultGitHubCacheStore())
+  const store = storeOverride ?? getDefaultGitHubCacheStore()
   const paramsJson = stableSerialize(params)
   const cacheKey = buildGitHubCacheKey({ scope, resource, paramsJson })
   const entry = await store.get(cacheKey)
@@ -531,7 +436,7 @@ export async function getOrRevalidateGitHubResource<TData>({
 
   const task = (async () => {
     if (!resolvedStore) {
-      resolvedStore = await getDefaultGitHubCacheStore()
+      resolvedStore = getDefaultGitHubCacheStore()
     }
     const existingEntry = await resolvedStore.get(cacheKey)
     const currentTime = now()
@@ -668,7 +573,7 @@ export async function getGitHubResourceLocalFirst<TData>(
     onBackgroundRefreshSettled,
   } = options
 
-  const resolvedStore = store ?? (await getDefaultGitHubCacheStore())
+  const resolvedStore = store ?? getDefaultGitHubCacheStore()
   const paramsJson = stableSerialize(params)
   const cacheKey = buildGitHubCacheKey({ scope, resource, paramsJson })
   const existingEntry = await resolvedStore.get(cacheKey)

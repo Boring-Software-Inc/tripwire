@@ -1,6 +1,5 @@
 import { getRouteApi, Link } from "@tanstack/react-router"
 import { useQuery } from "@tanstack/react-query"
-import { useMemo } from "react"
 import { authClient } from "@tripwire/auth/client"
 import { Button } from "@tripwire/ui/button"
 import { GithubIcon } from "@tripwire/ui/icons/github"
@@ -12,6 +11,7 @@ import { useTRPC } from "#/integrations/trpc/react"
 import { useWorkspace } from "#/providers/workspace-context"
 import { githubRevalidationSignalKeys } from "#/lib/github/revalidation"
 import { useGitHubSignalStream } from "#/lib/github/use-signal-stream"
+import { useRepoSignalTargets } from "#/lib/github/use-repo-signal-targets"
 
 /**
  * Pulled out from the route file so the route stays a thin
@@ -79,28 +79,17 @@ export function UserProfilePage() {
   // invalidates score + profile + events. Includes the repo signal too
   // since rule evaluations that don't name a specific user still
   // surface in this user's events list when they were the actor.
-  const profileSignalTargets = useMemo(() => {
-    const userSignal = githubRevalidationSignalKeys.user({ username })
-    const signals = [userSignal]
-    if (repo) {
-      const [owner, name] = repo.fullName.split("/")
-      if (owner && name) {
-        signals.push(githubRevalidationSignalKeys.repo({ owner, repo: name }))
-      }
-    }
-    return [
-      { queryKey: scoreQueryOpts.queryKey, signalKeys: signals },
-      { queryKey: profileQueryOpts.queryKey, signalKeys: signals },
-      { queryKey: eventsQueryOpts.queryKey, signalKeys: signals },
-    ]
-  }, [
-    username,
-    repo,
-    scoreQueryOpts.queryKey,
-    profileQueryOpts.queryKey,
-    eventsQueryOpts.queryKey,
-  ])
-  useGitHubSignalStream(profileSignalTargets)
+  useGitHubSignalStream(
+    useRepoSignalTargets(
+      repo?.fullName,
+      [
+        scoreQueryOpts.queryKey,
+        profileQueryOpts.queryKey,
+        eventsQueryOpts.queryKey,
+      ],
+      [githubRevalidationSignalKeys.user({ username })],
+    ),
+  )
 
   const scoreData = scoreQuery.data
   const score = scoreData?.score ?? null

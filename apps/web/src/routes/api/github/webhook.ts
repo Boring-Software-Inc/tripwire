@@ -18,14 +18,51 @@ import {
   handleInstallation,
   handleInstallationRepositories,
 } from "#/lib/github/webhook"
+import { markGitHubRevalidationSignals } from "@tripwire/github/cache"
 import {
-  markGitHubRevalidationSignals,
   markGitHubWebhookEventFailed,
   markGitHubWebhookEventProcessed,
   recordGitHubWebhookEvent,
-} from "#/lib/github/cache"
+} from "@tripwire/github/webhook-event"
 import { getGitHubWebhookRevalidationSignalKeys } from "#/lib/github/revalidation"
 import { broadcastSignalKeys } from "@tripwire/github/signal-broker"
+
+type WebhookCtx = {
+  installationId: number
+  repoFullName: string
+  githubRepoId: number
+  senderLogin: string
+  senderId: number
+}
+
+/**
+ * Best-effort wrapper around the idempotency bookkeeping. We never want
+ * recording the audit row to be the thing that fails the webhook — log
+ * and continue.
+ */
+async function safeMarkProcessed(deliveryId: string | null): Promise<void> {
+  if (!deliveryId) return
+  try {
+    await markGitHubWebhookEventProcessed(deliveryId)
+  } catch (err) {
+    console.error("[Webhook] failed to mark processed:", err)
+  }
+}
+
+async function safeMarkFailed(
+  deliveryId: string | null,
+  err: unknown,
+): Promise<void> {
+  if (!deliveryId) return
+  try {
+    await markGitHubWebhookEventFailed(
+      deliveryId,
+      err instanceof Error ? err.message : String(err),
+    )
+  } catch (logErr) {
+    console.error("[Webhook] failed to record processing error:", logErr)
+  }
+}
 
 async function handler({ request }: { request: Request }) {
   const secret = process.env.GITHUB_WEBHOOK_SECRET
@@ -50,21 +87,25 @@ async function handler({ request }: { request: Request }) {
   // Insert-or-ignore against `github_webhook_event` — if the row already
   // existed, this is a retry and we ACK without re-running the pipeline.
   // (Without `deliveryId` we can't dedupe; fall through and process.)
-  const signalKeys =
-    event ? getGitHubWebhookRevalidationSignalKeys(event, payload) : []
-  let recordedNewEvent = true
+  const signalKeys = event
+    ? getGitHubWebhookRevalidationSignalKeys(event, payload)
+    : []
   if (deliveryId && event) {
+    let isNewDelivery = true
     try {
-      recordedNewEvent = await recordGitHubWebhookEvent({
+      isNewDelivery = await recordGitHubWebhookEvent({
         deliveryId,
         event,
         signalKeys,
       })
     } catch (err) {
-      console.error("[Webhook] failed to record delivery:", err)
       // Fail open: better to process twice than to silently drop the webhook.
+      console.error(
+        "[Webhook] failed to record delivery, processing anyway:",
+        err,
+      )
     }
-    if (!recordedNewEvent) {
+    if (!isNewDelivery) {
       console.log("[Webhook] duplicate delivery, skipping:", deliveryId)
       return new Response("OK (duplicate)", { status: 200 })
     }
@@ -86,13 +127,7 @@ async function handler({ request }: { request: Request }) {
 
   const installationId = payload.installation?.id
   if (!installationId) {
-    if (deliveryId) {
-      try {
-        await markGitHubWebhookEventProcessed(deliveryId)
-      } catch (err) {
-        console.error("[Webhook] failed to mark processed:", err)
-      }
-    }
+    await safeMarkProcessed(deliveryId)
     return new Response("No installation", { status: 200 })
   }
 
@@ -101,60 +136,24 @@ async function handler({ request }: { request: Request }) {
       await handleInstallation(payload)
     } else if (event === "installation_repositories") {
       await handleInstallationRepositories(payload)
-    } else {
+    } else if (payload.repository) {
       const repo = payload.repository
-      if (!repo) {
-        if (deliveryId) {
-          try {
-            await markGitHubWebhookEventProcessed(deliveryId)
-          } catch (err) {
-            console.error("[Webhook] failed to mark processed:", err)
-          }
-        }
-        return new Response("OK", { status: 200 })
-      }
-
-      const ctx = {
+      const ctx: WebhookCtx = {
         installationId,
         repoFullName: repo.full_name,
         githubRepoId: repo.id,
         senderLogin: payload.sender?.login ?? "",
         senderId: payload.sender?.id ?? 0,
       }
-
       await handleRepoEvent(event, payload, ctx, repo)
     }
-
-    if (deliveryId) {
-      try {
-        await markGitHubWebhookEventProcessed(deliveryId)
-      } catch (err) {
-        console.error("[Webhook] failed to mark processed:", err)
-      }
-    }
+    await safeMarkProcessed(deliveryId)
   } catch (err) {
     console.error("Webhook handler error:", err)
-    if (deliveryId) {
-      try {
-        await markGitHubWebhookEventFailed(
-          deliveryId,
-          err instanceof Error ? err.message : String(err),
-        )
-      } catch (logErr) {
-        console.error("[Webhook] failed to record processing error:", logErr)
-      }
-    }
+    await safeMarkFailed(deliveryId, err)
   }
 
   return new Response("OK", { status: 200 })
-}
-
-type WebhookCtx = {
-  installationId: number
-  repoFullName: string
-  githubRepoId: number
-  senderLogin: string
-  senderId: number
 }
 
 async function handleRepoEvent(
@@ -165,9 +164,6 @@ async function handleRepoEvent(
   // biome-ignore lint/suspicious/noExplicitAny: webhook payload is dynamically shaped
   repo: any,
 ): Promise<void> {
-  // Extracted from the inline switch so the outer handler's try/catch can
-  // wrap both this and the installation branches uniformly. Behavior is
-  // identical to the prior inline form.
   switch (event) {
     case "pull_request": {
       if (payload.action === "opened" || payload.action === "reopened") {
@@ -180,7 +176,7 @@ async function handleRepoEvent(
         if (repoRow) {
           const bountyHit = await checkFakeBountyReference(
             repoRow.id,
-            prContent
+            prContent,
           )
           if (bountyHit) {
             await handleFakeBountyCatch({
@@ -202,7 +198,7 @@ async function handleRepoEvent(
           ctx,
           payload.pull_request.number,
           payload.pull_request.title,
-          payload.pull_request.body ?? undefined
+          payload.pull_request.body ?? undefined,
         )
       }
       break
@@ -214,7 +210,7 @@ async function handleRepoEvent(
           ctx,
           payload.issue.number,
           payload.issue.title,
-          payload.issue.body ?? undefined
+          payload.issue.body ?? undefined,
         )
       }
       break
@@ -227,7 +223,7 @@ async function handleRepoEvent(
           ctx,
           payload.comment.id,
           payload.issue.number,
-          payload.comment.body ?? undefined
+          payload.comment.body ?? undefined,
         )
       }
       break

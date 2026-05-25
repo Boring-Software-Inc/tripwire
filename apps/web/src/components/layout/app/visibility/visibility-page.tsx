@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Button } from "@tripwire/ui/button"
 import { toastManager } from "@tripwire/ui/toast"
 import { EmptyState } from "#/components/shared/empty-state"
@@ -16,10 +16,16 @@ import { SyncBar } from "#/components/layout/app/visibility/sync-bar"
 import { useTRPC } from "#/integrations/trpc/react"
 import { useWorkspace } from "#/providers/workspace-context"
 import { formatCompact } from "#/lib/format"
-import { githubRevalidationSignalKeys } from "#/lib/github/revalidation"
-import { useGitHubSignalStream } from "#/lib/github/use-signal-stream"
+import { useLiveGitHubQuery } from "#/lib/github/use-live-query"
+import { useRepoSignalKeys } from "#/lib/github/use-repo-signal-targets"
 import { routes } from "#/lib/routes"
 import { toastFromError } from "#/lib/toast-error"
+import {
+  flipContributorStatuses,
+  matchesContributorsListForRepo,
+  nextContributorStatus,
+  patchOptimistic,
+} from "#/lib/use-optimistic-mutation"
 
 type StatusFilter = "all" | "whitelisted" | "blacklisted" | "normal"
 
@@ -67,91 +73,27 @@ export function VisibilityPage() {
     },
     { enabled: !!repoId, staleTime: 30_000 },
   )
-  const listQuery = useQuery({
-    ...listQueryOpts,
-    meta: { persist: true },
-  })
-
-  // Subscribe to the repo signal so contributor scores/statuses refresh
-  // as webhooks for this repo land. The 30s staleTime + signal stream
-  // together give "feels live without thrashing the server."
-  const contributorsSignalTargets = useMemo(() => {
-    if (!repo) return []
-    const [owner, name] = repo.fullName.split("/")
-    if (!owner || !name) return []
-    return [
-      {
-        queryKey: listQueryOpts.queryKey,
-        signalKeys: [githubRevalidationSignalKeys.repo({ owner, repo: name })],
-      },
-    ]
-  }, [repo, listQueryOpts.queryKey])
-  useGitHubSignalStream(contributorsSignalTargets)
+  const listQuery = useLiveGitHubQuery(
+    listQueryOpts,
+    useRepoSignalKeys(repo?.fullName),
+  )
 
   const bulkMutation = useMutation(
     trpc.visibility.bulkAction.mutationOptions({
       // Optimistic patch: flip status on every cached `listContributors`
-      // variant for this repo (different sort/filter combos). Snapshot
-      // matches so `onError` can roll back to the exact prior shape.
-      onMutate: (vars) => {
-        const newStatus: "whitelisted" | "blacklisted" | "normal" =
-          vars.action === "whitelist"
-            ? "whitelisted"
-            : vars.action === "blacklist"
-              ? "blacklisted"
-              : "normal"
-        const targetSet = new Set(
-          vars.usernames.map((u) => u.toLowerCase()),
-        )
-        const matchPredicate = (q: { queryKey: readonly unknown[] }) => {
-          const key = q.queryKey
-          if (!Array.isArray(key) || key.length < 2) return false
-          // tRPC keys look like ["visibility","listContributors", {input}]
-          const segment = JSON.stringify(key)
-          return (
-            segment.includes("listContributors") &&
-            segment.includes(`"repoId":"${vars.repoId}"`)
-          )
-        }
-        const snapshot = queryClient.getQueriesData({
-          predicate: matchPredicate,
-        })
-        queryClient.setQueriesData(
-          { predicate: matchPredicate },
-          (current: unknown) => {
-            if (current === undefined) return current
-            const list = current as {
-              items: Array<{ githubUsername: string; status: string }>
-              total: number
-            }
-            return {
-              ...list,
-              items: list.items.map((row) =>
-                targetSet.has(row.githubUsername.toLowerCase())
-                  ? { ...row, status: newStatus }
-                  : row,
-              ),
-            }
-          },
-        )
-        return { snapshot }
-      },
-      onError: (err, _vars, context) => {
-        // Roll back to exactly what was there.
-        if (context?.snapshot) {
-          for (const [key, data] of context.snapshot) {
-            queryClient.setQueryData(key, data)
-          }
-        }
+      // variant for this repo. The signal stream brings canonical data
+      // when the durable-factory pipeline catches up — no invalidate.
+      onMutate: (vars) =>
+        patchOptimistic(
+          queryClient,
+          { predicate: matchesContributorsListForRepo(vars.repoId) },
+          flipContributorStatuses(vars.usernames, nextContributorStatus(vars.action)),
+        ),
+      onError: (err, _vars, handle) => {
+        handle?.rollback()
         toastFromError(err, { fallbackTitle: "Bulk action failed" })
       },
       onSuccess: (data, vars) => {
-        // Deliberately NOT invalidating: the optimistic patch already
-        // reflects the post-mutation state, and the webhook-driven
-        // signal stream brings the canonical state when the server-side
-        // pipeline (events + reputation Inngest job) has caught up.
-        // Invalidating here would re-fetch immediately and could flash
-        // a stale row back into the UI before propagation.
         setSelection({})
         const verb =
           vars.action === "whitelist" ? "Whitelisted" : "Blacklisted"

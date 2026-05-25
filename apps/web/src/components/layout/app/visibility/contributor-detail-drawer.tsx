@@ -1,5 +1,4 @@
-import { useMemo } from "react"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import {
   Dialog,
   DialogPopup,
@@ -14,16 +13,17 @@ import { formatCompact, formatRelativeTime } from "#/lib/format"
 import { toastFromError } from "#/lib/toast-error"
 import { toastManager } from "@tripwire/ui/toast"
 import { githubRevalidationSignalKeys } from "#/lib/github/revalidation"
-import { useGitHubSignalStream } from "#/lib/github/use-signal-stream"
+import { useLiveGitHubQuery } from "#/lib/github/use-live-query"
+import {
+  type ContributorAction,
+  flipContributorStatuses,
+  matchesContributorsListForRepo,
+  nextContributorStatus,
+  patchOptimistic,
+} from "#/lib/use-optimistic-mutation"
 import type { ContributorRow } from "./contributors-table"
 
-type BulkAction =
-  | "whitelist"
-  | "blacklist"
-  | "removeWhitelist"
-  | "removeBlacklist"
-
-const actionToastTitle: Record<BulkAction, (n: string) => string> = {
+const actionToastTitle: Record<ContributorAction, (n: string) => string> = {
   whitelist: (n) => `Whitelisted @${n}`,
   blacklist: (n) => `Blocked @${n}`,
   removeWhitelist: (n) => `Removed @${n} from whitelist`,
@@ -31,13 +31,13 @@ const actionToastTitle: Record<BulkAction, (n: string) => string> = {
 }
 
 type DrawerAction = {
-  action: BulkAction
+  action: ContributorAction
   label: string
   variant: "outline" | "secondary" | "destructive-outline"
 }
 
 function drawerActionsFor(
-  status: ContributorRow["status"]
+  status: ContributorRow["status"],
 ): DrawerAction[] {
   const out: DrawerAction[] = []
   if (status === "whitelisted") {
@@ -107,96 +107,33 @@ export function ContributorDetailDrawer({
   const queryClient = useQueryClient()
   const username = contributor?.githubUsername ?? ""
 
-  // Persist this query so reopening the drawer for the same contributor
-  // renders the last-known events instantly while a fresh fetch runs.
-  // Subscribe to `user:USERNAME` so a webhook for this contributor
-  // invalidates the events list within ~20s — no manual refresh needed.
-  const eventsQueryOptions = useMemo(
-    () =>
-      trpc.events.list.queryOptions(
-        { repoId, targetUsername: username, limit: 30 },
-        { enabled: !!contributor && open },
-      ),
-    [trpc, repoId, username, contributor, open],
+  // Persisted + signal-streamed: reopening the drawer renders last-known
+  // events instantly while a fresh fetch runs. The `user:USERNAME` signal
+  // invalidates within ~1s of a webhook for this contributor.
+  const eventsQuery = useLiveGitHubQuery(
+    trpc.events.list.queryOptions(
+      { repoId, targetUsername: username, limit: 30 },
+      { enabled: !!contributor && open },
+    ),
+    username ? [githubRevalidationSignalKeys.user({ username })] : [],
   )
-  const eventsQuery = useQuery({
-    ...eventsQueryOptions,
-    meta: { ...eventsQueryOptions.meta, persist: true },
-  })
-
-  const streamTargets = useMemo(
-    () =>
-      contributor && open && username
-        ? [
-            {
-              queryKey: eventsQueryOptions.queryKey,
-              signalKeys: [
-                githubRevalidationSignalKeys.user({ username }),
-              ],
-            },
-          ]
-        : [],
-    [eventsQueryOptions.queryKey, contributor, open, username],
-  )
-  // SSE for sub-second push + 20s poll fallback under the hood.
-  useGitHubSignalStream(streamTargets)
 
   const mutation = useMutation(
     trpc.visibility.bulkAction.mutationOptions({
-      // Optimistic flip on every cached `listContributors` for this repo
-      // so the parent table updates instantly when the user clicks the
-      // action button. The drawer closes on success; even if the server
-      // call hasn't returned yet, the parent already reflects the change.
-      onMutate: (vars) => {
-        const newStatus: "whitelisted" | "blacklisted" | "normal" =
-          vars.action === "whitelist"
-            ? "whitelisted"
-            : vars.action === "blacklist"
-              ? "blacklisted"
-              : "normal"
-        const targetSet = new Set(
-          vars.usernames.map((u) => u.toLowerCase()),
-        )
-        const matchPredicate = (q: { queryKey: readonly unknown[] }) => {
-          const segment = JSON.stringify(q.queryKey)
-          return (
-            segment.includes("listContributors") &&
-            segment.includes(`"repoId":"${vars.repoId}"`)
-          )
-        }
-        const snapshot = queryClient.getQueriesData({
-          predicate: matchPredicate,
-        })
-        queryClient.setQueriesData(
-          { predicate: matchPredicate },
-          (current: unknown) => {
-            if (current === undefined) return current
-            const list = current as {
-              items: Array<{ githubUsername: string; status: string }>
-              total: number
-            }
-            return {
-              ...list,
-              items: list.items.map((row) =>
-                targetSet.has(row.githubUsername.toLowerCase())
-                  ? { ...row, status: newStatus }
-                  : row,
-              ),
-            }
-          },
-        )
-        return { snapshot }
-      },
-      onError: (err, _vars, context) => {
-        if (context?.snapshot) {
-          for (const [key, data] of context.snapshot) {
-            queryClient.setQueryData(key, data)
-          }
-        }
+      onMutate: (vars) =>
+        patchOptimistic(
+          queryClient,
+          { predicate: matchesContributorsListForRepo(vars.repoId) },
+          flipContributorStatuses(
+            vars.usernames,
+            nextContributorStatus(vars.action),
+          ),
+        ),
+      onError: (err, _vars, handle) => {
+        handle?.rollback()
         toastFromError(err, { fallbackTitle: "Action failed" })
       },
       onSuccess: (_data, vars) => {
-        // Skip invalidate; signal stream brings canonical data.
         toastManager.add({
           type: "success",
           title:
@@ -219,6 +156,19 @@ export function ContributorDetailDrawer({
       tone: "warn" as const,
     },
   ]
+
+  const eventsData = eventsQuery.data as
+    | {
+        events: Array<{
+          id: string
+          severity: string | null
+          action: string
+          githubRef: string | null
+          description: string | null
+          createdAt: Date | string
+        }>
+      }
+    | undefined
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -270,13 +220,13 @@ export function ContributorDetailDrawer({
         <ScrollArea className="max-h-[280px] px-5">
           {eventsQuery.isLoading ? (
             <div className="py-4 text-[12px] text-tw-text-muted">Loading…</div>
-          ) : (eventsQuery.data?.events.length ?? 0) === 0 ? (
+          ) : (eventsData?.events.length ?? 0) === 0 ? (
             <div className="py-4 text-[12px] text-tw-text-muted">
               No events on this repo yet.
             </div>
           ) : (
             <ul className="flex flex-col gap-1.5 pb-3">
-              {eventsQuery.data?.events.map((e) => (
+              {eventsData?.events.map((e) => (
                 <li
                   key={e.id}
                   className="flex items-start gap-2.5 rounded-lg bg-tw-inner/50 px-3 py-2"
@@ -331,4 +281,3 @@ export function ContributorDetailDrawer({
     </Dialog>
   )
 }
-

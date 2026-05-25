@@ -30,6 +30,15 @@ vi.mock("@tripwire/env/server", () => ({
   },
 }))
 
+// Stub the DB client so transitively-imported `cache.ts` doesn't try
+// to validate DATABASE_URL at module load (this suite is fully mocked
+// at the fetch layer and never touches the database).
+vi.mock("@tripwire/db/client", () => ({ db: {} }))
+vi.mock("@tripwire/db", () => ({
+  githubResponseCache: { cacheKey: {} },
+  githubRevalidationSignal: { signalKey: {}, updatedAt: {} },
+}))
+
 import {
   getInstallationToken,
   invalidateInstallationToken,

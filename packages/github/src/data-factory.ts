@@ -190,8 +190,44 @@ function syntheticMetadata() {
 }
 
 /**
- * Fetch a user's pull requests with full details.
- * Defaults to 5 merged PRs. Cached for 1 hour.
+ * Build the `/search/issues` endpoint for "this user's PRs in state X".
+ * Shared between the cached and uncached paths so any change to the
+ * query or perPage logic only happens once.
+ */
+function buildUserPRsSearchEndpoint(
+  username: string,
+  state: FetchOptions["state"] | "merged",
+  limit: number,
+): string {
+  const stateFilter = state === "all" ? "" : `+is:${state}`
+  const perPage = Math.max(limit, MIN_BATCH_SIZE)
+  return `/search/issues?q=author:${encodeURIComponent(username)}+type:pr${stateFilter}&sort=created&order=desc&per_page=${perPage}`
+}
+
+/**
+ * Run the search → transform → enrich-top-N pipeline against a raw
+ * search response. Pure of caching concerns — both fetchUserPRs paths
+ * lean on this so the enrichment + transform logic exists once.
+ */
+async function buildPRsPayload(
+  token: string,
+  rawData: { total_count?: number; items?: Record<string, unknown>[] } | null,
+  limit: number,
+): Promise<MergedPrsCachePayload> {
+  const totalCount = (rawData?.total_count as number) ?? 0
+  const rawItems = (rawData?.items as Record<string, unknown>[]) ?? []
+  const basePrs = rawItems.map(transformSearchItemToPR)
+  const enriched = await Promise.all(
+    basePrs.slice(0, limit).map((pr) => enrichPRWithDetails(token, pr)),
+  )
+  return { items: [...enriched, ...basePrs.slice(limit)], totalCount }
+}
+
+/**
+ * Fetch a user's pull requests with full details. Defaults to 5
+ * merged PRs. The merged-state path goes through the read-through
+ * cache (1h TTL + signal-driven invalidation); other states fall
+ * through to a direct call.
  */
 export async function fetchUserPRs(
   token: string,
@@ -200,29 +236,37 @@ export async function fetchUserPRs(
 ): Promise<PRResult> {
   const limit = opts.limit ?? 5
   const state = opts.state ?? "merged"
-  const scope = username.toLowerCase()
 
-  // Only `merged` state goes through the cache engine — matches pre-refactor behavior.
   if (state !== "merged") {
-    return fetchUserPRsRaw(token, username, state, limit)
+    // Non-merged states are rarer + change more often — skip the cache.
+    let searchResult: Record<string, unknown> | null = null
+    try {
+      searchResult = await githubApi(
+        buildUserPRsSearchEndpoint(username, state, limit),
+        token,
+      )
+    } catch {
+      // 422 = user has no searchable PR activity; other errors = API issue.
+      return { items: [], totalCount: 0 }
+    }
+    return buildPRsPayload(token, searchResult, limit)
   }
 
   const fetcher = async (
     conditionals: { etag?: string | null; lastModified?: string | null },
   ): Promise<GitHubFetchResult<MergedPrsCachePayload>> => {
-    const stateFilter = `+is:merged`
-    const perPage = Math.max(limit, MIN_BATCH_SIZE)
-    const endpoint = `/search/issues?q=author:${encodeURIComponent(username)}+type:pr${stateFilter}&sort=created&order=desc&per_page=${perPage}`
-
     let result: GitHubFetchResult<{
       total_count?: number
       items?: Record<string, unknown>[]
     }>
     try {
-      result = await cachedFetchGitHub(endpoint, conditionals, { token })
+      result = await cachedFetchGitHub(
+        buildUserPRsSearchEndpoint(username, "merged", limit),
+        conditionals,
+        { token },
+      )
     } catch {
-      // 422 = user has no searchable PR activity; other errors = transient.
-      // Either way, surface an empty result and let the cache hold it briefly.
+      // Cache the empty result briefly so we don't hammer search on 422.
       return {
         kind: "success",
         data: { items: [], totalCount: 0 },
@@ -231,33 +275,23 @@ export async function fetchUserPRs(
     }
 
     if (result.kind === "not-modified") {
-      // Search endpoint unchanged → previously-enriched PRs are still
-      // current. Engine refreshes freshness without re-running enrichment.
+      // Engine refreshes freshness without re-running enrichment.
       return result
     }
 
-    const totalCount = (result.data?.total_count as number) ?? 0
-    const rawItems = (result.data?.items as Record<string, unknown>[]) ?? []
-    const basePrs = rawItems.map(transformSearchItemToPR)
-    const toEnrich = basePrs.slice(0, limit)
-    const enriched = await Promise.all(
-      toEnrich.map((pr) => enrichPRWithDetails(token, pr)),
-    )
-    const items = [...enriched, ...basePrs.slice(limit)]
     return {
       kind: "success",
-      data: { items, totalCount },
+      data: await buildPRsPayload(token, result.data, limit),
       metadata: result.metadata,
     }
   }
+
   const engineOpts = {
-    scope,
+    scope: username.toLowerCase(),
     resource: "user.merged-prs",
     freshForMs: CACHE_TTL_MS,
     fetcher,
   }
-
-  // forceRefresh bypasses local-first so the caller actually waits on fresh data.
   const cached = opts.forceRefresh
     ? await getOrRevalidateGitHubResource<MergedPrsCachePayload>({
         ...engineOpts,
@@ -271,40 +305,6 @@ export async function fetchUserPRs(
     items: cached.items.slice(0, limit),
     totalCount: cached.totalCount,
   }
-}
-
-async function fetchUserPRsRaw(
-  token: string,
-  username: string,
-  state: "merged" | "closed" | "open" | "all",
-  limit: number,
-): Promise<PRResult> {
-  const stateFilter = state === "all" ? "" : `+is:${state}`
-  const perPage = Math.max(limit, MIN_BATCH_SIZE)
-
-  let searchResult: Record<string, unknown> | null = null
-  try {
-    searchResult = await githubApi(
-      `/search/issues?q=author:${encodeURIComponent(username)}+type:pr${stateFilter}&sort=created&order=desc&per_page=${perPage}`,
-      token,
-    )
-  } catch {
-    // 422 = user has no searchable PR activity; other errors = API issue.
-    return { items: [], totalCount: 0 }
-  }
-
-  const totalCount = (searchResult?.total_count as number) ?? 0
-  const rawItems = (searchResult?.items as Record<string, unknown>[]) ?? []
-  const basePrs = rawItems.map(transformSearchItemToPR)
-
-  // Enrich the ones we'll return with full PR details.
-  const toEnrich = basePrs.slice(0, limit)
-  const enriched = await Promise.all(
-    toEnrich.map((pr) => enrichPRWithDetails(token, pr)),
-  )
-  const items = [...enriched, ...basePrs.slice(limit)]
-
-  return { items, totalCount }
 }
 
 /**

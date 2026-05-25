@@ -1,10 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 /**
- * Focused tests for the webhook-idempotency helpers in cache.ts.
- * Lives in a separate file because it needs to mock `@tripwire/db`
- * imports — keeping it out of cache.test.ts avoids polluting the
- * store-injection style there.
+ * Focused tests for the webhook-idempotency helpers in webhook-event.ts.
+ * Mocks @tripwire/db so the chainable Drizzle calls can be observed
+ * without standing up a real database.
  */
 
 /** Captures every SQL builder call so assertions can introspect them. */
@@ -84,7 +83,7 @@ import {
   markGitHubWebhookEventFailed,
   markGitHubWebhookEventProcessed,
   recordGitHubWebhookEvent,
-} from "./cache"
+} from "./webhook-event"
 
 beforeEach(() => {
   recorded = []

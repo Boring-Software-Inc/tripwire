@@ -1,9 +1,8 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router"
 import { Button } from "@tripwire/ui/button"
 import { useQuery } from "@tanstack/react-query"
-import { useMemo } from "react"
-import { githubRevalidationSignalKeys } from "#/lib/github/revalidation"
 import { useGitHubSignalStream } from "#/lib/github/use-signal-stream"
+import { useRepoSignalTargets } from "#/lib/github/use-repo-signal-targets"
 import {
   HomeNavIcon,
   RulesNavIcon,
@@ -127,18 +126,9 @@ export function TopNav({ askOpen, onToggleAsk }: TopNavProps) {
 
   // Repo-wide signal stream so the nav badge updates within ~1s of a
   // webhook arriving (no need to navigate to the events page first).
-  const navSignalTargets = useMemo(() => {
-    if (!repo) return []
-    const [owner, name] = repo.fullName.split("/")
-    if (!owner || !name) return []
-    return [
-      {
-        queryKey: countsQueryOpts.queryKey,
-        signalKeys: [githubRevalidationSignalKeys.repo({ owner, repo: name })],
-      },
-    ]
-  }, [repo, countsQueryOpts.queryKey])
-  useGitHubSignalStream(navSignalTargets)
+  useGitHubSignalStream(
+    useRepoSignalTargets(repo?.fullName, [countsQueryOpts.queryKey]),
+  )
 
   // Only show blocked + near misses in badge (actionable items)
   const eventsBadge = countsQuery.data
