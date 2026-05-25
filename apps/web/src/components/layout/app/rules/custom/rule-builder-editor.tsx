@@ -19,122 +19,23 @@ import "@xyflow/react/dist/style.css"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useTRPC } from "#/integrations/trpc/react"
 import { nodeTypes, nodeColors } from "#/components/layout/app/automations/node-types"
+import {
+  rulePaletteGroups,
+  type PaletteItem,
+} from "#/components/layout/app/rules/custom/rule-palette"
 import { onRuleMutation } from "#/lib/workflow/events"
 import { buildChangeSummary, type EditorSnapshot } from "#/lib/workflow/pending-changes"
 import { PendingChangesToolbar } from "#/components/layout/app/automations/pending-changes-toolbar"
+import { RulePalettePanel } from "#/components/layout/app/rules/custom/rule-palette-panel"
 import {
-  ToolboxSearchLoupeIcon13,
-  DragHandleDotsIcon8,
-} from "@tripwire/ui/icons/app-chrome-icons"
+  RuleImpactPreview,
+  type SimulationResult,
+} from "#/components/layout/app/rules/custom/rule-impact-preview"
 import type {
   CustomRuleAction,
   CustomRuleDefinition,
   CustomRuleScopeOverride,
 } from "@tripwire/db"
-
-interface PaletteItem {
-  type: string
-  label: string
-  sublabel: string
-  color: string
-  data: Record<string, unknown>
-}
-
-const rulePaletteGroups: { title: string; items: PaletteItem[] }[] = [
-  {
-    title: "Conditions",
-    items: [
-      {
-        type: "condition",
-        label: "Signal Condition",
-        sublabel: "Check any signal",
-        color: nodeColors.condition,
-        data: { signalMode: true, signal: "", operator: "", value: "" },
-      },
-    ],
-  },
-  {
-    title: "Logic Gates",
-    items: [
-      {
-        type: "logic",
-        label: "AND",
-        sublabel: "All inputs must pass",
-        color: nodeColors.logic,
-        data: { gate: "AND" },
-      },
-      {
-        type: "logic",
-        label: "OR",
-        sublabel: "Any input can pass",
-        color: nodeColors.logic,
-        data: { gate: "OR" },
-      },
-      {
-        type: "logic",
-        label: "NOT",
-        sublabel: "Invert the result",
-        color: nodeColors.logic,
-        data: { gate: "NOT" },
-      },
-    ],
-  },
-  {
-    title: "Transform",
-    items: [
-      {
-        type: "transform",
-        label: "Fetch GitHub User",
-        sublabel: "Enrich with profile data",
-        color: nodeColors.transform,
-        data: { transform: "fetch_github_user" },
-      },
-      {
-        type: "transform",
-        label: "Compute Score",
-        sublabel: "Calculate contributor score",
-        color: nodeColors.transform,
-        data: { transform: "compute_score" },
-      },
-      {
-        type: "transform",
-        label: "Fetch PR Files",
-        sublabel: "Get changed file list",
-        color: nodeColors.transform,
-        data: { transform: "fetch_pr_files" },
-      },
-      {
-        type: "transform",
-        label: "Scan History",
-        sublabel: "Check repo history for user",
-        color: nodeColors.transform,
-        data: { transform: "scan_history" },
-      },
-      {
-        type: "transform",
-        label: "Detect Language",
-        sublabel: "Analyze content language",
-        color: nodeColors.transform,
-        data: { transform: "detect_language" },
-      },
-    ],
-  },
-]
-
-interface SimulationResult {
-  totalContributors: number
-  wouldBlock: number
-  wouldPass: number
-  wouldNearMiss: number
-  blockPercentage: number
-  contributors: Array<{
-    username: string
-    avatarUrl: string | null
-    passed: boolean
-    nearMiss: boolean
-    detail: string
-  }>
-}
 
 interface RuleBuilderEditorProps {
   repoId: string
@@ -482,48 +383,12 @@ export function RuleBuilderEditor({
 
   return (
     <div className="flex h-full w-full">
-      {/* Left palette */}
-      <div className="flex w-[220px] shrink-0 flex-col border-r border-tw-border bg-tw-surface">
-        <div className="shrink-0 border-b border-tw-border p-2">
-          <div className="flex h-8 items-center gap-2 rounded-[10px] bg-tw-card px-2.5">
-            <ToolboxSearchLoupeIcon13 />
-            <input
-              type="text"
-              placeholder="Search nodes..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="flex-1 bg-transparent text-[13px] text-white outline-none placeholder:text-[#6E6E6E]"
-            />
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-auto p-1.5">
-          {filtered.map((group) => (
-            <div key={group.title} className="mb-3">
-              <div className="mb-1.5 px-2 text-[11px] font-medium tracking-[0.08em] text-tw-text-tertiary uppercase">
-                {group.title}
-              </div>
-              <div className="flex flex-col gap-px rounded-[10px] bg-tw-card p-1">
-                {group.items.map((item) => (
-                  <div
-                    key={`${item.type}-${item.label}`}
-                    draggable
-                    onDragStart={(e) => onDragStart(e, item)}
-                    className="flex cursor-grab items-center gap-2.5 rounded-lg px-2.5 py-2 transition-colors hover:bg-tw-hover active:cursor-grabbing"
-                  >
-                    <span className="shrink-0 text-tw-text-muted opacity-60">
-                      <DragHandleDotsIcon8 />
-                    </span>
-                    <span className="truncate text-[12px] leading-tight text-tw-text-primary">
-                      {item.label}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      <RulePalettePanel
+        search={search}
+        setSearch={setSearch}
+        groups={filtered}
+        onDragStart={onDragStart}
+      />
 
       {/* Canvas */}
       <div className="relative flex-1" ref={reactFlowWrapper}>
@@ -696,108 +561,12 @@ export function RuleBuilderEditor({
           </div>
         </div>
 
-        <div className="flex flex-col gap-2 border-t border-tw-border px-3 py-2.5">
-          <div className="text-[11px] font-medium tracking-[0.08em] text-tw-text-tertiary uppercase">
-            Impact Preview
-          </div>
-          <Button
-            variant="ghost"
-            type="button"
-            onClick={handleSimulate}
-            disabled={simulateRule.isPending || nodes.length === 0}
-            className="flex h-8 w-full items-center justify-center gap-1.5 rounded-[10px] bg-[#363639] text-[13px] font-medium text-tw-text-primary transition-colors hover:bg-[#404044] disabled:opacity-50"
-          >
-            {simulateRule.isPending ? "Simulating..." : "Run Simulation"}
-          </Button>
-
-          {simResult && (
-            <div className="mt-1 flex flex-col gap-2">
-              <div className="grid grid-cols-3 gap-1.5">
-                <div className="rounded-md bg-tw-card px-2 py-1.5 text-center">
-                  <div className="text-[12px] font-medium text-tw-text-primary tabular-nums">
-                    {simResult.totalContributors}
-                  </div>
-                  <div className="text-[10px] text-tw-text-tertiary">Total</div>
-                </div>
-                <div className="rounded-md bg-tw-card px-2 py-1.5 text-center">
-                  <div className="text-[12px] font-medium text-tw-error tabular-nums">
-                    {simResult.wouldBlock}
-                  </div>
-                  <div className="text-[10px] text-tw-text-tertiary">Block</div>
-                </div>
-                <div className="rounded-md bg-tw-card px-2 py-1.5 text-center">
-                  <div className="text-[12px] font-medium text-tw-success tabular-nums">
-                    {simResult.wouldPass}
-                  </div>
-                  <div className="text-[10px] text-tw-text-tertiary">Pass</div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <div className="h-2 flex-1 overflow-hidden rounded-full bg-tw-card">
-                  <div
-                    className={`h-full rounded-full transition-all ${
-                      simResult.blockPercentage > 50
-                        ? "bg-tw-error"
-                        : simResult.blockPercentage > 20
-                          ? "bg-tw-warning"
-                          : "bg-tw-success"
-                    }`}
-                    style={{
-                      width: `${simResult.blockPercentage}%`,
-                    }}
-                  />
-                </div>
-                <span className="text-[11px] text-tw-text-secondary tabular-nums">
-                  {simResult.blockPercentage}% blocked
-                </span>
-              </div>
-
-              {simResult.blockPercentage > 50 && (
-                <p className="m-0 text-[11px] text-tw-warning">
-                  This rule would block more than half of recent contributors.
-                </p>
-              )}
-
-              {simResult.contributors.length > 0 && (
-                <div className="flex max-h-[200px] flex-col gap-0.5 overflow-auto">
-                  {simResult.contributors.map((c) => (
-                    <div
-                      key={c.username}
-                      className="flex items-center gap-2 rounded-lg bg-tw-inner px-2 py-1.5"
-                    >
-                      {c.avatarUrl && (
-                        <img
-                          src={c.avatarUrl}
-                          alt=""
-                          className="size-5 rounded-full"
-                        />
-                      )}
-                      <span className="flex-1 truncate text-[12px] text-tw-text-secondary">
-                        {c.username}
-                      </span>
-                      <span
-                        className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${
-                          c.passed
-                            ? c.nearMiss
-                              ? "bg-tw-warning/10 text-tw-warning"
-                              : "bg-tw-success/10 text-tw-success"
-                            : "bg-tw-error/10 text-tw-error"
-                        }`}
-                      >
-                        {c.passed
-                          ? c.nearMiss
-                            ? "Near miss"
-                            : "Pass"
-                          : "Block"}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+        <RuleImpactPreview
+          simResult={simResult}
+          isSimulating={simulateRule.isPending}
+          canSimulate={nodes.length > 0}
+          onSimulate={handleSimulate}
+        />
 
         {saveError && (
           <div className="px-3">

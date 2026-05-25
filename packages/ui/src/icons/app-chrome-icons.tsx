@@ -1,4 +1,5 @@
 import type * as React from "react"
+import { cn } from "../utils"
 
 /** 14×14 plus for toolbar buttons (stroke via currentColor) */
 export function PlusStrokeIcon14({
@@ -8,11 +9,9 @@ export function PlusStrokeIcon14({
 }): React.ReactElement {
   return (
     <svg
-      width="14"
-      height="14"
       viewBox="0 0 14 14"
       fill="none"
-      className={className}
+      className={cn("size-3.5 shrink-0", className)}
     >
       <path
         d="M7 3v8M3 7h8"
@@ -222,11 +221,9 @@ export function StrokeXIcon14({
 }): React.ReactElement {
   return (
     <svg
-      width="14"
-      height="14"
       viewBox="0 0 14 14"
       fill="none"
-      className={className}
+      className={cn("size-3.5 shrink-0", className)}
       aria-hidden
     >
       <path
@@ -246,11 +243,9 @@ export function StrokeXIcon10Muted({
 }): React.ReactElement {
   return (
     <svg
-      width="10"
-      height="10"
       viewBox="0 0 10 10"
       fill="none"
-      className={className ?? "text-[#9F9FA9]"}
+      className={cn("size-2.5 shrink-0 text-[#9F9FA9]", className)}
       aria-hidden
     >
       <path
@@ -270,11 +265,9 @@ export function ChatBubbleOutlineIcon12({
 }): React.ReactElement {
   return (
     <svg
-      width="12"
-      height="12"
       viewBox="0 0 12 12"
       fill="none"
-      className={className}
+      className={cn("size-3 shrink-0", className)}
       aria-hidden
     >
       <path

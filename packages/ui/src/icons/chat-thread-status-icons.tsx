@@ -1,20 +1,30 @@
 import type * as React from "react"
+import { cn } from "../utils"
 
-export function QuotaCreditsLockIcon20(): React.ReactElement {
+export function QuotaCreditsLockIcon20({
+  className,
+}: {
+  className?: string
+}): React.ReactElement {
   return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
+    <svg
+      viewBox="0 0 20 20"
+      fill="none"
+      className={cn("size-5 shrink-0", className)}
+      aria-hidden
+    >
       <rect
         x="4"
         y="9"
         width="12"
         height="9"
         rx="1.5"
-        stroke="#9F9FA9"
+        stroke="currentColor"
         strokeWidth="1.5"
       />
       <path
         d="M7 9V6a3 3 0 1 1 6 0v3"
-        stroke="#9F9FA9"
+        stroke="currentColor"
         strokeWidth="1.5"
         strokeLinecap="round"
       />

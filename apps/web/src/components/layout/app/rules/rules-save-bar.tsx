@@ -234,7 +234,7 @@ export function RulesSaveBar({
                           {changes.length === 1 ? "" : "s"} not saved
                         </span>
                         <ChevronDown
-                          className={`transition-transform duration-200 ${isDropdownOpen ? "rotate-180" : ""}`}
+                          className={`text-[#787878] transition-transform duration-200 ${isDropdownOpen ? "rotate-180" : ""}`}
                         />
                       </Button>
 

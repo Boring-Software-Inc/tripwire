@@ -90,7 +90,7 @@ export function Sidebar() {
             <span className="min-w-0 flex-1 truncate text-left text-sm font-medium text-[#E6E6E6]">
               {orgName}
             </span>
-            <ChevronDown />
+            <ChevronDown className="text-[#787878]" />
           </Button>
           {switcherOpen && orgs.length > 1 && (
             <div className="absolute top-full right-0 left-0 z-50 mt-1 rounded-lg border border-[#353434] bg-[#2a2a2a] py-1 shadow-lg">
@@ -130,7 +130,7 @@ export function Sidebar() {
                 onClick={close}
                 className="mx-0.5 flex h-[30px] w-full items-center gap-2 rounded-lg px-2 no-underline"
               >
-                <Icon />
+                <Icon className="text-[#939393]" />
                 <span className="truncate text-base font-medium text-[#CDCDCD]">
                   {item.label}
                 </span>
@@ -159,7 +159,7 @@ export function Sidebar() {
                     isActive ? "bg-tw-card" : ""
                   }`}
                 >
-                  <Icon />
+                  <Icon className="text-[#939393]" />
                   <span className="truncate text-base font-medium text-[#CDCDCD]">
                     {item.label}
                   </span>

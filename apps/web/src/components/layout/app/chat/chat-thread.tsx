@@ -135,7 +135,7 @@ function QuotaExhaustedState() {
   return (
     <div className="flex flex-col items-center justify-center py-8 text-center">
       <div className="mb-3 flex size-12 items-center justify-center rounded-full bg-[#FAFAFA08]">
-        <QuotaCreditsLockIcon20 />
+        <QuotaCreditsLockIcon20 className="text-[#9F9FA9]" />
       </div>
       <p className="mb-1 text-[14px] text-tw-text-secondary">Out of credits</p>
       <p className="max-w-[220px] text-[12px] text-tw-text-muted">
