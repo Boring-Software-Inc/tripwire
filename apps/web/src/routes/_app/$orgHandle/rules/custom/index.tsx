@@ -3,12 +3,12 @@ import {
   CustomRulesHubPage,
   CustomRulesHubPageSkeleton,
 } from "#/components/layout/app/rules/custom/custom-rules-hub-page"
-import { buildSeo, formatPageTitle, PRIVATE_ROUTE_HEADERS } from "#/lib/seo"
+import { buildSeo, formatPageTitle, privateHeaders } from "#/lib/seo"
 
 export const Route = createFileRoute("/_app/$orgHandle/rules/custom/")({
   component: CustomRulesHubPage,
   pendingComponent: CustomRulesHubPageSkeleton,
-  headers: () => PRIVATE_ROUTE_HEADERS,
+  headers: () => privateHeaders,
   head: ({ match }) =>
     buildSeo({
       path: match.pathname,

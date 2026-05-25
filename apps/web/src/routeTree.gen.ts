@@ -25,6 +25,7 @@ import { Route as AppSearchRouteImport } from './routes/_app/search'
 import { Route as AppOrgHandleRouteImport } from './routes/_app/$orgHandle'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotwellKnownChar93OauthAuthorizationServerRouteImport } from './routes/[.well-known]/oauth-authorization-server'
+import { Route as AppEventsIndexRouteImport } from './routes/_app/events/index'
 import { Route as AdminAdminIndexRouteImport } from './routes/_admin/admin/index'
 import { Route as RequestOwnerRepoRouteImport } from './routes/request.$owner.$repo'
 import { Route as OnboardingStep4RouteImport } from './routes/onboarding/step.4'
@@ -155,6 +156,11 @@ const Char91DotwellKnownChar93OauthAuthorizationServerRoute =
     path: '/.well-known/oauth-authorization-server',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AppEventsIndexRoute = AppEventsIndexRouteImport.update({
+  id: '/events/',
+  path: '/events/',
+  getParentRoute: () => AppRoute,
+} as any)
 const AdminAdminIndexRoute = AdminAdminIndexRouteImport.update({
   id: '/admin/',
   path: '/admin/',
@@ -459,6 +465,7 @@ export interface FileRoutesByFullPath {
   '/onboarding/step/4': typeof OnboardingStep4Route
   '/request/$owner/$repo': typeof RequestOwnerRepoRoute
   '/admin/': typeof AdminAdminIndexRoute
+  '/events/': typeof AppEventsIndexRoute
   '/admin/research/$runId': typeof AdminAdminResearchRunIdRoute
   '/admin/research/new': typeof AdminAdminResearchNewRoute
   '/$orgHandle/automations/$automationId': typeof AppOrgHandleAutomationsAutomationIdRoute
@@ -523,6 +530,7 @@ export interface FileRoutesByTo {
   '/onboarding/step/4': typeof OnboardingStep4Route
   '/request/$owner/$repo': typeof RequestOwnerRepoRoute
   '/admin': typeof AdminAdminIndexRoute
+  '/events': typeof AppEventsIndexRoute
   '/admin/research/$runId': typeof AdminAdminResearchRunIdRoute
   '/admin/research/new': typeof AdminAdminResearchNewRoute
   '/$orgHandle/automations/$automationId': typeof AppOrgHandleAutomationsAutomationIdRoute
@@ -591,6 +599,7 @@ export interface FileRoutesById {
   '/onboarding/step/4': typeof OnboardingStep4Route
   '/request/$owner/$repo': typeof RequestOwnerRepoRoute
   '/_admin/admin/': typeof AdminAdminIndexRoute
+  '/_app/events/': typeof AppEventsIndexRoute
   '/_admin/admin/research/$runId': typeof AdminAdminResearchRunIdRoute
   '/_admin/admin/research/new': typeof AdminAdminResearchNewRoute
   '/_app/$orgHandle/automations/$automationId': typeof AppOrgHandleAutomationsAutomationIdRoute
@@ -658,6 +667,7 @@ export interface FileRouteTypes {
     | '/onboarding/step/4'
     | '/request/$owner/$repo'
     | '/admin/'
+    | '/events/'
     | '/admin/research/$runId'
     | '/admin/research/new'
     | '/$orgHandle/automations/$automationId'
@@ -722,6 +732,7 @@ export interface FileRouteTypes {
     | '/onboarding/step/4'
     | '/request/$owner/$repo'
     | '/admin'
+    | '/events'
     | '/admin/research/$runId'
     | '/admin/research/new'
     | '/$orgHandle/automations/$automationId'
@@ -789,6 +800,7 @@ export interface FileRouteTypes {
     | '/onboarding/step/4'
     | '/request/$owner/$repo'
     | '/_admin/admin/'
+    | '/_app/events/'
     | '/_admin/admin/research/$runId'
     | '/_admin/admin/research/new'
     | '/_app/$orgHandle/automations/$automationId'
@@ -952,6 +964,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/.well-known/oauth-authorization-server'
       preLoaderRoute: typeof Char91DotwellKnownChar93OauthAuthorizationServerRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_app/events/': {
+      id: '/_app/events/'
+      path: '/events'
+      fullPath: '/events/'
+      preLoaderRoute: typeof AppEventsIndexRouteImport
+      parentRoute: typeof AppRoute
     }
     '/_admin/admin/': {
       id: '/_admin/admin/'
@@ -1435,6 +1454,7 @@ interface AppRouteChildren {
   AppSettingsRoute: typeof AppSettingsRouteWithChildren
   AppChatChatIdRoute: typeof AppChatChatIdRoute
   AppUsersUsernameRoute: typeof AppUsersUsernameRoute
+  AppEventsIndexRoute: typeof AppEventsIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -1443,6 +1463,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppSettingsRoute: AppSettingsRouteWithChildren,
   AppChatChatIdRoute: AppChatChatIdRoute,
   AppUsersUsernameRoute: AppUsersUsernameRoute,
+  AppEventsIndexRoute: AppEventsIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

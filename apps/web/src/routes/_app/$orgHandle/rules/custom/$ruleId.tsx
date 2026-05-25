@@ -3,12 +3,12 @@ import {
   RuleBuilderPage,
   RuleBuilderPageSkeleton,
 } from "#/components/layout/app/rules/custom/rule-builder-page"
-import { buildSeo, formatPageTitle, PRIVATE_ROUTE_HEADERS } from "#/lib/seo"
+import { buildSeo, formatPageTitle, privateHeaders } from "#/lib/seo"
 
 export const Route = createFileRoute("/_app/$orgHandle/rules/custom/$ruleId")({
   component: RuleBuilderPage,
   pendingComponent: RuleBuilderPageSkeleton,
-  headers: () => PRIVATE_ROUTE_HEADERS,
+  headers: () => privateHeaders,
   head: ({ match, params }) =>
     buildSeo({
       path: match.pathname,

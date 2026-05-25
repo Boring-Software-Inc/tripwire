@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { OrgMembersPage } from "#/components/layout/settings/org/members-page"
-import { buildSeo, formatPageTitle, PRIVATE_ROUTE_HEADERS } from "#/lib/seo"
+import { buildSeo, formatPageTitle, privateHeaders } from "#/lib/seo"
 
 export const Route = createFileRoute("/_app/$orgHandle/settings/members")({
   component: OrgMembersPage,
-  headers: () => PRIVATE_ROUTE_HEADERS,
+  headers: () => privateHeaders,
   head: ({ match }) =>
     buildSeo({
       path: match.pathname,

@@ -5,11 +5,11 @@ import { authClient } from "@tripwire/auth/client"
 import { Button } from "@tripwire/ui/button"
 import { TripwireSparkIcon } from "@tripwire/ui/icons/nav-icons"
 import { OauthConsentCheckRingIcon20 } from "@tripwire/ui/icons/oauth-consent-check-ring-icon"
-import { buildSeo, formatPageTitle, PRIVATE_ROUTE_HEADERS } from "#/lib/seo"
+import { buildSeo, formatPageTitle, privateHeaders } from "#/lib/seo"
 
 export const Route = createFileRoute("/oauth/consent")({
   component: ConsentPage,
-  headers: () => PRIVATE_ROUTE_HEADERS,
+  headers: () => privateHeaders,
   head: ({ match }) =>
     buildSeo({
       path: match.pathname,
