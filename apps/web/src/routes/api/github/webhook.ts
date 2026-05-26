@@ -265,6 +265,7 @@ async function handleRepoEvent(
             githubRef: `#${pr.number}`,
             refType: "pr",
             prNumber: pr.number,
+            requirementValidation: bountyHit.requirementValidation,
             installationId: ctx.installationId,
             repoFullName: ctx.repoFullName,
           })

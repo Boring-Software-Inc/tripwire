@@ -30,6 +30,10 @@ import {
   githubApi,
 } from "@tripwire/github"
 import { logEvent } from "./events"
+import {
+  type BountyRequirementValidation,
+  validateBountySubmissionRequirements,
+} from "./bounty-requirements"
 
 // ─── Issue templates ──────────────────────────────────────────
 
@@ -244,7 +248,11 @@ export async function createFakeBounty(repoId: string): Promise<{
 export async function checkFakeBountyReference(
   repoId: string,
   contentText: string
-): Promise<{ bountyId: string; issueNumber: number } | null> {
+): Promise<{
+  bountyId: string
+  issueNumber: number
+  requirementValidation: BountyRequirementValidation
+} | null> {
   // Get all active fake bounties for this repo
   const bounties = await db
     .select()
@@ -268,7 +276,14 @@ export async function checkFakeBountyReference(
 
     for (const pattern of patterns) {
       if (pattern.test(contentText)) {
-        return { bountyId: bounty.id, issueNumber: bounty.githubIssueNumber }
+        return {
+          bountyId: bounty.id,
+          issueNumber: bounty.githubIssueNumber,
+          requirementValidation: validateBountySubmissionRequirements({
+            bountyBody: bounty.body,
+            submissionText: contentText,
+          }),
+        }
       }
     }
   }
@@ -288,6 +303,7 @@ export async function handleFakeBountyCatch(opts: {
   githubRef: string
   refType: "pr" | "comment" | "issue"
   prNumber?: number
+  requirementValidation?: BountyRequirementValidation
   installationId: number
   repoFullName: string
 }): Promise<void> {
@@ -345,6 +361,7 @@ export async function handleFakeBountyCatch(opts: {
       fakeBounty: true,
       bountyId: opts.bountyId,
       refType: opts.refType,
+      requirementValidation: opts.requirementValidation,
     },
   })
 }
