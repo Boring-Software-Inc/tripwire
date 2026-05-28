@@ -10,7 +10,7 @@ export const Route = createFileRoute("/_app/$orgHandle/rules/workflows")({
       path: match.pathname,
       title: formatPageTitle("Workflows"),
       description:
-        "Automations that respond to events — auto-close PRs, trigger reviews, run checks on a schedule.",
+        "Workflows that respond to events. Auto-close PRs, kick off reviews, run scheduled checks.",
       robots: "noindex",
     }),
 })

@@ -9,8 +9,7 @@ export const Route = createFileRoute("/_app/$orgHandle/settings/billing")({
     buildSeo({
       path: match.pathname,
       title: formatPageTitle("Billing"),
-      description:
-        "Manage your Tripwire subscription, invoices, and usage limits.",
+      description: "Subscription, invoices, and usage limits.",
       robots: "noindex",
     }),
 })

@@ -14,7 +14,7 @@ export const Route = createFileRoute("/_app/$orgHandle/visibility")({
       path: match.pathname,
       title: formatPageTitle("Visibility"),
       description:
-        "Contributors, reputation scores, and whitelist controls for your repos. Spot risky activity at a glance and pre-approve the people you trust.",
+        "Every contributor in your repos, their reputation scores, and a whitelist for people you already trust.",
       robots: "noindex",
     }),
 })

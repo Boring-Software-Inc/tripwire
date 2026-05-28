@@ -9,8 +9,7 @@ export const Route = createFileRoute("/_app/$orgHandle/rules/marketplace")({
     buildSeo({
       path: match.pathname,
       title: formatPageTitle("Rule marketplace"),
-      description:
-        "Browse and install moderation rules built by the Tripwire team and the open-source community.",
+      description: "Install rules from the Tripwire team or the community.",
       robots: "noindex",
     }),
 })

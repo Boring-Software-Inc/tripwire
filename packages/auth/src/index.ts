@@ -11,7 +11,10 @@ import * as schema from "@tripwire/db"
 import { organizations, member } from "@tripwire/db"
 import { env } from "@tripwire/env/server"
 import { eq, and, ne, count } from "drizzle-orm"
+import { createLogger } from "@tripwire/logger"
 import { deleteInstallation } from "@tripwire/github"
+
+const logger = createLogger("auth")
 
 export const auth = betterAuth({
   baseURL: env.BETTER_AUTH_URL,
@@ -85,7 +88,7 @@ export const auth = betterAuth({
             tripwireOrgs.map((org) => deleteInstallation(org.installationId))
           )
         } catch (err) {
-          console.error("[auth] Failed to uninstall GitHub apps:", err)
+          logger.error("Failed to uninstall GitHub apps", err)
         }
 
         // Delete better-auth orgs where this user is the sole owner
@@ -97,7 +100,7 @@ export const auth = betterAuth({
                 body: { organizationId: orgId },
               })
             } catch (err) {
-              console.error(`[auth] Failed to delete org ${orgId}:`, err)
+              logger.error("Failed to delete org", { orgId, err })
             }
           })
         )
@@ -232,7 +235,7 @@ export const auth = betterAuth({
               },
             })
           } catch (err) {
-            console.error("[Tripwire] Failed to auto-create org:", err)
+            logger.error("Failed to auto-create org", err)
           }
 
           // Create Autumn billing customer (idempotent)
@@ -243,7 +246,7 @@ export const auth = betterAuth({
               email: user.email,
             })
           } catch (err) {
-            console.error("[Tripwire] Failed to create Autumn customer:", err)
+            logger.error("Failed to create Autumn customer", err)
           }
         },
       },

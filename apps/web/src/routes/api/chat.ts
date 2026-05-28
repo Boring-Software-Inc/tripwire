@@ -9,7 +9,10 @@ import {
 import { createOpenRouter } from "@openrouter/ai-sdk-provider"
 import { useRequest as getNitroRequest } from "nitro/context"
 import type { RequestLogger } from "evlog"
+import { createLogger } from "@tripwire/logger"
 import { createChatTools, tripwireTools } from "@tripwire/tools"
+
+const logger = createLogger("chat")
 import {
   logCreditUsageError,
   trackCreditUsage,
@@ -17,13 +20,14 @@ import {
 import { buildSystemPrompt } from "@tripwire/ai"
 import { memoryProvider } from "@tripwire/ai/memory"
 import { createTripwireAgent } from "@tripwire/ai/agent"
-import { createContext, assertRepoOwner } from "#/integrations/trpc/init"
+import { createContext } from "#/integrations/trpc/init"
 import { assertRepoBelongsToOrg } from "@tripwire/core"
 import { auth } from "@tripwire/auth"
 import { autumn } from "@tripwire/auth/autumn"
 import { db } from "@tripwire/db/client"
 import {
   conversations,
+  member,
   organizations,
   repositories,
   type ConversationStoredMessage,
@@ -136,10 +140,22 @@ export const Route = createFileRoute("/api/chat")({
         const user = ctx.user
 
         // The active org is the billing subject — Autumn charges credits
-        // to its customer (the org), not to the signed-in user. Without
-        // an active org we have no Autumn customer to check against.
+        // to its customer (the org), not to the signed-in user. The
+        // session row carries `activeOrganizationId` once Better Auth's
+        // `setActive` has run, but new sessions and users who haven't
+        // switched orgs yet have it null. Fall back to the user's first
+        // org membership so the chat works on first sign-in, before the
+        // client's reconciliation effect propagates.
         const session = await auth.api.getSession({ headers: request.headers })
-        const activeOrgId = session?.session?.activeOrganizationId ?? null
+        let activeOrgId = session?.session?.activeOrganizationId ?? null
+        if (!activeOrgId) {
+          const [firstMembership] = await db
+            .select({ organizationId: member.organizationId })
+            .from(member)
+            .where(eq(member.userId, user.id))
+            .limit(1)
+          activeOrgId = firstMembership?.organizationId ?? null
+        }
         if (!activeOrgId) {
           return jsonError(400, {
             error: "no_active_org",
@@ -153,10 +169,7 @@ export const Route = createFileRoute("/api/chat")({
             quota = await checkQuota(activeOrgId)
           } catch (checkErr) {
             // Autumn down/misconfigured: fail closed rather than grant free credits.
-            console.error(
-              "[Tripwire] Autumn check failed, denying request:",
-              checkErr
-            )
+            logger.error("Autumn check failed, denying request", checkErr)
             return jsonError(429, {
               error: "quota_check_failed",
               code: "quota_check_failed",
@@ -207,6 +220,7 @@ export const Route = createFileRoute("/api/chat")({
             const [existing] = await db
               .select({
                 userId: conversations.userId,
+                organizationId: conversations.organizationId,
                 repoId: conversations.repoId,
                 messages: conversations.messages,
               })
@@ -214,14 +228,25 @@ export const Route = createFileRoute("/api/chat")({
               .where(eq(conversations.id, conversationId))
               .limit(1)
             existingConversation = existing
-            if (existing && existing.userId !== user.id) {
+            if (
+              existing &&
+              (existing.userId !== user.id ||
+                existing.organizationId !== activeOrgId)
+            ) {
               return jsonError(403, { error: "conversation_not_accessible" })
             }
           }
 
+          // Client-sent repoId wins. The conversation row's stored
+          // repoId is informational (last-used) and only a fallback
+          // when the client didn't send one — e.g. a stale tab where
+          // workspace context hasn't hydrated yet. This lets the agent
+          // track the user's CURRENT workspace repo across turns, so
+          // mid-chat repo switches get reflected in the system prompt
+          // and tool calls.
           const resolvedRepoId =
-            existingConversation?.repoId ??
             (repoId as string | undefined) ??
+            existingConversation?.repoId ??
             (await resolveRepoIdForUser(user.id))
 
           if (!resolvedRepoId) {
@@ -231,15 +256,6 @@ export const Route = createFileRoute("/api/chat")({
             })
           }
 
-          try {
-            await assertRepoOwner(user.id, resolvedRepoId)
-          } catch {
-            return jsonError(403, { error: "repo_not_accessible" })
-          }
-          // Defense in depth: even though the user owns the repo, ensure
-          // it belongs to the org the chat is scoped to. Without this, a
-          // user who's a member of A and B could attach a repoId from B
-          // to a chat created in A.
           try {
             await assertRepoBelongsToOrg(resolvedRepoId, activeOrgId)
           } catch {
@@ -261,11 +277,15 @@ export const Route = createFileRoute("/api/chat")({
             currentPage: currentPage ?? "/home",
           })
 
+          // Per-chat scope (not "user") because chatId is already
+          // org-scoped via the per-org localStorage slot in
+          // providers/chat-context.tsx. "user" scope would leak working
+          // memory across orgs for the same signed-in user.
           const wm = await memoryProvider
             .getWorkingMemory({
               userId: user.id,
               chatId: conversationId,
-              scope: "user",
+              scope: "chat",
             })
             .catch(() => null)
           if (wm?.content) {
@@ -308,11 +328,12 @@ export const Route = createFileRoute("/api/chat")({
               .where(
                 and(
                   eq(conversations.id, conversationId),
-                  eq(conversations.userId, user.id)
+                  eq(conversations.userId, user.id),
+                  eq(conversations.organizationId, activeOrgId)
                 )
               )
               .catch((err) => {
-                console.error("[chat] Failed to persist approval cleanup:", err)
+                logger.error("Failed to persist approval cleanup", err)
               })
           }
 
@@ -342,7 +363,7 @@ export const Route = createFileRoute("/api/chat")({
                 return `  [${i}] ${m.role}: ${parts}`
               })
               .join("\n")
-            console.log(`[Chat] ${messages.length} messages:\n${summary}`)
+            logger.debug("messages dump", { count: messages.length, summary })
           }
 
           const openrouter = createOpenRouter({
@@ -409,10 +430,9 @@ export const Route = createFileRoute("/api/chat")({
                 err?.error?.message ??
                 err?.message ??
                 "Unknown"
-              console.error(
-                "[Chat API stream]",
-                typeof raw === "string" ? raw : JSON.stringify(raw)
-              )
+              logger.error("stream error", {
+                raw: typeof raw === "string" ? raw : JSON.stringify(raw),
+              })
             },
           })
 
@@ -453,7 +473,7 @@ export const Route = createFileRoute("/api/chat")({
                   ),
                 })
                 .catch((err) => {
-                  console.error("[chat] Failed to persist server stream:", err)
+                  logger.error("Failed to persist server stream", err)
                 })
 
               const persistMemory = Promise.all(
@@ -475,10 +495,7 @@ export const Route = createFileRoute("/api/chat")({
                       timestamp: new Date(),
                     })
                     .catch((err: unknown) => {
-                      console.error(
-                        "[chat] Failed to persist memory message:",
-                        err
-                      )
+                      logger.error("Failed to persist memory message", err)
                     })
                 })
               )
@@ -489,10 +506,7 @@ export const Route = createFileRoute("/api/chat")({
           })
         } catch (error: unknown) {
           const { errMsg, provider, raw } = chatApiErrorFields(error)
-          console.error(
-            `[Chat API] ${provider ? provider + ": " : ""}${errMsg}`,
-            raw ? `\n${raw}` : ""
-          )
+          logger.error("API error", { provider, errMsg, raw })
           getRequestLog()?.set({
             ai: { outcome: "error", provider, errorMessage: errMsg },
           })

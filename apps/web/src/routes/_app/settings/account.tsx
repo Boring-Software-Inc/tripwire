@@ -10,7 +10,7 @@ export const Route = createFileRoute("/_app/settings/account")({
       path: match.pathname,
       title: formatPageTitle("Account"),
       description:
-        "Manage your Tripwire profile, connected providers, active sessions, and account deletion.",
+        "Profile, sign-in providers, active sessions, and the delete button.",
       robots: "noindex",
     }),
 })

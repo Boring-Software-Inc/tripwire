@@ -15,8 +15,7 @@ export const Route = createFileRoute("/onboarding/step/2")({
     buildSeo({
       path: match.pathname,
       title: formatPageTitle("Pick your main repo"),
-      description:
-        "Choose your primary GitHub repository to start protecting with Tripwire.",
+      description: "Pick the GitHub repo you want Tripwire to protect first.",
       robots: "noindex",
     }),
 })

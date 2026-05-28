@@ -9,8 +9,7 @@ export const Route = createFileRoute("/_app/settings/developers")({
     buildSeo({
       path: match.pathname,
       title: formatPageTitle("Developers"),
-      description:
-        "API keys, webhook secrets, and integration tokens for your Tripwire account.",
+      description: "Manage your API keys and webhook secrets.",
       robots: "noindex",
     }),
 })

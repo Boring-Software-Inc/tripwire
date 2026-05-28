@@ -22,7 +22,7 @@ export const Route = createFileRoute("/_app/$orgHandle/events/$eventId")({
       path: match.pathname,
       title: formatPageTitle("Event"),
       description:
-        "Full audit trail for a single Tripwire event — the contributor, the rules that fired, and what the pipeline did.",
+        "Audit trail for one event. The contributor, the rules that fired, and what the pipeline did.",
       robots: "noindex",
     }),
 })

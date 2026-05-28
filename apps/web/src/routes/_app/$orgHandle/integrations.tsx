@@ -13,8 +13,7 @@ export const Route = createFileRoute("/_app/$orgHandle/integrations")({
     buildSeo({
       path: match.pathname,
       title: formatPageTitle("Integrations"),
-      description:
-        "Connect repositories and manage your Tripwire GitHub App integration.",
+      description: "Connect repos via the Tripwire GitHub App.",
       robots: "noindex",
     }),
 })

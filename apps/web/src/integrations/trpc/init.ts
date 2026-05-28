@@ -11,9 +11,9 @@ import { member } from "@tripwire/db"
 // the errorFormatter below surfaces it on shape.data for client consumers.
 export {
   assertOrgOwner,
-  assertRepoOwner,
-  assertEventOwner,
-  assertRequestOwner,
+  assertRepoBelongsToOrg,
+  assertEventBelongsToOrg,
+  assertRequestBelongsToOrg,
 } from "@tripwire/core"
 
 export interface TRPCContext {
@@ -125,7 +125,23 @@ const orgMiddleware = t.middleware(async ({ ctx, next }) => {
       message: "You must be logged in to perform this action",
     })
   }
-  if (!ctx.activeOrgId) {
+  // Session row carries `activeOrganizationId` once Better Auth's
+  // `setActive` has propagated. New sessions and users who haven't
+  // switched orgs yet have it null — fall back to the user's first
+  // org membership so tRPC calls work on first sign-in, before the
+  // client's reconciliation effect lands. This is the same fallback
+  // /api/chat.ts uses; both must agree or one will succeed while the
+  // other returns UNAUTHORIZED for the same user-state.
+  let activeOrgId = ctx.activeOrgId
+  if (!activeOrgId) {
+    const [firstMembership] = await db
+      .select({ organizationId: member.organizationId })
+      .from(member)
+      .where(eq(member.userId, ctx.user.id))
+      .limit(1)
+    activeOrgId = firstMembership?.organizationId ?? null
+  }
+  if (!activeOrgId) {
     throw new TRPCError({
       code: "UNAUTHORIZED",
       message: "No active organization. Pick a workspace and try again.",
@@ -135,10 +151,7 @@ const orgMiddleware = t.middleware(async ({ ctx, next }) => {
     .select({ id: member.id })
     .from(member)
     .where(
-      and(
-        eq(member.userId, ctx.user.id),
-        eq(member.organizationId, ctx.activeOrgId)
-      )
+      and(eq(member.userId, ctx.user.id), eq(member.organizationId, activeOrgId))
     )
     .limit(1)
   if (!membership) {
@@ -151,7 +164,7 @@ const orgMiddleware = t.middleware(async ({ ctx, next }) => {
     ctx: {
       ...ctx,
       user: ctx.user,
-      activeOrgId: ctx.activeOrgId,
+      activeOrgId,
     },
   })
 })

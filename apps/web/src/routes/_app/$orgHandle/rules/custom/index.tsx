@@ -14,7 +14,7 @@ export const Route = createFileRoute("/_app/$orgHandle/rules/custom/")({
       path: match.pathname,
       title: formatPageTitle("Custom rules"),
       description:
-        "Build repo-specific moderation flows with the visual rule editor. Create, simulate, then enable.",
+        "Build repo-specific moderation flows in the visual editor. Create, simulate, enable.",
       robots: "noindex",
     }),
 })

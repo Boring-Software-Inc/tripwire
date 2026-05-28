@@ -14,7 +14,7 @@ export const Route = createFileRoute("/_app/$orgHandle/automations/")({
       path: match.pathname,
       title: formatPageTitle("Automations"),
       description:
-        "Visual workflows that process contributors through rule chains, logic gates, and actions.",
+        "Visual workflows that pipe contributors through rules and actions.",
       robots: "noindex",
     }),
 })

@@ -10,7 +10,7 @@ export const Route = createFileRoute("/onboarding/step/1")({
       path: match.pathname,
       title: formatPageTitle("Welcome"),
       description:
-        "Set up Tripwire to protect your repos from bot PRs, spam issues, and takeover attempts.",
+        "Set up Tripwire to block bot PRs, spam issues, and takeover attempts.",
       robots: "noindex",
     }),
 })

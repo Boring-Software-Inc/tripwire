@@ -1,7 +1,7 @@
 import { z } from "zod"
 import type { UIMessage } from "ai"
 import { eq, and, desc } from "drizzle-orm"
-import { assertRepoOwner, orgProcedure } from "../init"
+import { assertRepoBelongsToOrg, orgProcedure } from "../init"
 import { db } from "@tripwire/db/client"
 import { conversations } from "@tripwire/db"
 import type { TRPCRouterRecord } from "@trpc/server"
@@ -262,7 +262,7 @@ export const chatsRouter = {
           if (!resolvedRepoId) {
             throw new Error("Select a repository before running this command.")
           }
-          await assertRepoOwner(ctx.user.id, resolvedRepoId)
+          await assertRepoBelongsToOrg(resolvedRepoId, ctx.activeOrgId)
         }
 
         const toolArgs = command.buildArgs(args)

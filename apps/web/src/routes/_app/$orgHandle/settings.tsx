@@ -16,8 +16,7 @@ export const Route = createFileRoute("/_app/$orgHandle/settings")({
     buildSeo({
       path: match.pathname,
       title: formatPageTitle("Organization settings"),
-      description:
-        "General, billing, and member settings for your Tripwire workspace.",
+      description: "Settings for your Tripwire workspace.",
       robots: "noindex",
     }),
   component: OrgSettingsLayout,

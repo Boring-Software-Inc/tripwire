@@ -14,7 +14,7 @@ export const Route = createFileRoute("/_app/$orgHandle/insights")({
       path: match.pathname,
       title: formatPageTitle("Insights"),
       description:
-        "Tripwire's effectiveness at a glance — total spam blocked, bot blacklist trends, and PR/issue protection over time.",
+        "Spam blocked, blacklist growth, and PR/issue protection trends over time.",
       robots: "noindex",
     }),
 })

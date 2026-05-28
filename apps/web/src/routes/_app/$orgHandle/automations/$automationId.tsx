@@ -24,7 +24,7 @@ export const Route = createFileRoute(
       path: match.pathname,
       title: formatPageTitle("Automation editor"),
       description:
-        "Build and edit Tripwire automations visually — trigger → action chains that run on every webhook.",
+        "Build and edit Tripwire automations. Trigger → action chains that fire on every webhook.",
       robots: "noindex",
     }),
 })

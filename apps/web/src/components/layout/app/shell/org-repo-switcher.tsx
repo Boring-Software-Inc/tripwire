@@ -1,4 +1,5 @@
 import { useWorkspace } from "#/providers/workspace-context"
+import { useRepoSwitchGate } from "#/providers/repo-switch-gate"
 import { GithubIcon } from "@tripwire/ui/icons/github"
 import {
   Menu,
@@ -115,7 +116,8 @@ export function OrgSwitcher() {
 }
 
 export function RepoSwitcher() {
-  const { repo, repos, setRepo, isLoading } = useWorkspace()
+  const { repo, repos, isLoading } = useWorkspace()
+  const { requestRepoSwitch } = useRepoSwitchGate()
   const [open, setOpen] = useState(false)
 
   const handleOpenChange = (nextOpen: boolean) => {
@@ -154,7 +156,7 @@ export function RepoSwitcher() {
           <MenuItem
             key={r.id}
             onClick={() => {
-              setRepo(r)
+              requestRepoSwitch(r)
             }}
             className="flex items-center justify-between"
           >

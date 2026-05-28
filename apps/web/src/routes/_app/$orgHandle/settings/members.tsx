@@ -9,8 +9,7 @@ export const Route = createFileRoute("/_app/$orgHandle/settings/members")({
     buildSeo({
       path: match.pathname,
       title: formatPageTitle("Members"),
-      description:
-        "Manage organization members, roles, and invitations for your Tripwire workspace.",
+      description: "Invite people, change roles, and revoke access.",
       robots: "noindex",
     }),
 })

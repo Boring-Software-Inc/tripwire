@@ -14,7 +14,7 @@ export const Route = createFileRoute("/_app/$orgHandle/home")({
       path: match.pathname,
       title: formatPageTitle("Home"),
       description:
-        "Your tripwire dashboard — the last 48 hours of moderation activity, setup checklist, and one-shot chat composer.",
+        "The last 48 hours of moderation activity, your setup checklist, and the Tripwire chat.",
       robots: "noindex",
     }),
 })

@@ -10,7 +10,7 @@ export const Route = createFileRoute("/_app/$orgHandle/rules/installed")({
       path: match.pathname,
       title: formatPageTitle("Installed rules"),
       description:
-        "Rules currently active in this repo — toggle, configure, or uninstall any of them.",
+        "Rules currently active in this repo. Toggle, configure, or uninstall.",
       robots: "noindex",
     }),
 })

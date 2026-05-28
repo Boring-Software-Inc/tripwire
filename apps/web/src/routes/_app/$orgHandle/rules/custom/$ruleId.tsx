@@ -15,8 +15,7 @@ export const Route = createFileRoute("/_app/$orgHandle/rules/custom/$ruleId")({
       title: formatPageTitle(
         params.ruleId === "new" ? "New custom rule" : "Edit custom rule"
       ),
-      description:
-        "Build or edit a repo-specific moderation rule with the visual editor.",
+      description: "Edit a repo-specific moderation rule in the visual editor.",
       robots: "noindex",
     }),
 })

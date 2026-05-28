@@ -9,7 +9,7 @@ export const Route = createFileRoute("/")({
       path: match.pathname,
       title: "Tripwire — catch slop before it catches up with you",
       description:
-        "Open source GitHub moderation for spam PRs, bot accounts, and AI-generated contributions. Rules that run on every webhook so maintainers don't have to.",
+        "Open-source GitHub moderation for spam PRs, bot accounts, and AI-generated contributions. Rules run on every webhook so you don't have to babysit your repos.",
       type: "website",
     }),
 })

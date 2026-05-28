@@ -19,7 +19,7 @@ export const Route = createFileRoute("/_app/search")({
     buildSeo({
       path: match.pathname,
       title: formatPageTitle("Search"),
-      description: "Search across your Tripwire workspace.",
+      description: "Find chats, events, and contributors fast.",
       robots: "noindex",
     }),
 })

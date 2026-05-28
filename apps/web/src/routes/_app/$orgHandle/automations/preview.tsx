@@ -12,8 +12,7 @@ export const Route = createFileRoute("/_app/$orgHandle/automations/preview")({
     buildSeo({
       path: match.pathname,
       title: formatPageTitle("Automation preview"),
-      description:
-        "Preview a Tripwire automation template before saving it to your workspace.",
+      description: "Preview an automation template before saving it.",
       robots: "noindex",
     }),
 })

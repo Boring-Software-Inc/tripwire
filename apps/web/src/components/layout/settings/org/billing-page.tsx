@@ -1,7 +1,10 @@
 import { useCustomer } from "autumn-js/react"
 import { Button } from "@tripwire/ui/button"
 import { PlusStrokeIcon14 } from "@tripwire/ui/icons/app-chrome-icons"
+import { createLogger } from "@tripwire/logger"
 import { useWorkspace } from "#/providers/workspace-context"
+
+const logger = createLogger("Billing")
 
 /**
  * Org-scoped billing page. Autumn's `useCustomer` is wired through
@@ -126,7 +129,7 @@ function UpgradeButton({ isFreePlan }: { isFreePlan: boolean }) {
     try {
       await attach({ planId: "pro" })
     } catch (err) {
-      console.error("[Billing] Upgrade failed:", err)
+      logger.error("Upgrade failed", err)
     }
   }
 
@@ -134,7 +137,7 @@ function UpgradeButton({ isFreePlan }: { isFreePlan: boolean }) {
     try {
       await openCustomerPortal()
     } catch (err) {
-      console.error("[Billing] Portal open failed:", err)
+      logger.error("Portal open failed", err)
     }
   }
 
@@ -170,7 +173,7 @@ function PaymentMethodSection({ hasStripe }: { hasStripe: boolean }) {
     try {
       await setupPayment()
     } catch (err) {
-      console.error("[Billing] Setup payment failed:", err)
+      logger.error("Setup payment failed", err)
     }
   }
 
@@ -178,7 +181,7 @@ function PaymentMethodSection({ hasStripe }: { hasStripe: boolean }) {
     try {
       await openCustomerPortal()
     } catch (err) {
-      console.error("[Billing] Portal open failed:", err)
+      logger.error("Portal open failed", err)
     }
   }
 

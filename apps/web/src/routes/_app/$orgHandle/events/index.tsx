@@ -14,7 +14,7 @@ export const Route = createFileRoute("/_app/$orgHandle/events/")({
       path: match.pathname,
       title: formatPageTitle("Events"),
       description:
-        "Real-time activity feed for your repos — every webhook, every rule eval, every contributor action.",
+        "Live activity feed. Every webhook, every rule eval, every contributor action.",
       robots: "noindex",
     }),
 })
