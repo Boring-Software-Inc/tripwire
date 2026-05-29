@@ -29,6 +29,11 @@ import {
   closePullRequest,
   githubApi,
 } from "@tripwire/github"
+import {
+  type BountyRequirementValidation,
+  formatBountyRequirementValidation,
+  validateBountySubmissionRequirements,
+} from "./bounty-requirements"
 import { logEvent } from "./events"
 
 // ─── Issue templates ──────────────────────────────────────────
@@ -244,7 +249,11 @@ export async function createFakeBounty(repoId: string): Promise<{
 export async function checkFakeBountyReference(
   repoId: string,
   contentText: string
-): Promise<{ bountyId: string; issueNumber: number } | null> {
+): Promise<{
+  bountyId: string
+  issueNumber: number
+  requirementValidation: BountyRequirementValidation
+} | null> {
   // Get all active fake bounties for this repo
   const bounties = await db
     .select()
@@ -268,7 +277,14 @@ export async function checkFakeBountyReference(
 
     for (const pattern of patterns) {
       if (pattern.test(contentText)) {
-        return { bountyId: bounty.id, issueNumber: bounty.githubIssueNumber }
+        return {
+          bountyId: bounty.id,
+          issueNumber: bounty.githubIssueNumber,
+          requirementValidation: validateBountySubmissionRequirements({
+            bountyBody: bounty.body,
+            submissionText: contentText,
+          }),
+        }
       }
     }
   }
@@ -288,6 +304,7 @@ export async function handleFakeBountyCatch(opts: {
   githubRef: string
   refType: "pr" | "comment" | "issue"
   prNumber?: number
+  requirementValidation?: BountyRequirementValidation
   installationId: number
   repoFullName: string
 }): Promise<void> {
@@ -303,13 +320,13 @@ export async function handleFakeBountyCatch(opts: {
 
   // Send decline message
   if (opts.prNumber) {
-    await addComment(
-      token,
-      owner,
-      repoName,
-      opts.prNumber,
-      config.declineMessage
-    )
+    const validationMessage = opts.requirementValidation
+      ? formatBountyRequirementValidation(opts.requirementValidation)
+      : null
+    const declineMessage = validationMessage
+      ? `${config.declineMessage}\n\n${validationMessage}`
+      : config.declineMessage
+    await addComment(token, owner, repoName, opts.prNumber, declineMessage)
     // Close the PR
     await closePullRequest(token, owner, repoName, opts.prNumber)
   }
@@ -345,6 +362,7 @@ export async function handleFakeBountyCatch(opts: {
       fakeBounty: true,
       bountyId: opts.bountyId,
       refType: opts.refType,
+      requirementValidation: opts.requirementValidation,
     },
   })
 }
