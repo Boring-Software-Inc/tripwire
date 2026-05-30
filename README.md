@@ -45,7 +45,8 @@ The required vars:
 - `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` — from your GitHub OAuth App
 - `GITHUB_APP_ID` / `GITHUB_APP_PRIVATE_KEY` / `GITHUB_WEBHOOK_SECRET` — from your GitHub App
 - `VITE_GITHUB_APP_SLUG` — the slug from `github.com/apps/{slug}`
-- `DATABASE_URL` — Postgres connection string
+- `DATABASE_URL` — Postgres connection string. Optional in local dev; leave
+  blank to use file-backed PGlite at `.tripwire/pglite`.
 
 Optional:
 
@@ -62,6 +63,9 @@ Push tables to db:
 ```bash
 pnpm db:push
 ```
+
+If `DATABASE_URL` is blank outside production, `pnpm db:push` and the app use
+the local PGlite database. No Docker or local Postgres service is required.
 
 Start the dev server:
 

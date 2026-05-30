@@ -41,7 +41,16 @@ export function LoginPage() {
       })
 
       if (!seedResponse.ok) {
-        throw new Error("Dev login is only available while running locally.")
+        const responseBody = (await seedResponse.json().catch(() => null)) as {
+          error?: string
+          message?: string
+        } | null
+
+        throw new Error(
+          responseBody?.error ??
+            responseBody?.message ??
+            "Dev login is only available while running locally."
+        )
       }
 
       window.location.assign("/home")

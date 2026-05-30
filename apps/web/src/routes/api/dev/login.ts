@@ -10,8 +10,17 @@ async function postDevLogin({ request }: { request: Request }) {
     return Response.json({ error: "Not found" }, { status: 404 })
   }
 
-  await ensureDevLoginUser(request.headers)
-  await seedDevWorkspace()
+  try {
+    await ensureDevLoginUser(request.headers)
+    await seedDevWorkspace()
+  } catch (error) {
+    return Response.json(
+      {
+        error: error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 }
+    )
+  }
 
   return signInDevLoginUser(request.headers)
 }
