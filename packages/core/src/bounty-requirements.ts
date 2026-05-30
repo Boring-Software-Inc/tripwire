@@ -59,6 +59,7 @@ const STOP_WORDS = new Set([
   "with",
 ])
 
+/** Converts markdown or colon-style headings into comparable lowercase labels. */
 function normalizeHeading(line: string): string {
   return line
     .replace(/^#{1,6}\s*/, "")
@@ -69,6 +70,7 @@ function normalizeHeading(line: string): string {
     .toLowerCase()
 }
 
+/** Removes list/checklist markers and normalizes requirement text spacing. */
 function normalizeCriterion(line: string): string {
   return line
     .replace(/^\s*(?:[-*+]|\d+[.)])\s*/, "")
@@ -78,6 +80,7 @@ function normalizeCriterion(line: string): string {
     .trim()
 }
 
+/** Extracts meaningful matching terms from requirement or submission text. */
 function criterionTerms(text: string): string[] {
   return Array.from(
     new Set(
@@ -91,10 +94,12 @@ function criterionTerms(text: string): string[] {
   )
 }
 
+/** Returns true when a line is a markdown bullet, checkbox, or numbered item. */
 function isListItem(line: string): boolean {
   return /^\s*(?:[-*+]|\d+[.)])\s+(?:\[[ xX]\]\s+)?\S/.test(line)
 }
 
+/** Returns true when a line looks like a markdown, bold, or colon heading. */
 function isHeading(line: string): boolean {
   return (
     /^#{1,6}\s+\S/.test(line) ||
@@ -103,10 +108,12 @@ function isHeading(line: string): boolean {
   )
 }
 
+/** Checks whether a heading identifies a section that can contain criteria. */
 function looksLikeRequirementHeading(line: string): boolean {
   return REQUIREMENT_HEADINGS.has(normalizeHeading(line))
 }
 
+/** Builds a stable criterion object from normalized section text. */
 function makeCriterion(
   sourceHeading: string,
   text: string,
@@ -121,7 +128,12 @@ function makeCriterion(
   }
 }
 
-/** Extracts checklist-style criteria from requirement-like sections. */
+/**
+ * Extracts checklist-style criteria from requirement-like sections.
+ *
+ * @param body - Markdown body of the bounty issue or task.
+ * @returns Requirement criteria parsed from bullets, checkboxes, and paragraphs.
+ */
 export function extractBountyRequirementCriteria(
   body: string
 ): BountyRequirementCriterion[] {
@@ -165,6 +177,7 @@ export function extractBountyRequirementCriteria(
   return criteria
 }
 
+/** Determines whether enough requirement terms appear in the submission text. */
 function criterionMatchesSubmission(
   criterion: BountyRequirementCriterion,
   submissionTerms: Set<string>
@@ -180,7 +193,12 @@ function criterionMatchesSubmission(
   return { criterion, matchedTerms }
 }
 
-/** Validates whether a submission references all extracted bounty criteria. */
+/**
+ * Validates whether a submission references all extracted bounty criteria.
+ *
+ * @param opts - Bounty body plus PR title/body/comment text to inspect.
+ * @returns Coverage details and the missing criteria, if any.
+ */
 export function validateBountySubmissionRequirements(opts: {
   bountyBody: string
   submissionText: string
@@ -217,7 +235,12 @@ export function validateBountySubmissionRequirements(opts: {
   }
 }
 
-/** Formats missing criteria for a concise decline comment. */
+/**
+ * Formats missing criteria for a concise decline comment.
+ *
+ * @param validation - Validation result from validateBountySubmissionRequirements.
+ * @returns Human-readable message, or null when no criteria are missing.
+ */
 export function formatBountyRequirementValidation(
   validation: BountyRequirementValidation
 ): string | null {
