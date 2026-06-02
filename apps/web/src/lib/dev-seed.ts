@@ -18,6 +18,7 @@ import {
   whitelistEntries,
   workflows,
   type CustomRuleDefinition,
+  type OnboardingSetupAnswers,
   type RuleConfig,
   type WorkflowDefinition,
 } from "@tripwire/db"
@@ -30,6 +31,12 @@ const DEV_MEMBER_ID = "dev-workspace-owner"
 const DEV_INSTALLATION_ID = 93_001
 const DEV_GITHUB_ACCOUNT_ID = 93_002
 const DEV_REPO_GITHUB_ID = 93_003
+
+const SEEDED_ONBOARDING_SETUP_ANSWERS = {
+  useCases: ["ai_prs", "spam_issues"],
+  priorIncident: "Seeded local demo workspace.",
+  teamSize: "small",
+} satisfies OnboardingSetupAnswers
 
 const seededRuleConfig: RuleConfig = {
   ...DEFAULT_RULE_CONFIG,
@@ -319,11 +326,7 @@ export async function seedDevWorkspace() {
         completedStep4: true,
         mainRepoId: repo.id,
         source: "other",
-        setupAnswers: {
-          useCases: ["ai_prs", "spam_issues"],
-          priorIncident: "Seeded local demo workspace.",
-          teamSize: "small",
-        },
+        setupAnswers: SEEDED_ONBOARDING_SETUP_ANSWERS,
         gettingStartedDismissed: false,
         configuredRules: true,
         reviewedRiskAlerts: true,
@@ -339,6 +342,9 @@ export async function seedDevWorkspace() {
           completedStep3: true,
           completedStep4: true,
           mainRepoId: repo.id,
+          source: "other",
+          setupAnswers: SEEDED_ONBOARDING_SETUP_ANSWERS,
+          gettingStartedDismissed: false,
           configuredRules: true,
           reviewedRiskAlerts: true,
           vouchedSomeone: true,
@@ -440,7 +446,14 @@ export async function seedDevWorkspace() {
       .onConflictDoNothing()
 
     const seededPipelineIds = ["dev-seed-1", "dev-seed-2", "dev-seed-3"]
-    await tx.delete(events).where(inArray(events.pipelineId, seededPipelineIds))
+    await tx
+      .delete(events)
+      .where(
+        and(
+          eq(events.repoId, repo.id),
+          inArray(events.pipelineId, seededPipelineIds)
+        )
+      )
 
     await tx.insert(events).values([
       {
