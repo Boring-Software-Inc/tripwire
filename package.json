@@ -31,6 +31,11 @@
     "typescript": "^5.7.2"
   },
   "pnpm": {
+    "overrides": {
+      "@rsbuild/core": "2.0.7",
+      "@rspack/binding": "2.0.4",
+      "@rspack/core": "2.0.4"
+    },
     "onlyBuiltDependencies": [
       "esbuild",
       "lightningcss"
