@@ -12,6 +12,7 @@ import { toastManager } from "@tripwire/ui/toast"
 import { githubRevalidationSignalKeys } from "#/lib/github/revalidation"
 import { useGitHubSignalStream } from "#/lib/github/use-signal-stream"
 import { patchOptimistic } from "#/lib/use-optimistic-mutation"
+import { getEventActionLabel } from "#/lib/event-labels"
 import {
   type ContributorAction,
   flipContributorStatuses,
@@ -67,22 +68,6 @@ interface ContributorDetailDrawerProps {
   contributor: ContributorRow | null
   open: boolean
   onOpenChange: (open: boolean) => void
-}
-
-const actionLabels: Record<string, string> = {
-  pipeline_allowed: "Allowed",
-  pipeline_blocked: "Blocked",
-  pipeline_warned: "Warned",
-  pipeline_logged: "Logged",
-  rule_near_miss: "Near miss",
-  whitelist_bypass: "Whitelist bypass",
-  blacklist_blocked: "Blacklist blocked",
-  whitelist_added: "Added to whitelist",
-  whitelist_removed: "Removed from whitelist",
-  blacklist_added: "Added to blacklist",
-  blacklist_removed: "Removed from blacklist",
-  rule_config_updated: "Rule changed",
-  score_reset: "Score reset",
 }
 
 const severityDot: Record<string, string> = {
@@ -248,7 +233,7 @@ export function ContributorDetailDrawer({
                   />
                   <div className="flex min-w-0 flex-1 flex-col">
                     <span className="text-[12px] text-tw-text-primary">
-                      {actionLabels[e.action] ?? e.action}
+                      {getEventActionLabel(e.action)}
                       {e.githubRef ? (
                         <span className="ml-1.5 text-tw-text-muted">
                           · {e.githubRef}
