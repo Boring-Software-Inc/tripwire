@@ -17,6 +17,7 @@ import { useTRPC } from "#/integrations/trpc/react"
 import { useWorkspace, useWorkspacePath } from "#/providers/workspace-context"
 import { invalidateListCaches } from "#/lib/cache"
 import { isCustomRuleName, stripCustomRulePrefix } from "#/lib/custom-rules"
+import { getEventTitle } from "#/lib/event-labels"
 import { formatRelativeTime } from "#/lib/format"
 import { toastFromError } from "#/lib/toast-error"
 
@@ -365,7 +366,7 @@ function EventHero({
         className="m-0 text-[28px] leading-[36px] tracking-[-0.01em] text-tw-text-primary"
         style={{ fontFamily: "'Playfair Display', serif", fontWeight: 500 }}
       >
-        {getEventTitle(event.action || "", event.severity)}
+        {getEventTitle(event.action || "", event.severity, "Flagged activity")}
       </h1>
       <p className="m-0 max-w-[560px] text-[16px] leading-[24px] text-[#EEEEEE80]">
         {event.description || `Tripwire flagged activity from @${username}`}
@@ -766,28 +767,6 @@ function getActionedLabel(
     blacklist_blocked: "blocked this user",
   }
   return labels[action || ""] || "took action"
-}
-
-function getEventTitle(
-  action: string,
-  severity: string | null | undefined
-): string {
-  const titles: Record<string, string> = {
-    pipeline_blocked: "Content blocked",
-    pipeline_allowed: "Content allowed",
-    rule_near_miss: "Near miss warning",
-    blacklist_blocked: "Blacklisted user blocked",
-    whitelist_bypass: "Whitelist bypass",
-    bot_bypass: "Bot bypass",
-    pr_closed: "Pull request closed",
-    issue_closed: "Issue closed",
-    comment_deleted: "Comment deleted",
-  }
-  let title = titles[action] || "Flagged activity"
-  if (severity === "error") title = `Blocked — ${title.toLowerCase()}`
-  if (severity === "warning" && action !== "rule_near_miss")
-    title = `Suspected spam`
-  return title
 }
 
 function formatRuleName(ruleName: string): string {
