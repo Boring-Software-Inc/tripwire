@@ -25,6 +25,7 @@ dist-ssr
 # Tooling caches
 count.txt
 todos.json
+/.tripwire
 
 # Tool-managed dirs (not source of truth)
 /.agents
