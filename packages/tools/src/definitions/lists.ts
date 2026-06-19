@@ -8,7 +8,7 @@ import {
   organizations,
   whitelistEntries,
 } from "@tripwire/db"
-import { assertRepoOwner } from "@tripwire/core"
+import { assertRepoMember } from "@tripwire/core"
 import { logEvent } from "@tripwire/core"
 import { getInstallationToken } from "@tripwire/github"
 import { resetContributorScore } from "@tripwire/core"
@@ -78,10 +78,11 @@ const listLists = defineTool({
   name: "list_lists",
   description: "Return both the whitelist and blacklist for the current repo.",
   directInvokable: true,
+  readOnly: true,
   inputSchema: z.object({}),
   handler: async (_args, ctx) => {
     const repoId = requireRepoId(ctx)
-    await assertRepoOwner(ctx.userId, repoId)
+    await assertRepoMember(ctx.userId, repoId)
     const [whitelist, blacklist] = await Promise.all([
       db
         .select()
@@ -119,10 +120,11 @@ const getBlacklist = defineTool({
   description:
     "Show only the blacklisted users for the current repo. Use when the user specifically asks about the blacklist.",
   surfaces: ["chat"],
+  readOnly: true,
   inputSchema: z.object({}),
   handler: async (_args, ctx) => {
     const repoId = requireRepoId(ctx)
-    await assertRepoOwner(ctx.userId, repoId)
+    await assertRepoMember(ctx.userId, repoId)
     return db
       .select()
       .from(blacklistEntries)
@@ -145,10 +147,11 @@ const getWhitelist = defineTool({
   description:
     "Show only the whitelisted users for the current repo. Use when the user specifically asks about the whitelist.",
   surfaces: ["chat"],
+  readOnly: true,
   inputSchema: z.object({}),
   handler: async (_args, ctx) => {
     const repoId = requireRepoId(ctx)
-    await assertRepoOwner(ctx.userId, repoId)
+    await assertRepoMember(ctx.userId, repoId)
     return db
       .select()
       .from(whitelistEntries)
@@ -171,10 +174,11 @@ const checkLists = defineTool({
   description:
     "Check whether a SPECIFIC user is on the whitelist or blacklist. Use this when the user asks about one person; use list_lists for a full overview.",
   directInvokable: true,
+  readOnly: true,
   inputSchema: z.object({ username: z.string().min(1) }),
   handler: async ({ username }, ctx) => {
     const repoId = requireRepoId(ctx)
-    await assertRepoOwner(ctx.userId, repoId)
+    await assertRepoMember(ctx.userId, repoId)
     const [whitelist, blacklist] = await Promise.all([
       db
         .select()
@@ -220,7 +224,7 @@ const addToBlacklist = defineTool({
   inputSchema: z.object({ username: z.string().min(1) }),
   handler: async ({ username }, ctx) => {
     const repoId = requireRepoId(ctx)
-    await assertRepoOwner(ctx.userId, repoId)
+    await assertRepoMember(ctx.userId, repoId)
 
     const token = await getTokenForRepo(repoId)
     const ghUser = await fetchGitHubUser(username, token ?? undefined).catch(
@@ -285,7 +289,7 @@ const removeFromBlacklist = defineTool({
   inputSchema: z.object({ username: z.string().min(1) }),
   handler: async ({ username }, ctx) => {
     const repoId = requireRepoId(ctx)
-    await assertRepoOwner(ctx.userId, repoId)
+    await assertRepoMember(ctx.userId, repoId)
     const deleted = await db
       .delete(blacklistEntries)
       .where(
@@ -327,7 +331,7 @@ const addToWhitelist = defineTool({
   inputSchema: z.object({ username: z.string().min(1) }),
   handler: async ({ username }, ctx) => {
     const repoId = requireRepoId(ctx)
-    await assertRepoOwner(ctx.userId, repoId)
+    await assertRepoMember(ctx.userId, repoId)
 
     const token = await getTokenForRepo(repoId)
     const ghUser = await fetchGitHubUser(username, token ?? undefined).catch(
@@ -398,7 +402,7 @@ const removeFromWhitelist = defineTool({
   inputSchema: z.object({ username: z.string().min(1) }),
   handler: async ({ username }, ctx) => {
     const repoId = requireRepoId(ctx)
-    await assertRepoOwner(ctx.userId, repoId)
+    await assertRepoMember(ctx.userId, repoId)
     const deleted = await db
       .delete(whitelistEntries)
       .where(
@@ -441,7 +445,7 @@ const moveToWhitelist = defineTool({
   inputSchema: z.object({ username: z.string().min(1) }),
   handler: async ({ username }, ctx) => {
     const repoId = requireRepoId(ctx)
-    await assertRepoOwner(ctx.userId, repoId)
+    await assertRepoMember(ctx.userId, repoId)
 
     const token = await getTokenForRepo(repoId)
     const ghUser = await fetchGitHubUser(username, token ?? undefined).catch(
@@ -508,7 +512,7 @@ const moveToBlacklist = defineTool({
   inputSchema: z.object({ username: z.string().min(1) }),
   handler: async ({ username }, ctx) => {
     const repoId = requireRepoId(ctx)
-    await assertRepoOwner(ctx.userId, repoId)
+    await assertRepoMember(ctx.userId, repoId)
 
     const token = await getTokenForRepo(repoId)
     const ghUser = await fetchGitHubUser(username, token ?? undefined).catch(
@@ -569,13 +573,14 @@ const resetContributorScoreTool = defineTool({
   description:
     "Forgive a GitHub user's accumulated Tripwire history for this repo. Zeros their reputation totals (blocks/allows/near-misses) and stamps a reset timestamp so future score_breakdown / lookup_user calls ignore older events. The audit events themselves are preserved.",
   needsApproval: true,
+  destructive: true,
   inputSchema: z.object({
     username: z.string().min(1),
     reason: z.string().optional(),
   }),
   handler: async ({ username, reason }, ctx) => {
     const repoId = requireRepoId(ctx)
-    await assertRepoOwner(ctx.userId, repoId)
+    await assertRepoMember(ctx.userId, repoId)
 
     const token = await getTokenForRepo(repoId)
     const ghUser = await fetchGitHubUser(username, token ?? undefined).catch(

@@ -27,6 +27,7 @@ import { EventGroupCard } from "#/components/layout/app/home/event-group-card"
 import { useTRPC } from "#/integrations/trpc/react"
 import { useWorkspace, useWorkspacePath } from "#/providers/workspace-context"
 import { parseCommand } from "#/lib/chat/commands"
+import { getEventTitle } from "#/lib/event-labels"
 import { formatRelativeTime } from "#/lib/format"
 import type { EventAction, TripwireEvent } from "#/types/home"
 
@@ -71,7 +72,7 @@ export function HomePage() {
           | "warning"
           | "error"
           | "success",
-        title: getEventTitle(event.action, event.severity),
+        title: getEventTitle(event.action, event.severity, "Event"),
         preview: event.description || "",
         users: g.users.filter((u): u is string => u !== null),
         repo: event.repoId,
@@ -554,24 +555,6 @@ function RecentChats() {
 }
 
 // Helper functions
-
-function getEventTitle(action: string, severity: string | null): string {
-  const titles: Record<string, string> = {
-    pipeline_blocked: "Blocked",
-    pipeline_allowed: "Allowed",
-    rule_near_miss: "Near miss",
-    blacklist_blocked: "Blacklisted user blocked",
-    whitelist_bypass: "Whitelist bypass",
-    pr_closed: "PR closed",
-    issue_closed: "Issue closed",
-    comment_deleted: "Comment deleted",
-  }
-  let title = titles[action] || "Event"
-  if (severity === "error") title = `Blocked — ${title.toLowerCase()}`
-  if (severity === "warning" && action !== "rule_near_miss")
-    title = `Suspected spam`
-  return title
-}
 
 function getEventAction(action: string): EventAction | null {
   const actions: Record<string, EventAction> = {

@@ -3,7 +3,7 @@ import { z } from "zod"
 import { db } from "@tripwire/db/client"
 import { workflows } from "@tripwire/db"
 import {
-  assertRepoOwner,
+  assertRepoMember,
   getNodesByCategory,
   NODE_REGISTRY,
   applyWorkflowOperations,
@@ -18,6 +18,7 @@ const getNodeTypes = defineTool({
   description:
     "Returns the node type registry so you know what nodes are available for building workflows. Optionally filter by category (Triggers, Rules, Conditions, Logic Gates, Actions, Delays, Transforms).",
   needsRepo: false,
+  readOnly: true,
   surfaces: ["chat"] as const,
   inputSchema: z.object({
     category: z
@@ -108,7 +109,7 @@ const createWorkflow = defineTool({
   }),
   handler: async ({ name, description }, ctx) => {
     const repoId = requireRepoId(ctx)
-    await assertRepoOwner(ctx.userId, repoId)
+    await assertRepoMember(ctx.userId, repoId)
 
     const [row] = await db
       .insert(workflows)
@@ -176,7 +177,7 @@ Always provide an explicit id for each add_node.`,
   }),
   handler: async ({ workflowId, operations }, ctx) => {
     const repoId = requireRepoId(ctx)
-    await assertRepoOwner(ctx.userId, repoId)
+    await assertRepoMember(ctx.userId, repoId)
 
     const [wf] = await db
       .select()
@@ -268,12 +269,13 @@ const deleteWorkflow = defineTool({
   name: "delete_workflow",
   description: "Delete a workflow by ID.",
   needsApproval: true,
+  destructive: true,
   inputSchema: z.object({
     workflowId: z.string().uuid().describe("Workflow ID to delete"),
   }),
   handler: async ({ workflowId }, ctx) => {
     const repoId = requireRepoId(ctx)
-    await assertRepoOwner(ctx.userId, repoId)
+    await assertRepoMember(ctx.userId, repoId)
 
     const [wf] = await db
       .select({
@@ -320,7 +322,7 @@ const enableWorkflow = defineTool({
   }),
   handler: async ({ workflowId, enabled }, ctx) => {
     const repoId = requireRepoId(ctx)
-    await assertRepoOwner(ctx.userId, repoId)
+    await assertRepoMember(ctx.userId, repoId)
 
     const [wf] = await db
       .select({
@@ -367,12 +369,13 @@ const getWorkflow = defineTool({
   name: "get_workflow",
   description:
     "Get the full definition of a workflow by ID, including all nodes and edges.",
+  readOnly: true,
   inputSchema: z.object({
     workflowId: z.string().uuid().describe("Workflow ID"),
   }),
   handler: async ({ workflowId }, ctx) => {
     const repoId = requireRepoId(ctx)
-    await assertRepoOwner(ctx.userId, repoId)
+    await assertRepoMember(ctx.userId, repoId)
 
     const [wf] = await db
       .select()

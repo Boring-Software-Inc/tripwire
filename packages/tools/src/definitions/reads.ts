@@ -1,15 +1,17 @@
-import { and, desc, eq, sql } from "drizzle-orm"
+import { and, desc, eq, isNotNull, or, sql } from "drizzle-orm"
 import { z } from "zod"
 import { createError } from "evlog"
 import { db } from "@tripwire/db/client"
 import {
   events,
   githubReputation,
+  member,
+  organization,
   organizations,
   repositories,
   type EventAction,
 } from "@tripwire/db"
-import { assertEventOwner, assertRepoOwner } from "@tripwire/core"
+import { assertEventMember, assertRepoMember } from "@tripwire/core"
 import { getInstallationToken } from "@tripwire/github"
 import {
   type ScoreCategory,
@@ -55,22 +57,32 @@ const fmtDate = (d: Date) =>
 const listRepos = defineTool({
   name: "list_repos",
   description:
-    "List GitHub repositories the caller has connected to Tripwire. Returns repo id (use this for other tools), full name, privacy, and the owning GitHub org login.",
+    "List GitHub repositories the caller can manage in Tripwire — every repo they own OR belong to via a workspace, across ALL their workspaces. Returns repo id (use this for other tools), full name, privacy, the owning GitHub org login, and the Tripwire workspace name. When the same repo name could exist in more than one workspace, disambiguate with workspaceName / orgLogin.",
   needsRepo: false,
   inputSchema: z.object({}),
   handler: async (_args, ctx) =>
     db
-      .select({
+      .selectDistinct({
         id: repositories.id,
         fullName: repositories.fullName,
         name: repositories.name,
         isPrivate: repositories.isPrivate,
         orgId: repositories.orgId,
         orgLogin: organizations.githubAccountLogin,
+        workspaceName: organization.name,
       })
       .from(repositories)
       .innerJoin(organizations, eq(repositories.orgId, organizations.id))
-      .where(eq(organizations.ownerId, ctx.userId)),
+      .leftJoin(organization, eq(organizations.betterAuthOrgId, organization.id))
+      .leftJoin(
+        member,
+        and(
+          eq(member.organizationId, organizations.betterAuthOrgId),
+          eq(member.userId, ctx.userId)
+        )
+      )
+      .where(or(eq(organizations.ownerId, ctx.userId), isNotNull(member.id)))
+      .orderBy(repositories.fullName),
 })
 const listEvents = defineTool({
   name: "list_events",
@@ -85,7 +97,7 @@ const listEvents = defineTool({
   }),
   handler: async ({ username, action, severity, limit }, ctx) => {
     const repoId = requireRepoId(ctx)
-    await assertRepoOwner(ctx.userId, repoId)
+    await assertRepoMember(ctx.userId, repoId)
 
     const conditions = [eq(events.repoId, repoId)]
     if (username)
@@ -120,7 +132,7 @@ const getEvent = defineTool({
   lazy: true,
   inputSchema: z.object({ eventId: z.string().uuid() }),
   handler: async ({ eventId }, ctx) => {
-    const { event, repo } = await assertEventOwner(ctx.userId, eventId)
+    const { event, repo } = await assertEventMember(ctx.userId, eventId)
     return { event, repo: { id: repo.id, fullName: repo.fullName } }
   },
   chatRender: ({ event }) =>
@@ -140,7 +152,7 @@ async function gatherUserSignals(
   userId: string,
   repoId: string
 ): Promise<UserSignals> {
-  await assertRepoOwner(userId, repoId)
+  await assertRepoMember(userId, repoId)
   const token = await getTokenForRepo(repoId)
   return fetchContributorSignals({
     username,
@@ -423,7 +435,7 @@ const explainScoreFlag = defineTool({
   }),
   handler: async ({ username, flag }, ctx) => {
     const repoId = requireRepoId(ctx)
-    await assertRepoOwner(ctx.userId, repoId)
+    await assertRepoMember(ctx.userId, repoId)
     const token = await getTokenForRepo(repoId)
     if (!token)
       throw createError({
@@ -718,7 +730,7 @@ const getReputationLeaderboard = defineTool({
   }),
   handler: async ({ limit }, ctx) => {
     const repoId = requireRepoId(ctx)
-    await assertRepoOwner(ctx.userId, repoId)
+    await assertRepoMember(ctx.userId, repoId)
     return db
       .select()
       .from(githubReputation)
@@ -750,7 +762,7 @@ const listWorkflows = defineTool({
   inputSchema: z.object({}),
   handler: async (_args, ctx) => {
     const repoId = requireRepoId(ctx)
-    await assertRepoOwner(ctx.userId, repoId)
+    await assertRepoMember(ctx.userId, repoId)
     const { workflows } = await import("@tripwire/db")
     const { desc } = await import("drizzle-orm")
     const rows = await db
@@ -787,7 +799,7 @@ const describeWorkflow = defineTool({
   }),
   handler: async ({ name }, ctx) => {
     const repoId = requireRepoId(ctx)
-    await assertRepoOwner(ctx.userId, repoId)
+    await assertRepoMember(ctx.userId, repoId)
     const { workflows } = await import("@tripwire/db")
     const { desc } = await import("drizzle-orm")
     const rows = await db
@@ -881,7 +893,7 @@ const getUserPrs = defineTool({
   }),
   handler: async ({ username, limit, state }, ctx) => {
     const repoId = requireRepoId(ctx)
-    await assertRepoOwner(ctx.userId, repoId)
+    await assertRepoMember(ctx.userId, repoId)
     const token = await getTokenForRepo(repoId)
     if (!token)
       throw createError({
@@ -924,7 +936,7 @@ const getPrDetail = defineTool({
   }),
   handler: async ({ repo, prNumber }, ctx) => {
     const repoId = requireRepoId(ctx)
-    await assertRepoOwner(ctx.userId, repoId)
+    await assertRepoMember(ctx.userId, repoId)
     const token = await getTokenForRepo(repoId)
     if (!token)
       throw createError({
@@ -995,7 +1007,7 @@ const getComments = defineTool({
   }),
   handler: async ({ repo, issue_number, limit, include_bots }, ctx) => {
     const repoId = requireRepoId(ctx)
-    await assertRepoOwner(ctx.userId, repoId)
+    await assertRepoMember(ctx.userId, repoId)
     const token = await getTokenForRepo(repoId)
     if (!token)
       throw createError({
@@ -1049,7 +1061,7 @@ const getUserRepos = defineTool({
   }),
   handler: async ({ username, limit }, ctx) => {
     const repoId = requireRepoId(ctx)
-    await assertRepoOwner(ctx.userId, repoId)
+    await assertRepoMember(ctx.userId, repoId)
     const token = await getTokenForRepo(repoId)
     if (!token)
       throw createError({
@@ -1093,7 +1105,7 @@ const getUserActivity = defineTool({
   }),
   handler: async ({ username }, ctx) => {
     const repoId = requireRepoId(ctx)
-    await assertRepoOwner(ctx.userId, repoId)
+    await assertRepoMember(ctx.userId, repoId)
     const token = await getTokenForRepo(repoId)
     if (!token)
       throw createError({
@@ -1118,6 +1130,8 @@ const getUserActivity = defineTool({
     }),
 })
 
+// Every tool in this file is read-only (no DB writes, no GitHub mutations),
+// so flag the whole set for read-only surfaces in one place.
 export const readTools: AnyToolDefinition[] = [
   listRepos,
   listEvents,
@@ -1134,4 +1148,4 @@ export const readTools: AnyToolDefinition[] = [
   getUserRepos,
   explainScoreFlag,
   getUserActivity,
-]
+].map((t) => ({ ...t, readOnly: true }) as AnyToolDefinition)

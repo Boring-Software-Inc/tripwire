@@ -80,6 +80,24 @@ export interface ToolDefinition<
   /** Chat: tool requires explicit user approval before execution. */
   needsApproval?: boolean
 
+  /**
+   * Marks the tool as read-only (no DB writes / no GitHub mutations).
+   * Used to build a reduced, safe surface — e.g. the MCP server can be
+   * gated to read-only tools for an external client like Poke. Default
+   * is falsy, i.e. treated as a mutation; opt in explicitly so a newly
+   * added tool is excluded from read-only surfaces until vetted.
+   */
+  readOnly?: boolean
+
+  /**
+   * Marks a mutation as irreversible / high-blast-radius — score resets,
+   * deletes, whole-config overwrites. These are kept off the default MCP
+   * surface (see selectMcpSurface) so an external agent can't permanently
+   * destroy state without a human in the loop. Reversible writes (toggle a
+   * rule, add/remove a list entry) leave this falsy.
+   */
+  destructive?: boolean
+
   /** Chat: tool is rendered lazily. */
   lazy?: boolean
 
@@ -146,5 +164,34 @@ export function filterToolsForSurface(
   return tools.filter((tool) => {
     const surfaces = tool.surfaces ?? ALL_SURFACES
     return surfaces.includes(surface)
+  })
+}
+
+export interface McpSurfaceOptions {
+  /** Expose reversible state-changing tools. Default false ⇒ read-only. */
+  allowWrites: boolean
+  /** Also expose irreversible/destructive writes (delete, reset, full copy). */
+  allowIrreversible: boolean
+}
+
+/**
+ * Pick which tools an MCP client may call, in tiers:
+ *   - read-only tools          → always exposed
+ *   - reversible writes        → exposed when allowWrites
+ *   - destructive (irreversible) writes → exposed only when allowIrreversible
+ * Always scoped to the "mcp" surface first. A tool that is neither readOnly
+ * nor (when writes are on) flagged destructive is treated as a reversible
+ * write. New unvetted tools therefore stay off the surface until writes are
+ * explicitly enabled.
+ */
+export function selectMcpSurface(
+  tools: readonly AnyToolDefinition[],
+  opts: McpSurfaceOptions
+): AnyToolDefinition[] {
+  return filterToolsForSurface(tools, "mcp").filter((tool) => {
+    if (tool.readOnly === true) return true
+    if (!opts.allowWrites) return false
+    if (tool.destructive === true) return opts.allowIrreversible
+    return true
   })
 }

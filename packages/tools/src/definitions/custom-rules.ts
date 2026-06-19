@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm"
 import { z } from "zod"
 import { db } from "@tripwire/db/client"
 import { customRules } from "@tripwire/db"
-import { assertRepoOwner } from "@tripwire/core"
+import { assertRepoMember } from "@tripwire/core"
 import { logEvent } from "@tripwire/core"
 import { createCustomRuleSchema } from "@tripwire/core"
 import { getCustomRuleLimits, countDefinitionNodes } from "@tripwire/core"
@@ -15,10 +15,11 @@ const listCustomRules = defineTool({
   name: "list_custom_rules",
   description:
     "List all custom rules for the current repo. Shows name, enabled state, action, description, and node count.",
+  readOnly: true,
   inputSchema: z.object({}),
   handler: async (_args, ctx) => {
     const repoId = requireRepoId(ctx)
-    await assertRepoOwner(ctx.userId, repoId)
+    await assertRepoMember(ctx.userId, repoId)
 
     const rows = await db
       .select()
@@ -47,12 +48,13 @@ const getCustomRule = defineTool({
   name: "get_custom_rule",
   description:
     "Get full detail of a custom rule by ID, including its definition graph, action, scope override, and simulation status.",
+  readOnly: true,
   inputSchema: z.object({
     ruleId: z.string().uuid(),
   }),
   handler: async ({ ruleId }, ctx) => {
     const repoId = requireRepoId(ctx)
-    await assertRepoOwner(ctx.userId, repoId)
+    await assertRepoMember(ctx.userId, repoId)
 
     const [rule] = await db
       .select()
@@ -134,7 +136,7 @@ const createCustomRule = defineTool({
   }),
   handler: async (args, ctx) => {
     const repoId = requireRepoId(ctx)
-    await assertRepoOwner(ctx.userId, repoId)
+    await assertRepoMember(ctx.userId, repoId)
 
     const input = { ...args, repoId, priority: 0 }
     const parsed = createCustomRuleSchema.safeParse(input)
@@ -207,7 +209,7 @@ const toggleCustomRule = defineTool({
   }),
   handler: async ({ ruleId, enabled }, ctx) => {
     const repoId = requireRepoId(ctx)
-    await assertRepoOwner(ctx.userId, repoId)
+    await assertRepoMember(ctx.userId, repoId)
 
     const [rule] = await db
       .select()
@@ -262,7 +264,7 @@ const updateCustomRuleAction = defineTool({
   }),
   handler: async ({ ruleId, action, thresholdCount }, ctx) => {
     const repoId = requireRepoId(ctx)
-    await assertRepoOwner(ctx.userId, repoId)
+    await assertRepoMember(ctx.userId, repoId)
 
     const [rule] = await db
       .select()
@@ -309,12 +311,13 @@ const updateCustomRuleAction = defineTool({
 const deleteCustomRule = defineTool({
   name: "delete_custom_rule",
   description: "Permanently delete a custom rule by ID.",
+  destructive: true,
   inputSchema: z.object({
     ruleId: z.string().uuid(),
   }),
   handler: async ({ ruleId }, ctx) => {
     const repoId = requireRepoId(ctx)
-    await assertRepoOwner(ctx.userId, repoId)
+    await assertRepoMember(ctx.userId, repoId)
 
     const [rule] = await db
       .select({ id: customRules.id, name: customRules.name })
@@ -366,7 +369,7 @@ const editCustomRule = defineTool({
   }),
   handler: async ({ ruleId, operations }, ctx) => {
     const repoId = requireRepoId(ctx)
-    await assertRepoOwner(ctx.userId, repoId)
+    await assertRepoMember(ctx.userId, repoId)
 
     const [rule] = await db
       .select()

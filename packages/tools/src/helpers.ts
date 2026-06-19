@@ -9,7 +9,7 @@ import {
 import { ruleConfigSchema } from "@tripwire/core"
 import { normalizeRuleConfig } from "@tripwire/core"
 import { logEvent } from "@tripwire/core"
-import { assertRepoOwner } from "@tripwire/core"
+import { assertRepoMember } from "@tripwire/core"
 import type { MutationResult, ToolContext } from "./registry"
 import { RULE_META } from "@tripwire/db"
 export const RULE_NAMES: Record<RuleKey, string> = Object.fromEntries(
@@ -66,7 +66,7 @@ export async function applyRuleMutation(
   opts: RuleMutationOpts
 ): Promise<MutationResult> {
   const repoId = requireRepoId(opts.ctx)
-  await assertRepoOwner(opts.ctx.userId, repoId)
+  await assertRepoMember(opts.ctx.userId, repoId)
 
   const current = await loadRuleConfig(repoId)
   const draft = structuredClone(current) as RuleConfig

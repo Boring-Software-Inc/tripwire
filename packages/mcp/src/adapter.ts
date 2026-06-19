@@ -12,8 +12,12 @@ import {
  * For each tool that opts into the "mcp" surface, this:
  *   1. Builds the input shape the model sees. Tools with needsRepo !== false
  *      get a `repoId: uuid` field prepended; the model must provide it.
- *   2. On call, extracts repoId into ctx, hands the rest to the handler.
- *   3. Stringifies the handler output as a text content block.
+ *   2. Attaches MCP annotations (readOnlyHint / destructiveHint) so a client
+ *      can surface a confirmation prompt before a state-changing call. These
+ *      are advisory hints — a client is not required to honor them, and the
+ *      handler still runs if called, so they are defence-in-depth, not a gate.
+ *   3. On call, extracts repoId into ctx, hands the rest to the handler.
+ *   4. Stringifies the handler output as a text content block.
  */
 export function registerMcpTools(
   server: McpServer,
@@ -27,10 +31,16 @@ export function registerMcpTools(
       ? { repoId: z.string().uuid(), ...baseShape }
       : baseShape
 
+    const annotations =
+      tool.readOnly === true
+        ? { readOnlyHint: true, destructiveHint: false }
+        : { readOnlyHint: false, destructiveHint: true }
+
     server.tool(
       tool.name,
       tool.description,
       fullShape,
+      annotations,
       async (rawArgs: Record<string, unknown>) => {
         try {
           let handlerArgs: Record<string, unknown>

@@ -9,6 +9,7 @@ const getGuide = defineTool({
   description: `Return Tripwire MCP documentation for a topic. Topics: ${GUIDE_TOPICS.join(", ")}. Use for conceptual docs (event taxonomy, list semantics). Tool schemas already document their own inputs — you don't need a guide call to figure out a specific tool.`,
   surfaces: ["mcp"],
   needsRepo: false,
+  readOnly: true,
   inputSchema: z.object({
     topic: z.enum(GUIDE_TOPICS),
   }),

@@ -17,7 +17,13 @@ export const tripwireTools: readonly AnyToolDefinition[] = [
 
 export { SERVER_INSTRUCTIONS } from "./guides-content"
 export { createChatTools, runToolForChat } from "./chat-adapter"
-export { defineTool, makeSpec, filterToolsForSurface } from "./registry"
+export {
+  defineTool,
+  makeSpec,
+  filterToolsForSurface,
+  selectMcpSurface,
+} from "./registry"
+export type { McpSurfaceOptions } from "./registry"
 export type {
   AnyToolDefinition,
   JsonRenderSpec,
