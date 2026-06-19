@@ -7,7 +7,10 @@ import { RULE_META } from "@tripwire/db/schema/rule-meta"
 import { EmptyState } from "#/components/shared/empty-state"
 import { markEventsViewed } from "#/hooks/use-events-unread"
 import { isCustomRuleName, stripCustomRulePrefix } from "#/lib/custom-rules"
-import { feedSeverityColor } from "#/lib/github/repo-events"
+import {
+  EVENT_SUMMARY_ITEMS,
+  eventSeverityDotColor,
+} from "#/lib/events-design"
 import { useGitHubSignalStream } from "#/lib/github/use-signal-stream"
 import { useRepoSignalTargets } from "#/lib/github/use-repo-signal-targets"
 import { routes } from "#/lib/routes"
@@ -95,7 +98,7 @@ const NON_CLICKABLE_ACTIONS = new Set([
 ])
 
 function EventRow({ event }: { event: Event }) {
-  const dotColor = feedSeverityColor(event.severity)
+  const dotColor = eventSeverityDotColor(event.severity)
   const actionLabel = getActionLabel(event.action)
   const isClickable = !NON_CLICKABLE_ACTIONS.has(event.action)
 
@@ -380,18 +383,7 @@ export function EventsPage() {
 
       {/* Summary counters */}
       <div className="flex flex-wrap overflow-clip rounded-xl border border-[#0000000F] bg-tw-card shadow-[#0000000A_0px_0px_2px,#0000000A_0px_0px_1px]">
-        {[
-          { key: "success", label: "Allowed", dot: "bg-tw-success" },
-          { key: "error", label: "Blocked", dot: "bg-tw-error" },
-          { key: "warning", label: "Near Misses", dot: "bg-tw-warning" },
-          {
-            key: "workflow",
-            label: "Workflows",
-            dot: "bg-[#34A6FF]",
-            count: actionCounts?.workflow_run,
-          },
-          { key: "info", label: "Other", dot: "bg-tw-accent" },
-        ].map((item, i, arr) => (
+        {EVENT_SUMMARY_ITEMS.map((item, i, arr) => (
           <div
             key={item.key}
             className={`flex min-w-0 grow flex-col px-3 pt-2.5 pb-2 md:px-4 ${i < arr.length - 1 ? "md:border-r md:border-r-[#0000000F]" : ""}`}
@@ -403,8 +395,8 @@ export function EventsPage() {
               </span>
             </div>
             <span className="text-xl leading-7 font-semibold text-[#FFFFFFCC] tabular-nums">
-              {("count" in item && item.count !== undefined
-                ? item.count
+              {(item.key === "workflow"
+                ? (actionCounts?.workflow_run ?? 0)
                 : (severityCounts[item.key] ?? 0)
               ).toLocaleString()}
             </span>

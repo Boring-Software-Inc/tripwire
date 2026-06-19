@@ -73,25 +73,6 @@ export interface FeedEvent {
 /** The feed buckets the UI can filter to. */
 export type FeedCategory = "all" | "security" | "activity"
 
-export const FEED_CATEGORIES: { label: string; value: FeedCategory }[] = [
-  { label: "All", value: "all" },
-  { label: "Security", value: "security" },
-  { label: "Activity", value: "activity" },
-]
-
-export const FEED_SEVERITY_COLORS: Record<FeedEventSeverity, string> = {
-  success: "bg-tw-success",
-  error: "bg-tw-error",
-  warning: "bg-tw-warning",
-  info: "bg-tw-accent",
-}
-
-export function feedSeverityColor(
-  severity: string | null | undefined
-): string {
-  return FEED_SEVERITY_COLORS[severity as FeedEventSeverity] ?? FEED_SEVERITY_COLORS.info
-}
-
 /** Tripwire actions that represent a security intervention. */
 export const SECURITY_ACTIONS = [
   "pipeline_blocked",
@@ -106,6 +87,17 @@ export const SECURITY_ACTIONS = [
 
 /** Tripwire actions that represent routine, non-blocking activity. */
 export const ACTIVITY_ACTIONS = [
+  "github_pr_opened",
+  "github_pr_reopened",
+  "github_pr_closed",
+  "github_pr_merged",
+  "github_pr_synchronized",
+  "github_issue_opened",
+  "github_issue_reopened",
+  "github_issue_closed",
+  "github_comment_created",
+  "github_push",
+  "github_release_published",
   "pipeline_allowed",
   "pipeline_logged",
   "whitelist_bypass",
@@ -135,6 +127,17 @@ export const TRIPWIRE_ACTION_ICONS: Record<string, FeedEventIcon> = {
   blacklist_removed: "list_remove",
   rule_config_updated: "config",
   workflow_run: "workflow",
+  github_pr_opened: "pr",
+  github_pr_reopened: "pr",
+  github_pr_closed: "pr",
+  github_pr_merged: "pr",
+  github_pr_synchronized: "pr",
+  github_issue_opened: "issue",
+  github_issue_reopened: "issue",
+  github_issue_closed: "issue",
+  github_comment_created: "comment",
+  github_push: "push",
+  github_release_published: "release",
 }
 
 export const TRIPWIRE_ACTION_SEVERITY: Record<string, FeedEventSeverity> = {
@@ -167,6 +170,17 @@ export const TRIPWIRE_ACTION_TITLES: Record<string, string> = {
   blacklist_removed: "Removed from blacklist",
   rule_config_updated: "Rule updated",
   workflow_run: "Workflow run",
+  github_pr_opened: "PR opened",
+  github_pr_reopened: "PR reopened",
+  github_pr_closed: "PR closed",
+  github_pr_merged: "PR merged",
+  github_pr_synchronized: "PR updated",
+  github_issue_opened: "Issue opened",
+  github_issue_reopened: "Issue reopened",
+  github_issue_closed: "Issue closed",
+  github_comment_created: "Commented",
+  github_push: "Pushed",
+  github_release_published: "Released",
 }
 
 /** Map a Tripwire `EventAction` to its feed icon bucket. */
@@ -406,6 +420,8 @@ export function collapsePushEvents(events: FeedEvent[]): FeedEvent[] {
       prev?.push &&
       event.push &&
       prev.push.branch === event.push.branch &&
+      Boolean(prev.actor?.username) &&
+      Boolean(event.actor?.username) &&
       prev.actor?.username === event.actor?.username
 
     if (sameRun && prev?.push && event.push) {

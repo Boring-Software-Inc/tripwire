@@ -5,11 +5,9 @@ import { useTRPC } from "#/integrations/trpc/react"
 import { useGitHubSignalStream } from "#/lib/github/use-signal-stream"
 import { useRepoSignalTargets } from "#/lib/github/use-repo-signal-targets"
 import {
-  collapsePushEvents,
-  FEED_CATEGORIES,
-  type FeedCategory,
-  type FeedEvent,
-} from "#/lib/github/repo-events"
+  EVENT_FEED_CATEGORIES,
+  type EventFeedCategory,
+} from "#/lib/events-design"
 import { RepoActivityRow } from "#/components/layout/app/visibility/repo-activity-row"
 
 interface RepoActivityFeedProps {
@@ -24,16 +22,16 @@ export function RepoActivityFeed({
   repoFullName,
 }: RepoActivityFeedProps) {
   const trpc = useTRPC()
-  const [category, setCategory] = useState<FeedCategory>("all")
+  const [category, setCategory] = useState<EventFeedCategory>("all")
 
   // Tripwire events: fast DB read, renders immediately.
-  const tripwireQueryOpts = trpc.visibility.feed.queryOptions({
+  const feedQueryOpts = trpc.visibility.feed.queryOptions({
     repoId,
     limit: FEED_LIMIT,
     category,
   })
-  const tripwireQuery = useQuery({
-    ...tripwireQueryOpts,
+  const feedQuery = useQuery({
+    ...feedQueryOpts,
     enabled: !!repoId,
     staleTime: 15_000,
     retry: false,
@@ -41,41 +39,13 @@ export function RepoActivityFeed({
     meta: { persist: true },
   })
 
-  // GitHub activity: cached server-side, loads independently and merges in.
-  // Skipped for the security filter (GitHub events are all "activity").
-  const githubQueryOpts = trpc.visibility.githubActivity.queryOptions({
-    repoId,
-    limit: FEED_LIMIT,
-  })
-  const githubQuery = useQuery({
-    ...githubQueryOpts,
-    enabled: !!repoId && category !== "security",
-    staleTime: 60_000,
-    retry: false,
-    placeholderData: keepPreviousData,
-    meta: { persist: true },
-  })
-
   useGitHubSignalStream(
-    useRepoSignalTargets(repoFullName, [
-      tripwireQueryOpts.queryKey,
-      githubQueryOpts.queryKey,
-    ])
+    useRepoSignalTargets(repoFullName, [feedQueryOpts.queryKey])
   )
 
-  const events = useMemo<FeedEvent[]>(() => {
-    const tripwire = tripwireQuery.data ?? []
-    const github = category === "security" ? [] : (githubQuery.data ?? [])
-    const merged = [...tripwire, ...github].sort(
-      (a, b) =>
-        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-    )
-    return collapsePushEvents(merged).slice(0, FEED_LIMIT)
-  }, [tripwireQuery.data, githubQuery.data, category])
+  const events = useMemo(() => feedQuery.data ?? [], [feedQuery.data])
 
-  // Only the fast Tripwire query gates the skeleton — the page and feed
-  // paint as soon as it resolves; GitHub activity fills in afterwards.
-  const isInitialLoad = tripwireQuery.isLoading && !tripwireQuery.data
+  const isInitialLoad = feedQuery.isLoading && !feedQuery.data
 
   return (
     <div className="flex w-full flex-col gap-2">
@@ -84,7 +54,7 @@ export function RepoActivityFeed({
           Recent activity
         </span>
         <div className="flex items-center gap-0.5 rounded-md border border-tw-border bg-tw-inner p-0.5">
-          {FEED_CATEGORIES.map((c) => (
+          {EVENT_FEED_CATEGORIES.map((c) => (
             <Button
               key={c.value}
               variant="ghost"

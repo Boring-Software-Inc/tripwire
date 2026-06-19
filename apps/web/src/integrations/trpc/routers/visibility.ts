@@ -558,26 +558,57 @@ async function fetchTripwireFeedEvents(
     .orderBy(desc(events.createdAt))
     .limit(limit)
 
-  return rows.map((row) => ({
-    id: row.id,
-    source: "tripwire" as const,
-    timestamp: row.createdAt.toISOString(),
-    icon: tripwireIcon(row.action),
-    title: feedTitleForAction(row.action),
-    body: row.description,
-    actor: row.targetGithubUsername
-      ? {
-          username: row.targetGithubUsername,
-          avatarUrl: row.targetGithubUserId
-            ? `https://avatars.githubusercontent.com/u/${row.targetGithubUserId}?v=4&s=48`
-            : `https://github.com/${row.targetGithubUsername}.png?size=48`,
-        }
-      : null,
-    severity: TRIPWIRE_ACTION_SEVERITY[row.action] ?? "info",
-    githubRef: row.githubRef,
-    eventId: row.id,
-    url: null,
-  }))
+  return rows.map((row) => {
+    const metadata = row.metadata ?? {}
+    const isGitHubActivity = row.action.startsWith("github_")
+    const branch = stringMetadata(metadata, "branch")
+    const commits = numberMetadata(metadata, "commits")
+    return {
+      id: row.id,
+      source: isGitHubActivity ? ("github" as const) : ("tripwire" as const),
+      timestamp: row.createdAt.toISOString(),
+      icon: tripwireIcon(row.action),
+      title: feedTitleForAction(row.action),
+      body: row.description,
+      actor: row.targetGithubUsername
+        ? {
+            username: row.targetGithubUsername,
+            avatarUrl: row.targetGithubUserId
+              ? `https://avatars.githubusercontent.com/u/${row.targetGithubUserId}?v=4&s=48`
+              : `https://github.com/${row.targetGithubUsername}.png?size=48`,
+          }
+        : null,
+      severity: TRIPWIRE_ACTION_SEVERITY[row.action] ?? "info",
+      githubRef: row.githubRef,
+      eventId: isGitHubActivity ? null : row.id,
+      url: stringMetadata(metadata, "url"),
+      push:
+        row.action === "github_push" && branch && commits
+          ? {
+              branch,
+              commits,
+              head: stringMetadata(metadata, "head"),
+              before: stringMetadata(metadata, "before"),
+            }
+          : undefined,
+    }
+  })
+}
+
+function stringMetadata(
+  metadata: Record<string, unknown>,
+  key: string
+): string | null {
+  const value = metadata[key]
+  return typeof value === "string" && value.length > 0 ? value : null
+}
+
+function numberMetadata(
+  metadata: Record<string, unknown>,
+  key: string
+): number | null {
+  const value = metadata[key]
+  return typeof value === "number" ? value : null
 }
 
 const GITHUB_EVENTS_TTL_MS = 60_000
