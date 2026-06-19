@@ -9,26 +9,7 @@
  * either side of the server/client boundary.
  */
 
-/** Visual/semantic bucket the UI maps to an icon + color. */
-export type FeedEventIcon =
-  | "blocked"
-  | "allowed"
-  | "warned"
-  | "near_miss"
-  | "bypass"
-  | "list_add"
-  | "list_remove"
-  | "config"
-  | "workflow"
-  | "push"
-  | "pr"
-  | "issue"
-  | "comment"
-  | "star"
-  | "fork"
-  | "release"
-  | "branch"
-  | "generic"
+import type { EventFeedIcon } from "#/lib/events-design"
 
 export type FeedEventSeverity = "info" | "warning" | "success" | "error"
 
@@ -46,7 +27,7 @@ export interface FeedEvent {
   id: string
   source: "tripwire" | "github"
   timestamp: string
-  icon: FeedEventIcon
+  icon: EventFeedIcon
   title: string
   body: string | null
   actor: FeedEventActor | null
@@ -109,7 +90,7 @@ export const ACTIVITY_ACTIONS = [
   "workflow_run",
 ] as const
 
-export const TRIPWIRE_ACTION_ICONS: Record<string, FeedEventIcon> = {
+export const TRIPWIRE_ACTION_ICONS: Record<string, EventFeedIcon> = {
   pipeline_blocked: "blocked",
   blacklist_blocked: "blocked",
   pr_closed: "blocked",
@@ -184,7 +165,7 @@ export const TRIPWIRE_ACTION_TITLES: Record<string, string> = {
 }
 
 /** Map a Tripwire `EventAction` to its feed icon bucket. */
-export function tripwireIcon(action: string): FeedEventIcon {
+export function tripwireIcon(action: string): EventFeedIcon {
   return TRIPWIRE_ACTION_ICONS[action] ?? "generic"
 }
 

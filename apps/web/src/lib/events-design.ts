@@ -2,6 +2,26 @@ export type EventDesignSeverity = "info" | "warning" | "success" | "error"
 
 export type EventFeedCategory = "all" | "security" | "activity"
 
+export type EventFeedIcon =
+  | "blocked"
+  | "allowed"
+  | "warned"
+  | "near_miss"
+  | "bypass"
+  | "list_add"
+  | "list_remove"
+  | "config"
+  | "workflow"
+  | "push"
+  | "pr"
+  | "issue"
+  | "comment"
+  | "star"
+  | "fork"
+  | "release"
+  | "branch"
+  | "generic"
+
 export const EVENT_FEED_CATEGORIES = [
   { label: "All", value: "all" },
   { label: "Security", value: "security" },
