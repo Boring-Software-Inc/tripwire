@@ -78,6 +78,8 @@ export function AskSidePanel() {
         messages: chatMessages as unknown as Record<string, unknown>[],
         createdAt: new Date(),
         updatedAt: new Date(),
+        authorName: null,
+        authorImage: null,
       }
     )
     close()

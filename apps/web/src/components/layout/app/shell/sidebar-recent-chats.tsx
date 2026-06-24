@@ -121,7 +121,7 @@ export function SidebarRecentChats() {
                 }}
                 className="flex min-w-0 flex-1 items-center gap-1.5"
               >
-                {currentUserId && chat.authorId !== currentUserId ? (
+                {chat.authorId ? (
                   <Tooltip>
                     <TooltipTrigger
                       render={
@@ -139,7 +139,9 @@ export function SidebarRecentChats() {
                       }
                     />
                     <TooltipContent side="right">
-                      {chat.authorName ?? "Workspace member"}
+                      {chat.authorId === currentUserId
+                        ? "You"
+                        : (chat.authorName ?? "Workspace member")}
                     </TooltipContent>
                   </Tooltip>
                 ) : (

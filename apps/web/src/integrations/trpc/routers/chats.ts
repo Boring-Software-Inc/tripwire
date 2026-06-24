@@ -116,8 +116,20 @@ export const chatsRouter = {
     .input(z.object({ chatId: z.string().uuid() }))
     .query(async ({ input, ctx }) => {
       const [conv] = await db
-        .select()
+        .select({
+          id: conversations.id,
+          userId: conversations.userId,
+          organizationId: conversations.organizationId,
+          repoId: conversations.repoId,
+          title: conversations.title,
+          messages: conversations.messages,
+          createdAt: conversations.createdAt,
+          updatedAt: conversations.updatedAt,
+          authorName: user.name,
+          authorImage: user.image,
+        })
         .from(conversations)
+        .leftJoin(user, eq(user.id, conversations.userId))
         .where(
           and(
             eq(conversations.id, input.chatId),
