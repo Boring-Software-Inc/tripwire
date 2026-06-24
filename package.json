@@ -5,8 +5,7 @@
   "packageManager": "pnpm@10.18.1",
   "scripts": {
     "postinstall": "node scripts/fix-nitro-windows-paths.mjs",
-    "dev": "portless web turbo run dev",
-    "dev:tunnel": "portless web --tailscale turbo run dev",
+    "dev": "turbo run dev",
     "build": "turbo run build",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
