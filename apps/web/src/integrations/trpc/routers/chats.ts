@@ -63,6 +63,7 @@ function helpMessage() {
 async function upsertMessages(
   chatId: string,
   userId: string,
+  organizationId: string,
   repoId: string | undefined | null,
   messages: unknown[],
   title: string
@@ -73,6 +74,7 @@ async function upsertMessages(
     .values({
       id: chatId,
       userId,
+      organizationId,
       repoId: repoId ?? null,
       messages: stored,
       title,
@@ -102,6 +104,7 @@ export const chatsRouter = {
         .values({
           id: input.id,
           userId: ctx.user.id,
+          organizationId: ctx.activeOrgId,
           repoId: input.repoId ?? null,
         })
         .onConflictDoNothing()
@@ -158,6 +161,7 @@ export const chatsRouter = {
         .values({
           id: input.chatId,
           userId: ctx.user.id,
+          organizationId: ctx.activeOrgId,
           repoId: input.repoId ?? null,
           messages: asConversationStoredMessages(merged),
           title: input.title ?? "New chat",
@@ -222,6 +226,7 @@ export const chatsRouter = {
           await upsertMessages(
             input.chatId,
             ctx.user.id,
+            ctx.activeOrgId,
             repoId,
             [],
             "New chat"
@@ -298,6 +303,7 @@ export const chatsRouter = {
       await upsertMessages(
         input.chatId,
         ctx.user.id,
+        ctx.activeOrgId,
         repoId,
         nextMessages,
         slashSyncTitle
@@ -349,6 +355,7 @@ export const chatsRouter = {
       await upsertMessages(
         input.chatId,
         ctx.user.id,
+        ctx.activeOrgId,
         existing?.repoId ?? input.repoId,
         nextMessages,
         appendSyncTitle

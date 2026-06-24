@@ -127,6 +127,9 @@ export const Route = createFileRoute("/api/chat")({
         const ctx = await createContext({ headers: request.headers })
         if (!ctx.user) return jsonError(401, { error: "Unauthorized" })
         const user = ctx.user
+        const activeOrgId = ctx.activeOrgId
+        if (!activeOrgId)
+          return jsonError(400, { error: "No active organization" })
 
         try {
           let quota: AutumnQuotaCheck
@@ -403,6 +406,7 @@ export const Route = createFileRoute("/api/chat")({
                 .values({
                   id: conversationId,
                   userId: user.id,
+                  organizationId: activeOrgId,
                   repoId: resolvedRepoId,
                   messages: asConversationStoredMessages(finishedMessages),
                   title: "New chat",
