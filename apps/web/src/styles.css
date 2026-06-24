@@ -86,6 +86,20 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Respect the user's OS "reduce motion" setting (WCAG 2.3.3).
+   Neutralizes CSS transitions/animations and scroll-driven effects for
+   people prone to motion sickness, vestibular disorders, or migraines. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Tripwire utility classes */
 .tw-root {
   @apply bg-tw-bg text-tw-text-primary;
