@@ -9,6 +9,7 @@
 import { eq, inArray } from "drizzle-orm"
 import { db } from "@tripwire/db/client"
 import { githubResponseCache, githubRevalidationSignal } from "@tripwire/db"
+import { githubErrorSchema } from "./error-schema"
 import {
   type GitHubConditionalHeaders,
   type GitHubFetchResult,
@@ -144,10 +145,6 @@ function parseCachedPayload<TData>(payloadJson: string) {
   return JSON.parse(payloadJson) as TData
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object"
-}
-
 function getRateLimitResetMs(rateLimitReset: number | null | undefined) {
   if (typeof rateLimitReset !== "number" || !Number.isFinite(rateLimitReset)) {
     return null
@@ -196,13 +193,13 @@ function getAdaptiveFreshForMs(
 }
 
 function getErrorStatusCode(error: unknown) {
-  if (!isRecord(error)) return null
-  return typeof error.status === "number" ? error.status : null
+  const parsed = githubErrorSchema.safeParse(error)
+  return parsed.success ? (parsed.data.status ?? null) : null
 }
 
 function getErrorResponseHeaders(error: unknown) {
-  if (!isRecord(error) || !isRecord(error.response)) return null
-  return error.response.headers as Record<string, unknown> | null
+  const parsed = githubErrorSchema.safeParse(error)
+  return parsed.success ? (parsed.data.response?.headers ?? null) : null
 }
 
 function normalizeUnknownHeaders(

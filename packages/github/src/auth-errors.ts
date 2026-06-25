@@ -9,18 +9,7 @@
  * one path links to GitHub install, the other surfaces a normal toast.
  */
 
-type GitHubErrorShape = {
-  status?: number
-  message?: string
-  response?: {
-    data?: unknown
-    headers?: Record<string, unknown>
-  }
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value)
-}
+import { githubApiBodySchema, githubErrorSchema } from "./error-schema"
 
 /**
  * Pulls the GitHub API's `message` field out of a response body. GitHub
@@ -28,9 +17,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * which is what we match on for the reauthorize branches.
  */
 function getGitHubApiMessage(data: unknown): string {
-  if (!isRecord(data)) return ""
-  const message = data.message
-  return typeof message === "string" ? message : ""
+  const parsed = githubApiBodySchema.safeParse(data)
+  return parsed.success ? (parsed.data.message ?? "") : ""
 }
 
 /**
@@ -39,16 +27,10 @@ function getGitHubApiMessage(data: unknown): string {
  * because GitHub isn't case-consistent across endpoints.
  */
 export function compactGitHubErrorMessage(error: unknown): string {
-  if (!isRecord(error)) {
-    return ""
-  }
-  const wrapperMessage =
-    typeof error.message === "string" ? (error.message as string) : ""
-  const bodyMessage = getGitHubApiMessage(
-    isRecord(error.response)
-      ? (error.response as { data?: unknown }).data
-      : null
-  )
+  const parsed = githubErrorSchema.safeParse(error)
+  if (!parsed.success) return ""
+  const wrapperMessage = parsed.data.message ?? ""
+  const bodyMessage = getGitHubApiMessage(parsed.data.response?.data)
   return `${wrapperMessage} ${bodyMessage}`.trim()
 }
 
@@ -74,8 +56,8 @@ export function compactGitHubErrorMessage(error: unknown): string {
 export function shouldReauthorizeGitHubApp(error: unknown): boolean {
   if (!error) return false
 
-  const wrapper = error as GitHubErrorShape
-  const status = typeof wrapper.status === "number" ? wrapper.status : null
+  const parsed = githubErrorSchema.safeParse(error)
+  const status = parsed.success ? (parsed.data.status ?? null) : null
   const combined = compactGitHubErrorMessage(error).toLowerCase()
 
   if (status === 401) {
