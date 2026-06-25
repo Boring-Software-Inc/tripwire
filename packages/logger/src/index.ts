@@ -124,6 +124,22 @@ const formatObject = (obj: unknown, isDev: boolean): string => {
 }
 
 /**
+ * JSON.stringify with a circular-reference guard so a cyclic payload (e.g. a
+ * Node request/response object passed as metadata) logs as "[Circular]"
+ * instead of throwing a TypeError and crashing the process.
+ */
+function safeStringify(value: unknown): string {
+  const seen = new WeakSet<object>()
+  return JSON.stringify(value, (_key, val) => {
+    if (typeof val === "object" && val !== null) {
+      if (seen.has(val)) return "[Circular]"
+      seen.add(val)
+    }
+    return val
+  })
+}
+
+/**
  * Logger class for standardized console logging.
  *
  * Provides methods for logging at different severity levels
@@ -271,7 +287,7 @@ export class Logger {
         }
       }
 
-      const line = JSON.stringify(entry)
+      const line = safeStringify(entry)
       if (level === LogLevel.ERROR) {
         console.error(line)
       } else {
