@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as VouchedRouteImport } from './routes/vouched'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as DitherKitRouteImport } from './routes/dither-kit'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AdminRouteImport } from './routes/_admin'
 import { Route as OnboardingRouteRouteImport } from './routes/onboarding/route'
@@ -88,6 +89,11 @@ const VouchedRoute = VouchedRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DitherKitRoute = DitherKitRouteImport.update({
+  id: '/dither-kit',
+  path: '/dither-kit',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppRoute = AppRouteImport.update({
@@ -447,6 +453,7 @@ const AppOrgHandleRulesCustomRuleIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/onboarding': typeof OnboardingRouteRouteWithChildren
+  '/dither-kit': typeof DitherKitRoute
   '/login': typeof LoginRoute
   '/vouched': typeof VouchedRoute
   '/.well-known/oauth-authorization-server': typeof Char91DotwellKnownChar93OauthAuthorizationServerRouteWithChildren
@@ -517,6 +524,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/onboarding': typeof OnboardingRouteRouteWithChildren
+  '/dither-kit': typeof DitherKitRoute
   '/login': typeof LoginRoute
   '/vouched': typeof VouchedRoute
   '/.well-known/oauth-authorization-server': typeof Char91DotwellKnownChar93OauthAuthorizationServerRouteWithChildren
@@ -589,6 +597,7 @@ export interface FileRoutesById {
   '/onboarding': typeof OnboardingRouteRouteWithChildren
   '/_admin': typeof AdminRouteWithChildren
   '/_app': typeof AppRouteWithChildren
+  '/dither-kit': typeof DitherKitRoute
   '/login': typeof LoginRoute
   '/vouched': typeof VouchedRoute
   '/.well-known/oauth-authorization-server': typeof Char91DotwellKnownChar93OauthAuthorizationServerRouteWithChildren
@@ -661,6 +670,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/onboarding'
+    | '/dither-kit'
     | '/login'
     | '/vouched'
     | '/.well-known/oauth-authorization-server'
@@ -731,6 +741,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/onboarding'
+    | '/dither-kit'
     | '/login'
     | '/vouched'
     | '/.well-known/oauth-authorization-server'
@@ -802,6 +813,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/_admin'
     | '/_app'
+    | '/dither-kit'
     | '/login'
     | '/vouched'
     | '/.well-known/oauth-authorization-server'
@@ -875,6 +887,7 @@ export interface RootRouteChildren {
   OnboardingRouteRoute: typeof OnboardingRouteRouteWithChildren
   AdminRoute: typeof AdminRouteWithChildren
   AppRoute: typeof AppRouteWithChildren
+  DitherKitRoute: typeof DitherKitRoute
   LoginRoute: typeof LoginRoute
   VouchedRoute: typeof VouchedRoute
   Char91DotwellKnownChar93OauthAuthorizationServerRoute: typeof Char91DotwellKnownChar93OauthAuthorizationServerRouteWithChildren
@@ -910,6 +923,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dither-kit': {
+      id: '/dither-kit'
+      path: '/dither-kit'
+      fullPath: '/dither-kit'
+      preLoaderRoute: typeof DitherKitRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app': {
@@ -1575,6 +1595,7 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingRouteRoute: OnboardingRouteRouteWithChildren,
   AdminRoute: AdminRouteWithChildren,
   AppRoute: AppRouteWithChildren,
+  DitherKitRoute: DitherKitRoute,
   LoginRoute: LoginRoute,
   VouchedRoute: VouchedRoute,
   Char91DotwellKnownChar93OauthAuthorizationServerRoute:

@@ -15,6 +15,14 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: "Geist Pixel";
+  src: url("/fonts/GeistPixel-Square.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme {
   --font-sans: "Geist", system-ui, sans-serif;
   --font-display: "Playfair Display", Georgia, serif;
@@ -76,7 +84,12 @@
   --color-secondary: var(--color-tw-button-muted);
   --color-secondary-foreground: var(--color-tw-text-primary);
   --color-destructive: var(--color-tw-error);
+  --color-card: var(--color-tw-surface);
+  --color-card-foreground: var(--color-tw-text-primary);
   --radius-lg: 0.5rem;
+
+  /* Geist Pixel — display face for the dither-kit docs page */
+  --font-pixel-geist: "Geist Pixel", ui-monospace, monospace;
 }
 
 body {

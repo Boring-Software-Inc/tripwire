@@ -1,0 +1,20 @@
+{
+	"name": "@dither-kit/core",
+	"version": "0.0.1",
+	"description": "Composable dithered charts for React — area, line, bar, pie, radar on a tiny canvas engine, no recharts. Installed via the shadcn registry, not this package: see https://tripwire.sh/dither-kit",
+	"homepage": "https://tripwire.sh/dither-kit",
+	"license": "MIT",
+	"author": "ripgrim",
+	"keywords": [
+		"charts",
+		"dither",
+		"react",
+		"canvas",
+		"shadcn",
+		"shadcn-registry",
+		"visualization"
+	],
+	"publishConfig": {
+		"access": "public"
+	}
+}
