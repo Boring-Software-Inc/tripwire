@@ -4,48 +4,7 @@ import { buildSeo } from "#/lib/seo"
 import { authClient } from "@tripwire/auth/client"
 import { LandingHeader } from "#/components/layout/landing/header"
 import { useSpaceInvaders } from "#/components/layout/landing/space-invaders"
-import FaultyTerminal from "#/components/layout/landing/faulty-terminal"
 import { RetroComputer } from "#/components/layout/landing/retro-computer"
-import {
-  TRIPWIRE_EYE_OUTER_PATH,
-  TRIPWIRE_EYE_OUTER_VIEWBOX,
-  TRIPWIRE_EYE_SOCKET_PATH,
-  TRIPWIRE_EYE_SOCKET_VIEWBOX,
-  TRIPWIRE_EYE_SOCKET_RECT_IN_OUTER,
-  TRIPWIRE_EYE_PUPIL_PATH,
-  TRIPWIRE_EYE_PUPIL_VIEWBOX,
-  TRIPWIRE_EYE_PUPIL_RECT_IN_OUTER,
-} from "@tripwire/ui/icons/tripwire-eye"
-
-const EYE_CURSOR_MASK = {
-  viewBox: TRIPWIRE_EYE_OUTER_VIEWBOX,
-  width: 1.05,
-  layers: [
-    {
-      path: TRIPWIRE_EYE_OUTER_PATH,
-      viewBox: TRIPWIRE_EYE_OUTER_VIEWBOX,
-      rect: [
-        0,
-        0,
-        TRIPWIRE_EYE_OUTER_VIEWBOX[0],
-        TRIPWIRE_EYE_OUTER_VIEWBOX[1],
-      ] as const,
-      mode: "add" as const,
-    },
-    {
-      path: TRIPWIRE_EYE_SOCKET_PATH,
-      viewBox: TRIPWIRE_EYE_SOCKET_VIEWBOX,
-      rect: TRIPWIRE_EYE_SOCKET_RECT_IN_OUTER,
-      mode: "subtract" as const,
-    },
-    {
-      path: TRIPWIRE_EYE_PUPIL_PATH,
-      viewBox: TRIPWIRE_EYE_PUPIL_VIEWBOX,
-      rect: TRIPWIRE_EYE_PUPIL_RECT_IN_OUTER,
-      mode: "add" as const,
-    },
-  ],
-}
 
 export const Route = createFileRoute("/")({
   component: LandingPage,
@@ -79,31 +38,15 @@ function LandingPage() {
   }, [gameActive])
 
   return (
-    <div className="relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden bg-tw-bg antialiased [font-synthesis:none]">
-      {/* Terminal — the game renders INSIDE it via the gameCanvas texture */}
-      <div className="absolute inset-0 z-0">
-        <FaultyTerminal
-          scale={3.0}
-          digitSize={1.2}
-          scanlineIntensity={0.5}
-          glitchAmount={gameActive ? 10 : 5}
-          flickerAmount={1}
-          noiseAmp={1}
-          chromaticAberration={0}
-          dither={0}
-          curvature={0.05}
-          tint="#A7EF9E"
-          mouseReact
-          mouseStrength={0.5}
-          cursorMask={EYE_CURSOR_MASK}
-          brightness={0.3}
-        />
-      </div>
-
-      {/* Landing content — fades out when game activates */}
-      <div className="relative z-10 flex min-h-screen w-full flex-col md:max-w-[95vw]">
+    // The classic Windows 98 desktop teal — the stage for what comes next.
+    <div
+      className="relative h-screen w-full overflow-hidden antialiased [font-synthesis:none]"
+      style={{ background: "#008080" }}
+    >
+      {/* Hero — dead centre, above the machine */}
+      <div className="relative z-10 flex h-full w-full flex-col">
         <LandingHeader session={session} />
-        <div className="flex w-full flex-1 flex-col items-center justify-center gap-6 px-4 py-10">
+        <div className="flex w-full flex-1 flex-col items-center justify-center gap-6 px-4">
           <h1 className="font-sans text-lg font-medium text-tw-text-primary">
             catch slop before it catches up with you
           </h1>
@@ -122,8 +65,15 @@ function LandingPage() {
               login
             </Link>
           )}
-          <RetroComputer gameCanvas={gameActive ? gameCanvas : null} />
         </div>
+      </div>
+
+      {/* The machine peeks up from the fold under the hero */}
+      <div
+        className="absolute inset-x-0 bottom-0 z-0 flex justify-center px-4"
+        style={{ transform: "translateY(58%)" }}
+      >
+        <RetroComputer gameCanvas={gameActive ? gameCanvas : null} />
       </div>
     </div>
   )

@@ -267,34 +267,57 @@ function Key({
   )
 }
 
-/** Tracks physically-pressed arrow keys so the drawn cluster mirrors them. */
-function usePressedArrows() {
+/** Physical key → drawn keycap label, for everything the board draws. */
+function labelOfKey(e: KeyboardEvent): string {
+  const named: Record<string, string> = {
+    Escape: "esc",
+    Backspace: "bksp",
+    Tab: "tab",
+    Control: "ctrl",
+    Enter: "enter",
+    Shift: "shift",
+    Alt: "alt",
+    CapsLock: "caps",
+    " ": "space",
+    ArrowUp: "ArrowUp",
+    ArrowDown: "ArrowDown",
+    ArrowLeft: "ArrowLeft",
+    ArrowRight: "ArrowRight",
+  }
+  return named[e.key] ?? e.key.toLowerCase()
+}
+
+/** Tracks every physically-pressed key so the whole drawn board mirrors the
+ * real one — type anywhere and the machine types with you. */
+function usePressedKeys() {
   const [pressed, setPressed] = useState<Set<string>>(new Set())
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
-      if (!e.key.startsWith("Arrow")) return
-      setPressed((prev) => new Set(prev).add(e.key))
+      setPressed((prev) => new Set(prev).add(labelOfKey(e)))
     }
     const up = (e: KeyboardEvent) => {
-      if (!e.key.startsWith("Arrow")) return
       setPressed((prev) => {
         const next = new Set(prev)
-        next.delete(e.key)
+        next.delete(labelOfKey(e))
         return next
       })
     }
+    // Keys held while the window loses focus would stick down forever.
+    const clear = () => setPressed(new Set())
     window.addEventListener("keydown", down)
     window.addEventListener("keyup", up)
+    window.addEventListener("blur", clear)
     return () => {
       window.removeEventListener("keydown", down)
       window.removeEventListener("keyup", up)
+      window.removeEventListener("blur", clear)
     }
   }, [])
   return pressed
 }
 
 function Keyboard() {
-  const pressed = usePressedArrows()
+  const pressed = usePressedKeys()
   return (
     <div style={{ perspective: "1000px", perspectiveOrigin: "50% 0%" }}>
       <div
