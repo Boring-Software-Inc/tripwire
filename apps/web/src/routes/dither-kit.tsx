@@ -2,8 +2,10 @@ import { createFileRoute } from "@tanstack/react-router"
 import {
   CheckIcon,
   CopyIcon,
+  MoonIcon,
   RefreshCcwIcon,
   SlidersHorizontalIcon,
+  SunIcon,
   XIcon,
 } from "lucide-react"
 import { Fragment, type ReactNode, useEffect, useRef, useState } from "react"
@@ -175,6 +177,24 @@ function useSettled(value: string | number, ms: number, onSettle: () => void) {
     const t = setTimeout(() => settle.current(), ms)
     return () => clearTimeout(t)
   }, [value, ms])
+}
+
+/** Page-scoped theme. The app is dark-only, so instead of a global theme the
+ * page swaps the `.dither-light` token overrides (and the `dark` class that
+ * drives `dark:` variants) on its own wrapper. Persisted per visitor. */
+function usePageTheme() {
+  const [light, setLight] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      window.localStorage.getItem("dither-kit-theme") === "light"
+  )
+  const toggle = () => {
+    setLight((v) => {
+      window.localStorage.setItem("dither-kit-theme", v ? "dark" : "light")
+      return !v
+    })
+  }
+  return { light, toggle }
 }
 
 function useCopy() {
@@ -658,6 +678,7 @@ function Showcase({
 /* ------------------------------------------------------------------ page */
 
 function DitherKitDocs() {
+  const { light, toggle: toggleTheme } = usePageTheme()
   const [tweaks, setTweaks] = useState<Tweaks>(DEFAULT_TWEAKS)
   const [panelOpen, setPanelOpen] = useState(false)
   const [pm, setPm] = useState<Pm>("npm")
@@ -694,8 +715,8 @@ function DitherKitDocs() {
     // stay in view while you turn the knobs.
     <div
       className={`min-h-screen bg-background text-foreground transition-[padding] duration-200 ${
-        panelOpen ? "lg:pr-80" : ""
-      }`}
+        light ? "dither-light" : "dark"
+      } ${panelOpen ? "lg:pr-80" : ""}`}
     >
       <DitherStrip className="h-2 w-full" />
 
@@ -711,6 +732,18 @@ function DitherKitDocs() {
                 five chart types on one tiny canvas engine, no recharts
               </p>
             </div>
+            <button
+              type="button"
+              aria-label="Toggle theme"
+              onClick={toggleTheme}
+              className="rounded-md border p-2 text-muted-foreground transition-colors hover:border-foreground/25 hover:text-foreground"
+            >
+              {light ? (
+                <MoonIcon className="size-4" />
+              ) : (
+                <SunIcon className="size-4" />
+              )}
+            </button>
           </div>
 
           <p className="max-w-2xl leading-relaxed text-balance text-muted-foreground">

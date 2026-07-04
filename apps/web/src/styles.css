@@ -27,9 +27,6 @@
   --font-sans: "Geist", system-ui, sans-serif;
   --font-display: "Playfair Display", Georgia, serif;
 
-  /* Default border color for Tailwind's `border` utility */
-  --default-border-color: #27272a;
-
   /* Tripwire color palette (from prototype) */
   --color-tw-bg: #0d0d0f;
   --color-tw-surface: #17171a;
@@ -90,6 +87,38 @@
 
   /* Geist Pixel — display face for the dither-kit docs page */
   --font-pixel-geist: "Geist Pixel", ui-monospace, monospace;
+}
+
+/* Default border color for Tailwind's `border` utility. v4 defaults to
+   currentColor (which reads as white on our dark theme); pointing it at the
+   border token restores the intended hairlines everywhere. */
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-border);
+  }
+}
+
+/* Light palette for the dither-kit docs page. The app itself is dark-only, so
+   the page's theme toggle swaps these shadcn-alias tokens on its own wrapper
+   instead of a global theme. */
+.dither-light {
+  --color-background: oklch(1 0 0);
+  --color-foreground: oklch(0.141 0.005 285.823);
+  --color-card: oklch(0.985 0 0);
+  --color-card-foreground: oklch(0.141 0.005 285.823);
+  --color-popover: oklch(1 0 0);
+  --color-popover-foreground: oklch(0.141 0.005 285.823);
+  --color-border: oklch(0.92 0.004 286.32);
+  --color-muted: oklch(0.967 0.001 286.375);
+  --color-muted-foreground: oklch(0.552 0.016 285.938);
+  --color-primary: oklch(0.21 0.006 285.885);
+  --color-primary-foreground: oklch(0.985 0 0);
+  --color-accent: oklch(0.967 0.001 286.375);
+  --color-accent-foreground: oklch(0.21 0.006 285.885);
 }
 
 body {
