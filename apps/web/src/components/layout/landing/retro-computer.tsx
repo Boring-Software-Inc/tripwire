@@ -1,14 +1,16 @@
 "use client"
 
+import { motion } from "motion/react"
 import { useEffect, useRef, useState } from "react"
 import { Sparkline } from "#/components/dither-kit"
 
 /**
  * A late-80s cream desktop PC (Philips P3120 XT energy) built entirely from
- * CSS — monitor on the system unit with the keyboard attached at its foot.
- * The 4:3 CRT runs a miniature of the tripwire moderation dashboard, and the
- * keyboard's arrow cluster lights up with real key presses — the same presses
- * that flip the landing page into the terminal game.
+ * CSS. At rest only the system unit sits at the bottom of the page; its power
+ * button boots the machine — the monitor rises out of the case, the screen
+ * warms up onto a miniature of the tripwire moderation dashboard, and the
+ * keyboard slides out from underneath. Every drawn key mirrors the real
+ * keyboard, and the arrow keys boot the game straight onto the CRT.
  *
  * Deliberately flat: hard bevels and plastic seams only. No glows, no blurs.
  */
@@ -25,6 +27,7 @@ const C = {
   screenBed: "#3a352a", // bezel recess around the tube
   tube: "#14130f", // CRT glass
   accent: "#b03a2e", // the Philips-style red stripe
+  led: "#67e19f", // power light
 }
 
 const bevel = (raise = true) => ({
@@ -33,6 +36,9 @@ const bevel = (raise = true) => ({
   borderRight: `2px solid ${raise ? C.shellDark : C.shellLight}`,
   borderBottom: `2px solid ${raise ? C.shellDark : C.shellLight}`,
 })
+
+// One spring for the whole boot choreography — snappy with a hint of mass.
+const POP = { type: "spring", visualDuration: 0.55, bounce: 0.18 } as const
 
 /* -------------------------------------------------------- demo content */
 
@@ -91,6 +97,11 @@ const DEMO_QUEUE = [
     flag: "#b08a2e",
   },
 ]
+
+const SCANLINES = {
+  backgroundImage:
+    "repeating-linear-gradient(to bottom, rgba(0,0,0,0.22) 0px, rgba(0,0,0,0.22) 1px, transparent 1px, transparent 3px)",
+} as const
 
 /** The moderation dashboard, miniaturized — rendered at full size and scaled
  * down so type and hairlines stay crisp on the tube. */
@@ -181,10 +192,7 @@ function DemoScreen() {
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0"
-        style={{
-          backgroundImage:
-            "repeating-linear-gradient(to bottom, rgba(0,0,0,0.22) 0px, rgba(0,0,0,0.22) 1px, transparent 1px, transparent 3px)",
-        }}
+        style={SCANLINES}
       />
     </div>
   )
@@ -211,10 +219,7 @@ function GameScreen({ canvas }: { canvas: HTMLCanvasElement }) {
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0"
-        style={{
-          backgroundImage:
-            "repeating-linear-gradient(to bottom, rgba(0,0,0,0.22) 0px, rgba(0,0,0,0.22) 1px, transparent 1px, transparent 3px)",
-        }}
+        style={SCANLINES}
       />
     </div>
   )
@@ -319,6 +324,8 @@ function usePressedKeys() {
 function Keyboard() {
   const pressed = usePressedKeys()
   return (
+    // Lies flat on the desk: the deck tilts away from the viewer so the far
+    // edge (at the case) is narrower than the near edge — like a real board.
     <div style={{ perspective: "1000px", perspectiveOrigin: "50% 0%" }}>
       <div
         className="mx-auto w-[84%] rounded-t-[3px] rounded-b-md px-3 pt-2 pb-3"
@@ -332,24 +339,29 @@ function Keyboard() {
         }}
       >
         <div className="flex gap-3">
-          {/* main key block */}
+          {/* main key block — every cap mirrors the physical board */}
           <div className="flex flex-1 flex-col gap-1">
             {KEY_ROWS.map((row) => (
               <div key={row.join()} className="flex gap-1">
                 {row.map((k, i) => (
                   // biome-ignore lint/suspicious/noArrayIndexKey: static layout
-                  <Key key={`${k}${i}`} label={k} w={WIDE_KEYS[k] ?? 1} />
+                  <Key
+                    key={`${k}${i}`}
+                    label={k}
+                    w={WIDE_KEYS[k] ?? 1}
+                    pressed={pressed.has(k)}
+                  />
                 ))}
               </div>
             ))}
             <div className="flex gap-1">
-              <Key label="alt" w={1.6} />
-              <Key w={7} label="" />
-              <Key label="caps" w={1.6} />
+              <Key label="alt" w={1.6} pressed={pressed.has("alt")} />
+              <Key w={7} label="" pressed={pressed.has("space")} />
+              <Key label="caps" w={1.6} pressed={pressed.has("caps")} />
             </div>
           </div>
 
-          {/* arrow cluster — mirrors real presses */}
+          {/* arrow cluster */}
           <div className="flex w-24 shrink-0 flex-col justify-end gap-1">
             <div className="flex justify-center">
               <div className="w-1/3">
@@ -394,17 +406,42 @@ function Monitor({ gameCanvas }: { gameCanvas: HTMLCanvasElement | null }) {
             className="relative aspect-[4/3] overflow-hidden rounded-[10px]"
             style={{ background: C.tube }}
           >
-            {gameCanvas ? <GameScreen canvas={gameCanvas} /> : <DemoScreen />}
+            {/* the picture warms in a beat after the tube arrives */}
+            <motion.div
+              className="absolute inset-0"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.35, delay: 0.4 }}
+            >
+              {gameCanvas ? <GameScreen canvas={gameCanvas} /> : <DemoScreen />}
+            </motion.div>
           </div>
         </div>
-        {/* chin: badge + controls */}
+        {/* chin: moulded brand, model sticker, controls, power light */}
         <div className="flex items-center justify-between pt-2">
-          <span
-            className="rounded-[2px] px-1.5 py-px font-mono text-[9px]"
-            style={{ background: C.shellDark, color: C.shellLight }}
-          >
-            tripwire
-          </span>
+          <div className="flex items-center gap-2.5">
+            {/* brand moulded into the plastic — debossed, not printed */}
+            <span
+              className="font-sans text-[10px] font-semibold"
+              style={{
+                color: C.shellDark,
+                textShadow: "0 1px 0 rgba(255,255,255,0.55)",
+              }}
+            >
+              tripwire
+            </span>
+            {/* the little metallic model plate every CRT carried */}
+            <span
+              className="rounded-[1px] px-1 py-px font-mono text-[7px]"
+              style={{
+                background: "#c9c4b4",
+                color: "#5d5747",
+                border: `1px solid ${C.shellDeep}`,
+              }}
+            >
+              cm 1431
+            </span>
+          </div>
           <div className="flex items-center gap-1.5">
             <span
               className="size-2 rounded-full"
@@ -417,6 +454,11 @@ function Monitor({ gameCanvas }: { gameCanvas: HTMLCanvasElement | null }) {
             <span
               className="h-2.5 w-4 rounded-[2px]"
               style={{ background: "#d9a441", ...bevel(true) }}
+            />
+            {/* tube power light */}
+            <span
+              className="ml-0.5 size-1.5 rounded-full"
+              style={{ background: C.led, border: `1px solid ${C.shellDeep}` }}
             />
           </div>
         </div>
@@ -433,7 +475,13 @@ function Monitor({ gameCanvas }: { gameCanvas: HTMLCanvasElement | null }) {
 
 /* ----------------------------------------------------------- system unit */
 
-function SystemUnit() {
+function SystemUnit({
+  powered,
+  onPowerToggle,
+}: {
+  powered: boolean
+  onPowerToggle: () => void
+}) {
   return (
     <div
       className="relative rounded-md px-4 py-3"
@@ -462,37 +510,56 @@ function SystemUnit() {
           />
         </div>
 
-        {/* floppy drives */}
-        <div className="flex w-[46%] shrink-0 flex-col gap-1.5">
-          {["a", "b"].map((drive) => (
+        {/* drive bays — slot, activity light, eject. no labels, like the
+            real thing */}
+        <div className="flex w-[42%] shrink-0 flex-col gap-1.5">
+          {["upper", "lower"].map((bay) => (
             <div
-              key={drive}
+              key={bay}
               className="flex items-center gap-2 rounded-[3px] px-2 py-1"
               style={{ background: C.shellLight, ...bevel(false) }}
             >
-              <span
-                className="font-mono text-[8px]"
-                style={{ color: C.shellDeep }}
-              >
-                {drive}
-              </span>
               <span
                 className="h-1 flex-1 rounded-full"
                 style={{ background: C.shellDeep }}
               />
               <span
+                className="size-1 rounded-full"
+                style={{ background: "#7a3b34" }}
+              />
+              <span
                 className="h-2 w-3 rounded-[1px]"
-                style={{ background: C.shellDark }}
+                style={{ background: C.shellDark, ...bevel(true) }}
               />
             </div>
           ))}
         </div>
 
-        {/* power switch */}
-        <div
-          className="h-10 w-3 shrink-0 rounded-[2px]"
-          style={{ background: "#c4451c", ...bevel(true) }}
-        />
+        {/* power button + LED — the machine's one real control */}
+        <div className="flex shrink-0 flex-col items-center gap-1">
+          <span
+            className="size-1.5 rounded-full"
+            style={{
+              background: powered ? C.led : C.shellDark,
+              border: `1px solid ${C.shellDeep}`,
+            }}
+          />
+          {/* plain moulded push button — latched in while the machine runs */}
+          <button
+            type="button"
+            aria-pressed={powered}
+            aria-label={powered ? "Power off" : "Power on"}
+            onClick={onPowerToggle}
+            className="h-8 w-9 cursor-pointer rounded-[3px] transition-transform active:translate-y-px"
+            style={{
+              background: powered ? C.shellDark : C.shell,
+              ...bevel(!powered),
+            }}
+          />
+          <span className="font-mono text-[8px]" style={{ color: C.shellDeep }}>
+            power
+          </span>
+        </div>
       </div>
     </div>
   )
@@ -501,21 +568,53 @@ function SystemUnit() {
 /* ---------------------------------------------------------------- shell */
 
 export function RetroComputer({
+  powered,
+  onPowerToggle,
   gameCanvas = null,
 }: {
+  powered: boolean
+  onPowerToggle: () => void
   /** When set, the live game replaces the dashboard demo on the CRT. */
   gameCanvas?: HTMLCanvasElement | null
 }) {
   return (
     <div className="w-full max-w-3xl select-none">
-      <Monitor gameCanvas={gameCanvas} />
-      <SystemUnit />
-      <Keyboard />
-      <p className="pt-4 text-center font-mono text-[11px] text-tw-text-muted">
-        {gameCanvas
-          ? "arrows move, space shoots, esc hands the machine back"
-          : "press an arrow key to play"}
-      </p>
+      {/* monitor rises out of the case top */}
+      <motion.div
+        className="relative z-0 overflow-hidden"
+        initial={false}
+        animate={
+          powered
+            ? { height: "auto", y: 0, opacity: 1 }
+            : { height: 0, y: 56, opacity: 0 }
+        }
+        transition={POP}
+      >
+        <Monitor gameCanvas={gameCanvas} />
+      </motion.div>
+
+      <div className="relative z-10">
+        <SystemUnit powered={powered} onPowerToggle={onPowerToggle} />
+      </div>
+
+      {/* keyboard slides out from under the case, a beat behind the monitor */}
+      <motion.div
+        className="relative z-0 overflow-hidden"
+        initial={false}
+        animate={
+          powered
+            ? { height: "auto", y: 0, opacity: 1 }
+            : { height: 0, y: -48, opacity: 0 }
+        }
+        transition={{ ...POP, delay: powered ? 0.14 : 0 }}
+      >
+        <Keyboard />
+        <p className="pt-4 pb-1 text-center font-mono text-[11px] text-white/80">
+          {gameCanvas
+            ? "arrows move, space shoots, esc hands the machine back"
+            : "press an arrow key to play"}
+        </p>
+      </motion.div>
     </div>
   )
 }
