@@ -528,16 +528,31 @@ export function DemoScreen() {
     )
   }, [])
 
-  // The tour runs itself until the visitor's mouse takes the screen; on leave
-  // it picks the loop back up from wherever they left it.
+  // The tour runs itself until the visitor's mouse takes the screen. Control
+  // is held for as long as they keep interacting; after 5s of stillness (or
+  // after leaving) the tour resumes — springing off from wherever the cursor
+  // was left, since the same motion values carry both modes.
   const [interactive, setInteractive] = useState(false)
   const [pressed, setPressed] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
+  const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const touch = () => {
+    setInteractive(true)
+    if (idleTimer.current) clearTimeout(idleTimer.current)
+    idleTimer.current = setTimeout(() => setInteractive(false), 5000)
+  }
+  useEffect(
+    () => () => {
+      if (idleTimer.current) clearTimeout(idleTimer.current)
+    },
+    []
+  )
   const { scene, phase, next, goTo } = useTour(reduceMotion, interactive)
   const cursor = useDemoCursor(phase, next, scene, interactive)
 
   // Map the real pointer into the demo's 2× coordinate space.
   const onPointerMove = (e: React.PointerEvent) => {
+    touch()
     const rect = rootRef.current?.getBoundingClientRect()
     if (!rect) return
     cursor.x.set((e.clientX - rect.left) * 2)
@@ -549,13 +564,13 @@ export function DemoScreen() {
       ref={rootRef}
       className="h-full w-full overflow-hidden"
       style={{ background: P.bg, cursor: "none" }}
-      onPointerEnter={() => setInteractive(true)}
-      onPointerLeave={() => {
-        setInteractive(false)
-        setPressed(false)
-      }}
+      onPointerEnter={touch}
+      onPointerLeave={() => setPressed(false)}
       onPointerMove={onPointerMove}
-      onPointerDown={() => setPressed(true)}
+      onPointerDown={() => {
+        touch()
+        setPressed(true)
+      }}
       onPointerUp={() => setPressed(false)}
     >
       <div
