@@ -8,7 +8,7 @@ import {
   RefreshCcwIcon,
   SunIcon,
 } from "lucide-react"
-import { Fragment, type ReactNode, useEffect, useRef, useState } from "react"
+import { Fragment, type ReactNode, useState } from "react"
 import {
   ActiveDot,
   Area,
@@ -145,25 +145,6 @@ function DitherStrip({ className = "" }: { className?: string }) {
       }}
     />
   )
-}
-
-/** Fire `onSettle` once `value` has stopped changing for `ms` (skips mount).
- * Lets the tweak panel replay the charts by itself instead of making you reach
- * for the replay button after every change. */
-function useSettled(value: string | number, ms: number, onSettle: () => void) {
-  const first = useRef(true)
-  const settle = useRef(onSettle)
-  useEffect(() => {
-    settle.current = onSettle
-  }, [onSettle])
-  useEffect(() => {
-    if (first.current) {
-      first.current = false
-      return
-    }
-    const t = setTimeout(() => settle.current(), ms)
-    return () => clearTimeout(t)
-  }, [value, ms])
 }
 
 /** Page-scoped theme. The app is dark-only, so instead of a global theme the
@@ -491,10 +472,6 @@ function DitherKitDocs() {
     duration: params.entranceMs,
   }
   const bloom = bloomOf(tweaks)
-
-  // Any tweak replays the charts on its own once it settles (300ms after the
-  // last change) — no need to reach for "replay all".
-  useSettled(JSON.stringify(tweaks), 300, replayAll)
 
   // Register the namespace once, then install any chart by name.
   const registries = `// components.json\n{\n  "registries": {\n    "@dither-kit": "${HOST}/r/{name}.json"\n  }\n}`
@@ -842,7 +819,7 @@ function DitherKitDocs() {
       </div>
 
       <DitherStrip className="h-2 w-full" />
-      <DialRoot position="top-right" productionEnabled />
+      <DialRoot position="top-right" defaultOpen={false} productionEnabled />
     </div>
   )
 }
