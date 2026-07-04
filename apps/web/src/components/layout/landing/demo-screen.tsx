@@ -1,7 +1,7 @@
 "use client"
 
-import { AnimatePresence, motion } from "motion/react"
-import { useEffect, useState } from "react"
+import { AnimatePresence, animate, motion, useMotionValue } from "motion/react"
+import { useEffect, useRef, useState } from "react"
 import { Sparkline } from "#/components/dither-kit"
 
 /**
@@ -48,12 +48,19 @@ const REST: Record<Scene, { x: number; y: number }> = {
 const SCENE_MS = 4600 // time on each page
 const CLICK_MS = 900 // cursor travel + press before the swap
 
-/** Drives the loop: cursor heads for the next nav item, clicks, scene swaps. */
-function useTour(reduceMotion: boolean) {
+/** Drives the loop: cursor heads for the next nav item, clicks, scene swaps.
+ * Paused while the visitor's own mouse has the screen; `goTo` serves their
+ * clicks. */
+function useTour(reduceMotion: boolean, paused: boolean) {
   const [scene, setScene] = useState<Scene>("home")
   const [phase, setPhase] = useState<"resting" | "clicking">("resting")
+  const goTo = (s: Scene) => {
+    setScene(s)
+    setPhase("resting")
+  }
 
   useEffect(() => {
+    if (paused) return
     if (reduceMotion) {
       // No cursor theatrics — just rotate the pages.
       const t = setInterval(() => {
@@ -81,10 +88,10 @@ function useTour(reduceMotion: boolean) {
       cancelled = true
       clearTimeout(timer)
     }
-  }, [reduceMotion])
+  }, [reduceMotion, paused])
 
   const next = SCENES[(SCENES.indexOf(scene) + 1) % SCENES.length]
-  return { scene, phase, next }
+  return { scene, phase, next, goTo }
 }
 
 /* ------------------------------------------------------------ fragments */
@@ -391,7 +398,13 @@ function EventsScene() {
 
 /* ----------------------------------------------------------------- nav */
 
-function TopNav({ active }: { active: Scene }) {
+function TopNav({
+  active,
+  onNavigate,
+}: {
+  active: Scene
+  onNavigate: (s: Scene) => void
+}) {
   return (
     <div
       className="flex items-center gap-1 px-4 py-2"
@@ -401,6 +414,7 @@ function TopNav({ active }: { active: Scene }) {
       {SCENES.map((item) => (
         <span
           key={item}
+          onClick={() => onNavigate(item)}
           className="rounded-md px-2 py-1 text-[11px]"
           style={
             item === active
@@ -426,30 +440,60 @@ function TopNav({ active }: { active: Scene }) {
   )
 }
 
-/** The tour guide — a little arrow that travels to the nav and clicks. */
+/** The demo's pointer — glides on rails during the tour, and becomes the
+ * visitor's actual cursor the moment their mouse takes the screen. */
+function useDemoCursor(
+  phase: string,
+  next: Scene,
+  scene: Scene,
+  interactive: boolean
+) {
+  const x = useMotionValue(REST.home.x)
+  const y = useMotionValue(REST.home.y)
+
+  useEffect(() => {
+    if (interactive) return // the mouse writes the values directly
+    const target =
+      phase === "clicking" ? { x: NAV_X[next], y: NAV_Y } : REST[scene]
+    const spring = {
+      type: "spring",
+      visualDuration: 0.7,
+      bounce: 0.05,
+    } as const
+    const ax = animate(x, target.x, spring)
+    const ay = animate(y, target.y, spring)
+    return () => {
+      ax.stop()
+      ay.stop()
+    }
+  }, [interactive, phase, next, scene, x, y])
+
+  return { x, y }
+}
+
 function TourCursor({
-  phase,
-  next,
-  scene,
+  x,
+  y,
+  dip,
 }: {
-  phase: string
-  next: Scene
-  scene: Scene
+  x: ReturnType<typeof useMotionValue<number>>
+  y: ReturnType<typeof useMotionValue<number>>
+  /** "tour" plays the choreographed travel-then-click; "press" tracks a real
+   * mouse button; null is at rest. */
+  dip: "tour" | "press" | null
 }) {
-  const target =
-    phase === "clicking" ? { x: NAV_X[next], y: NAV_Y } : REST[scene]
   return (
     <motion.div
       className="pointer-events-none absolute z-10"
+      style={{ x, y }}
       animate={{
-        x: target.x,
-        y: target.y,
-        scale: phase === "clicking" ? [1, 1, 0.8, 1] : 1,
+        scale: dip === "tour" ? [1, 1, 0.8, 1] : dip === "press" ? 0.82 : 1,
       }}
       transition={{
-        x: { type: "spring", visualDuration: 0.7, bounce: 0.05 },
-        y: { type: "spring", visualDuration: 0.7, bounce: 0.05 },
-        scale: { duration: CLICK_MS / 1000, times: [0, 0.75, 0.85, 1] },
+        scale:
+          dip === "tour"
+            ? { duration: CLICK_MS / 1000, times: [0, 0.75, 0.85, 1] }
+            : { duration: 0.1 },
       }}
     >
       {/* classic pointer, drawn with borders — crisp at any scale */}
@@ -483,15 +527,42 @@ export function DemoScreen() {
       window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false
     )
   }, [])
-  const { scene, phase, next } = useTour(reduceMotion)
+
+  // The tour runs itself until the visitor's mouse takes the screen; on leave
+  // it picks the loop back up from wherever they left it.
+  const [interactive, setInteractive] = useState(false)
+  const [pressed, setPressed] = useState(false)
+  const rootRef = useRef<HTMLDivElement>(null)
+  const { scene, phase, next, goTo } = useTour(reduceMotion, interactive)
+  const cursor = useDemoCursor(phase, next, scene, interactive)
+
+  // Map the real pointer into the demo's 2× coordinate space.
+  const onPointerMove = (e: React.PointerEvent) => {
+    const rect = rootRef.current?.getBoundingClientRect()
+    if (!rect) return
+    cursor.x.set((e.clientX - rect.left) * 2)
+    cursor.y.set((e.clientY - rect.top) * 2)
+  }
 
   return (
-    <div className="h-full w-full overflow-hidden" style={{ background: P.bg }}>
+    <div
+      ref={rootRef}
+      className="h-full w-full overflow-hidden"
+      style={{ background: P.bg, cursor: "none" }}
+      onPointerEnter={() => setInteractive(true)}
+      onPointerLeave={() => {
+        setInteractive(false)
+        setPressed(false)
+      }}
+      onPointerMove={onPointerMove}
+      onPointerDown={() => setPressed(true)}
+      onPointerUp={() => setPressed(false)}
+    >
       <div
         className="relative flex origin-top-left flex-col"
         style={{ width: "200%", height: "200%", transform: "scale(0.5)" }}
       >
-        <TopNav active={scene} />
+        <TopNav active={scene} onNavigate={(s) => interactive && goTo(s)} />
 
         <AnimatePresence mode="wait">
           <motion.div
@@ -527,7 +598,19 @@ export function DemoScreen() {
         </div>
 
         {!reduceMotion && (
-          <TourCursor phase={phase} next={next} scene={scene} />
+          <TourCursor
+            x={cursor.x}
+            y={cursor.y}
+            dip={
+              interactive
+                ? pressed
+                  ? "press"
+                  : null
+                : phase === "clicking"
+                  ? "tour"
+                  : null
+            }
+          />
         )}
       </div>
 
