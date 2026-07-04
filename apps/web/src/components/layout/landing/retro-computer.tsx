@@ -245,7 +245,7 @@ function Monitor({
   onDemoEngagement?: (engaged: boolean) => void
 }) {
   return (
-    <div className="mx-auto w-[76%]">
+    <div className="mx-auto w-[80%]">
       {/* housing */}
       <div
         className="rounded-md p-4 pb-3"

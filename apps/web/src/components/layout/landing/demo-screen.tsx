@@ -244,8 +244,8 @@ export function DemoScreen({
     touch()
     const rect = rootRef.current?.getBoundingClientRect()
     if (!rect) return
-    cursor.x.set((e.clientX - rect.left) * 2)
-    cursor.y.set((e.clientY - rect.top) * 2)
+    cursor.x.set((e.clientX - rect.left) / 0.6)
+    cursor.y.set((e.clientY - rect.top) / 0.6)
   }
 
   const scene = (() => {
@@ -319,7 +319,11 @@ export function DemoScreen({
     >
       <div
         className="relative flex origin-top-left flex-col"
-        style={{ width: "200%", height: "200%", transform: "scale(0.5)" }}
+        style={{
+          width: "166.667%",
+          height: "166.667%",
+          transform: "scale(0.6)",
+        }}
       >
         <TopNav
           active={route.page}
