@@ -2,7 +2,7 @@
 
 import { motion } from "motion/react"
 import { useEffect, useRef, useState } from "react"
-import { Sparkline } from "#/components/dither-kit"
+import { DemoScreen } from "./demo-screen"
 
 /**
  * A late-80s cream desktop PC (Philips P3120 XT energy) built entirely from
@@ -42,161 +42,10 @@ const POP = { type: "spring", visualDuration: 0.55, bounce: 0.18 } as const
 
 /* -------------------------------------------------------- demo content */
 
-const DEMO_STATS = [
-  {
-    label: "pending",
-    value: "23",
-    color: "red" as const,
-    series: [4, 6, 5, 9, 7, 11, 8, 12, 10, 14],
-  },
-  {
-    label: "resolved",
-    value: "148",
-    color: "blue" as const,
-    series: [8, 10, 9, 12, 14, 13, 16, 15, 18, 21],
-  },
-  {
-    label: "automod",
-    value: "67",
-    color: "purple" as const,
-    series: [12, 9, 11, 8, 10, 7, 9, 6, 8, 5],
-  },
-  {
-    label: "banned",
-    value: "9",
-    color: "orange" as const,
-    series: [2, 3, 2, 4, 3, 5, 4, 4, 6, 5],
-  },
-]
-
-const DEMO_QUEUE = [
-  {
-    title: "Add comprehensive test coverage",
-    meta: "spam · pr #482",
-    flag: "#b03a2e",
-  },
-  { title: "Fix typo in README.md", meta: "bot · pr #479", flag: "#b08a2e" },
-  {
-    title: "Update dependencies to latest",
-    meta: "ai slop · pr #477",
-    flag: "#b03a2e",
-  },
-  {
-    title: "Improve error handling logic",
-    meta: "spam · issue #93",
-    flag: "#b08a2e",
-  },
-  {
-    title: "Refactor utils for better DX",
-    meta: "ai slop · pr #474",
-    flag: "#b03a2e",
-  },
-  {
-    title: "Add dark mode support",
-    meta: "duplicate · issue #91",
-    flag: "#b08a2e",
-  },
-]
-
 const SCANLINES = {
   backgroundImage:
     "repeating-linear-gradient(to bottom, rgba(0,0,0,0.22) 0px, rgba(0,0,0,0.22) 1px, transparent 1px, transparent 3px)",
 } as const
-
-/** The moderation dashboard, miniaturized — rendered at full size and scaled
- * down so type and hairlines stay crisp on the tube. */
-function DemoScreen() {
-  return (
-    <div
-      className="h-full w-full overflow-hidden"
-      style={{ background: "#0d0d0f" }}
-    >
-      <div
-        className="flex origin-top-left flex-col"
-        style={{ width: "200%", height: "200%", transform: "scale(0.5)" }}
-      >
-        {/* topbar */}
-        <div
-          className="flex items-center justify-between px-4 py-2.5"
-          style={{ borderBottom: "1px solid #27272a" }}
-        >
-          <span className="font-mono text-[13px] text-[#eeeeee]">
-            tripwire — moderation
-          </span>
-          <span className="font-mono text-[11px] text-[#6e6e6e]">
-            demo.tripwire.sh
-          </span>
-        </div>
-
-        {/* stat cards */}
-        <div className="grid grid-cols-4 gap-2 px-4 pt-3">
-          {DEMO_STATS.map((s) => (
-            <div
-              key={s.label}
-              className="flex flex-col gap-1 rounded-md p-2.5"
-              style={{ background: "#17171a", border: "1px solid #27272a" }}
-            >
-              <span className="font-mono text-[10px] text-[#9f9fa9]">
-                {s.label}
-              </span>
-              <span className="font-mono text-[18px] text-[#eeeeee]">
-                {s.value}
-              </span>
-              <div className="h-8">
-                <Sparkline data={s.series} color={s.color} animate />
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* queue */}
-        <div className="flex flex-col gap-1.5 px-4 pt-3">
-          <span className="font-mono text-[11px] text-[#9f9fa9]">
-            pending review
-          </span>
-          {DEMO_QUEUE.map((q) => (
-            <div
-              key={q.title}
-              className="flex items-center gap-2.5 rounded-md px-3 py-2"
-              style={{ background: "#17171a", border: "1px solid #27272a" }}
-            >
-              <span
-                className="size-1.5 shrink-0 rounded-full"
-                style={{ background: q.flag }}
-              />
-              <span className="truncate font-mono text-[12px] text-[#b4b4b4]">
-                {q.title}
-              </span>
-              <span className="ml-auto shrink-0 font-mono text-[10px] text-[#6e6e6e]">
-                {q.meta}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        {/* status line — pinned to the tube's bottom edge */}
-        <div
-          className="mt-auto flex items-center justify-between px-4 py-1.5"
-          style={{ borderTop: "1px solid #27272a" }}
-        >
-          <span className="font-mono text-[10px] text-[#6e6e6e]">
-            5 rules active
-          </span>
-          <span className="font-mono text-[10px] text-[#67e19f]">
-            webhooks connected
-          </span>
-        </div>
-      </div>
-
-      {/* scanlines — plain lines, not a glow */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0"
-        style={SCANLINES}
-      />
-    </div>
-  )
-}
 
 /** Mounts the live game canvas as the tube's picture. */
 function GameScreen({ canvas }: { canvas: HTMLCanvasElement }) {

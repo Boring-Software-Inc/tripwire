@@ -5,6 +5,7 @@ import { buildSeo } from "#/lib/seo"
 import { authClient } from "@tripwire/auth/client"
 import { LandingHeader } from "#/components/layout/landing/header"
 import { useSpaceInvaders } from "#/components/layout/landing/space-invaders"
+import { CloudEye } from "#/components/layout/landing/cloud-eye"
 import { RetroComputer } from "#/components/layout/landing/retro-computer"
 
 export const Route = createFileRoute("/")({
@@ -56,6 +57,11 @@ function LandingPage() {
         backgroundPosition: "center",
       }}
     >
+      {/* The eye, as a cloud in the sky, riding the cursor */}
+      <div className="pointer-events-none absolute inset-0 z-[5] hidden md:block">
+        <CloudEye />
+      </div>
+
       {/* Hero — dead centre, above the machine */}
       <div className="relative z-10 flex h-full w-full flex-col">
         <LandingHeader session={session} />
