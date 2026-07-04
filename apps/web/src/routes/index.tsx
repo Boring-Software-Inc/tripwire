@@ -62,26 +62,21 @@ export const Route = createFileRoute("/")({
 function LandingPage() {
   const { data: session } = authClient.useSession()
   const [gameActive, setGameActive] = useState(false)
-  const [transitioning, setTransitioning] = useState(false)
 
-  const exitGame = useCallback(() => {
-    setGameActive(false)
-    setTransitioning(false)
-  }, [])
+  const exitGame = useCallback(() => setGameActive(false), [])
 
+  // The game boots straight onto the retro computer's CRT, replacing the
+  // dashboard demo — the terminal backdrop stays put.
   const gameCanvas = useSpaceInvaders(gameActive, exitGame)
 
   useEffect(() => {
-    if (gameActive || transitioning) return
+    if (gameActive) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key.startsWith("Arrow")) {
-        setTransitioning(true)
-        setTimeout(() => setGameActive(true), 600)
-      }
+      if (e.key.startsWith("Arrow")) setGameActive(true)
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [gameActive, transitioning])
+  }, [gameActive])
 
   return (
     <div className="relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden bg-tw-bg antialiased [font-synthesis:none]">
@@ -91,32 +86,22 @@ function LandingPage() {
           scale={3.0}
           digitSize={1.2}
           scanlineIntensity={0.5}
-          glitchAmount={transitioning ? 30 : 5}
+          glitchAmount={gameActive ? 10 : 5}
           flickerAmount={1}
-          noiseAmp={gameActive ? 0.4 : 1}
-          chromaticAberration={transitioning ? 5 : 0}
+          noiseAmp={1}
+          chromaticAberration={0}
           dither={0}
           curvature={0.05}
           tint="#A7EF9E"
-          mouseReact={!gameActive}
+          mouseReact
           mouseStrength={0.5}
           cursorMask={EYE_CURSOR_MASK}
-          brightness={gameActive ? 0.5 : 0.3}
-          gameCanvas={gameCanvas}
-          gameMix={gameActive ? 1 : 0}
+          brightness={0.3}
         />
       </div>
 
       {/* Landing content — fades out when game activates */}
-      <div
-        className="relative z-10 flex min-h-screen w-full flex-col transition-all duration-500 md:max-w-[95vw]"
-        style={{
-          opacity: transitioning || gameActive ? 0 : 1,
-          transform: transitioning ? "scale(0.96)" : "scale(1)",
-          filter: transitioning ? "blur(12px) brightness(2)" : "none",
-          pointerEvents: gameActive ? "none" : "auto",
-        }}
-      >
+      <div className="relative z-10 flex min-h-screen w-full flex-col md:max-w-[95vw]">
         <LandingHeader session={session} />
         <div className="flex w-full flex-1 flex-col items-center justify-center gap-6 px-4 py-10">
           <h1 className="font-sans text-lg font-medium text-tw-text-primary">
@@ -137,7 +122,7 @@ function LandingPage() {
               login
             </Link>
           )}
-          <RetroComputer />
+          <RetroComputer gameCanvas={gameActive ? gameCanvas : null} />
         </div>
       </div>
     </div>

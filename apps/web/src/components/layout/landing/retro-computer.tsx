@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Sparkline } from "#/components/dither-kit"
 
 /**
@@ -101,7 +101,7 @@ function DemoScreen() {
       style={{ background: "#0d0d0f" }}
     >
       <div
-        className="origin-top-left"
+        className="flex origin-top-left flex-col"
         style={{ width: "200%", height: "200%", transform: "scale(0.5)" }}
       >
         {/* topbar */}
@@ -163,9 +163,9 @@ function DemoScreen() {
           ))}
         </div>
 
-        {/* status line */}
+        {/* status line — pinned to the tube's bottom edge */}
         <div
-          className="mt-3 flex items-center justify-between px-4 py-1.5"
+          className="mt-auto flex items-center justify-between px-4 py-1.5"
           style={{ borderTop: "1px solid #27272a" }}
         >
           <span className="font-mono text-[10px] text-[#6e6e6e]">
@@ -178,6 +178,36 @@ function DemoScreen() {
       </div>
 
       {/* scanlines — plain lines, not a glow */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(to bottom, rgba(0,0,0,0.22) 0px, rgba(0,0,0,0.22) 1px, transparent 1px, transparent 3px)",
+        }}
+      />
+    </div>
+  )
+}
+
+/** Mounts the live game canvas as the tube's picture. */
+function GameScreen({ canvas }: { canvas: HTMLCanvasElement }) {
+  const host = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = host.current
+    if (!el) return
+    canvas.style.width = "100%"
+    canvas.style.height = "100%"
+    canvas.style.display = "block"
+    el.appendChild(canvas)
+    return () => {
+      canvas.remove()
+    }
+  }, [canvas])
+  return (
+    <div className="absolute inset-0" style={{ background: "#0d0d0f" }}>
+      <div ref={host} className="absolute inset-0" />
+      {/* same scanlines as the demo — it's the same tube */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0"
@@ -266,50 +296,55 @@ function usePressedArrows() {
 function Keyboard() {
   const pressed = usePressedArrows()
   return (
-    <div
-      className="mx-auto w-[92%] rounded-t-[3px] rounded-b-md px-3 pt-2 pb-3"
-      style={{
-        background: C.shell,
-        ...bevel(true),
-        borderTop: `2px solid ${C.shellDeep}`, // seam against the case
-      }}
-    >
-      <div className="flex gap-3">
-        {/* main key block */}
-        <div className="flex flex-1 flex-col gap-1">
-          {KEY_ROWS.map((row) => (
-            <div key={row.join()} className="flex gap-1">
-              {row.map((k, i) => (
-                // biome-ignore lint/suspicious/noArrayIndexKey: static layout
-                <Key key={`${k}${i}`} label={k} w={WIDE_KEYS[k] ?? 1} />
-              ))}
+    <div style={{ perspective: "1000px", perspectiveOrigin: "50% 0%" }}>
+      <div
+        className="mx-auto w-[84%] rounded-t-[3px] rounded-b-md px-3 pt-2 pb-3"
+        style={{
+          background: C.shell,
+          ...bevel(true),
+          borderTop: `2px solid ${C.shellDeep}`, // seam against the case
+          borderBottom: `9px solid ${C.shellDark}`, // front edge thickness
+          transform: "rotateX(34deg)",
+          transformOrigin: "50% 0%",
+        }}
+      >
+        <div className="flex gap-3">
+          {/* main key block */}
+          <div className="flex flex-1 flex-col gap-1">
+            {KEY_ROWS.map((row) => (
+              <div key={row.join()} className="flex gap-1">
+                {row.map((k, i) => (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: static layout
+                  <Key key={`${k}${i}`} label={k} w={WIDE_KEYS[k] ?? 1} />
+                ))}
+              </div>
+            ))}
+            <div className="flex gap-1">
+              <Key label="alt" w={1.6} />
+              <Key w={7} label="" />
+              <Key label="caps" w={1.6} />
             </div>
-          ))}
-          <div className="flex gap-1">
-            <Key label="alt" w={1.6} />
-            <Key w={7} label="" />
-            <Key label="caps" w={1.6} />
           </div>
-        </div>
 
-        {/* arrow cluster — mirrors real presses */}
-        <div className="flex w-24 shrink-0 flex-col justify-end gap-1">
-          <div className="flex justify-center">
-            <div className="w-1/3">
-              <Key label="↑" pressed={pressed.has("ArrowUp")} />
+          {/* arrow cluster — mirrors real presses */}
+          <div className="flex w-24 shrink-0 flex-col justify-end gap-1">
+            <div className="flex justify-center">
+              <div className="w-1/3">
+                <Key label="↑" pressed={pressed.has("ArrowUp")} />
+              </div>
             </div>
+            <div className="flex gap-1">
+              <Key label="←" pressed={pressed.has("ArrowLeft")} />
+              <Key label="↓" pressed={pressed.has("ArrowDown")} />
+              <Key label="→" pressed={pressed.has("ArrowRight")} />
+            </div>
+            <span
+              className="pt-0.5 text-center font-mono text-[8px]"
+              style={{ color: C.shellDeep }}
+            >
+              play
+            </span>
           </div>
-          <div className="flex gap-1">
-            <Key label="←" pressed={pressed.has("ArrowLeft")} />
-            <Key label="↓" pressed={pressed.has("ArrowDown")} />
-            <Key label="→" pressed={pressed.has("ArrowRight")} />
-          </div>
-          <span
-            className="pt-0.5 text-center font-mono text-[8px]"
-            style={{ color: C.shellDeep }}
-          >
-            play
-          </span>
         </div>
       </div>
     </div>
@@ -318,9 +353,9 @@ function Keyboard() {
 
 /* ------------------------------------------------------------- monitor */
 
-function Monitor() {
+function Monitor({ gameCanvas }: { gameCanvas: HTMLCanvasElement | null }) {
   return (
-    <div className="mx-auto w-[72%]">
+    <div className="mx-auto w-[76%]">
       {/* housing */}
       <div
         className="rounded-md p-4 pb-3"
@@ -336,7 +371,7 @@ function Monitor() {
             className="relative aspect-[4/3] overflow-hidden rounded-[10px]"
             style={{ background: C.tube }}
           >
-            <DemoScreen />
+            {gameCanvas ? <GameScreen canvas={gameCanvas} /> : <DemoScreen />}
           </div>
         </div>
         {/* chin: badge + controls */}
@@ -442,14 +477,21 @@ function SystemUnit() {
 
 /* ---------------------------------------------------------------- shell */
 
-export function RetroComputer() {
+export function RetroComputer({
+  gameCanvas = null,
+}: {
+  /** When set, the live game replaces the dashboard demo on the CRT. */
+  gameCanvas?: HTMLCanvasElement | null
+}) {
   return (
-    <div className="w-full max-w-xl select-none">
-      <Monitor />
+    <div className="w-full max-w-3xl select-none">
+      <Monitor gameCanvas={gameCanvas} />
       <SystemUnit />
       <Keyboard />
-      <p className="pt-3 text-center font-mono text-[11px] text-tw-text-muted">
-        press an arrow key to play
+      <p className="pt-4 text-center font-mono text-[11px] text-tw-text-muted">
+        {gameCanvas
+          ? "arrows move, space shoots, esc hands the machine back"
+          : "press an arrow key to play"}
       </p>
     </div>
   )
