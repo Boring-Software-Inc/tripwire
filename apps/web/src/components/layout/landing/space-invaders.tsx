@@ -164,8 +164,8 @@ function drawExplosion(
   }
 }
 
-// The game renders to an offscreen canvas that gets fed into FaultyTerminal's shader as a texture.
-// No visible DOM element — the terminal IS the display.
+// The game renders to an offscreen 4:3 canvas sized for the landing page's
+// CRT — the RetroComputer mounts it inside the tube as the display.
 export function useSpaceInvaders(
   active: boolean,
   onExit: () => void
@@ -211,8 +211,9 @@ export function useSpaceInvaders(
       return
     }
 
-    const W = window.innerWidth
-    const H = window.innerHeight
+    // Fixed 4:3 — the CRT's aspect ratio, downscaled by CSS into the tube.
+    const W = 800
+    const H = 600
     const c = document.createElement("canvas")
     c.width = W
     c.height = H
