@@ -179,7 +179,12 @@ type PanelState =
   | { kind: "rule"; id: string }
   | null
 
-export function DemoScreen() {
+export function DemoScreen({
+  onEngagement,
+}: {
+  /** Fires when the visitor's mouse takes / releases the screen. */
+  onEngagement?: (engaged: boolean) => void
+}) {
   const [reduceMotion, setReduceMotion] = useState(false)
   useEffect(() => {
     setReduceMotion(
@@ -203,6 +208,10 @@ export function DemoScreen() {
     },
     []
   )
+
+  useEffect(() => {
+    onEngagement?.(interactive)
+  }, [interactive, onEngagement])
 
   const { route, phase, next, goTo } = useTour(reduceMotion, interactive)
   const cursor = useDemoCursor(phase, next, route.page, interactive)

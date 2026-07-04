@@ -237,7 +237,13 @@ function Keyboard() {
 
 /* ------------------------------------------------------------- monitor */
 
-function Monitor({ gameCanvas }: { gameCanvas: HTMLCanvasElement | null }) {
+function Monitor({
+  gameCanvas,
+  onDemoEngagement,
+}: {
+  gameCanvas: HTMLCanvasElement | null
+  onDemoEngagement?: (engaged: boolean) => void
+}) {
   return (
     <div className="mx-auto w-[76%]">
       {/* housing */}
@@ -262,7 +268,11 @@ function Monitor({ gameCanvas }: { gameCanvas: HTMLCanvasElement | null }) {
               animate={{ opacity: 1 }}
               transition={{ duration: 0.35, delay: 0.4 }}
             >
-              {gameCanvas ? <GameScreen canvas={gameCanvas} /> : <DemoScreen />}
+              {gameCanvas ? (
+                <GameScreen canvas={gameCanvas} />
+              ) : (
+                <DemoScreen onEngagement={onDemoEngagement} />
+              )}
             </motion.div>
           </div>
         </div>
@@ -420,14 +430,17 @@ export function RetroComputer({
   powered,
   onPowerToggle,
   gameCanvas = null,
+  onDemoEngagement,
 }: {
   powered: boolean
   onPowerToggle: () => void
   /** When set, the live game replaces the dashboard demo on the CRT. */
   gameCanvas?: HTMLCanvasElement | null
+  /** Fires when the visitor's mouse takes / releases the demo screen. */
+  onDemoEngagement?: (engaged: boolean) => void
 }) {
   return (
-    <div className="w-full max-w-3xl select-none">
+    <div className="w-full max-w-4xl select-none">
       {/* monitor rises out of the case top */}
       <motion.div
         className="relative z-0 overflow-hidden"
@@ -439,7 +452,7 @@ export function RetroComputer({
         }
         transition={POP}
       >
-        <Monitor gameCanvas={gameCanvas} />
+        <Monitor gameCanvas={gameCanvas} onDemoEngagement={onDemoEngagement} />
       </motion.div>
 
       <div className="relative z-10">

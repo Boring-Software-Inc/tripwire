@@ -61,6 +61,7 @@ uniform vec2 uMouse;        // device px, smoothed, y-up
 uniform vec2 uWind;         // smoothed cursor velocity, roughly -1..1
 uniform vec2 uPupil;        // pupil lean inside the socket, uv units
 uniform float uEyeW;        // eye quad width in device px
+uniform float uHide;        // 0 visible → 1 sunk away
 uniform sampler2D uBody;    // blurred eye body (outer minus socket)
 uniform sampler2D uPupilTex;// blurred pupil, same texture space
 
@@ -165,7 +166,7 @@ void main() {
   float rim = smoothstep(0.32, 0.44, d) * (1.0 - smoothstep(0.44, 0.68, d));
   col += rim * 0.10;
 
-  gl_FragColor = vec4(min(col, vec3(1.0)), alpha * 0.97);
+  gl_FragColor = vec4(min(col, vec3(1.0)), alpha * 0.97 * (1.0 - uHide));
 }
 `
 
@@ -217,8 +218,20 @@ function rasterizeMask(
   return flat
 }
 
-export function CloudEye({ size = 300 }: { size?: number }) {
+export function CloudEye({
+  size = 300,
+  hidden = false,
+}: {
+  size?: number
+  /** Sinks the cloud down and fades it out (e.g. while the demo owns the
+   * visitor's cursor) — eased in the render loop so it drifts, not pops. */
+  hidden?: boolean
+}) {
   const containerRef = useRef<HTMLDivElement>(null)
+  const hiddenRef = useRef(hidden)
+  useEffect(() => {
+    hiddenRef.current = hidden
+  }, [hidden])
 
   useEffect(() => {
     const container = containerRef.current
@@ -277,6 +290,7 @@ export function CloudEye({ size = 300 }: { size?: number }) {
         uWind: { value: new Float32Array([0, 0]) },
         uPupil: { value: new Float32Array([0, 0]) },
         uEyeW: { value: size * dpr },
+        uHide: { value: 0 },
         uBody: { value: bodyTex },
         uPupilTex: { value: pupilTex },
       },
@@ -304,6 +318,7 @@ export function CloudEye({ size = 300 }: { size?: number }) {
       y: container.offsetHeight * 0.62 * dpr,
     }
     const smooth = { x: raw.x, y: raw.y }
+    let hide = 0
     const wind = { x: 0, y: 0 }
     const pupil = { x: 0, y: 0 }
 
@@ -343,10 +358,14 @@ export function CloudEye({ size = 300 }: { size?: number }) {
       // texture y is flipped relative to screen y
       pupil.y += (-(lookY / lookLen) * capped * 0.13 - pupil.y) * 0.08
 
+      hide += ((hiddenRef.current ? 1 : 0) - hide) * 0.07
+
       program.uniforms.uTime.value = time
+      program.uniforms.uHide.value = hide
       const mu = program.uniforms.uMouse.value as Float32Array
       mu[0] = smooth.x
-      mu[1] = smooth.y
+      // sinking: the anchor drifts down (gl y is up) as the cloud fades
+      mu[1] = smooth.y - hide * 320 * dpr
       const wu = program.uniforms.uWind.value as Float32Array
       wu[0] = wind.x
       wu[1] = wind.y

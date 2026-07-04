@@ -57,7 +57,7 @@ export function TopNav({
         className="px-1 text-[13px] font-medium"
         style={{ color: V.fg, fontFamily: '"Geist Pixel", monospace' }}
       >
-        modkit
+        tripwire
       </span>
       <div className="flex items-center gap-0.5">
         {NAV_ITEMS.map((item) => (

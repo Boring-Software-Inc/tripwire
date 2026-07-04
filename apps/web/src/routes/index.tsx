@@ -24,6 +24,7 @@ function LandingPage() {
   const { data: session } = authClient.useSession()
   const [powered, setPowered] = useState(false)
   const [gameActive, setGameActive] = useState(false)
+  const [demoEngaged, setDemoEngaged] = useState(false)
 
   const exitGame = useCallback(() => setGameActive(false), [])
   const togglePower = useCallback(() => {
@@ -59,7 +60,7 @@ function LandingPage() {
     >
       {/* The eye, as a cloud in the sky, riding the cursor */}
       <div className="pointer-events-none absolute inset-0 z-[5] hidden md:block">
-        <CloudEye />
+        <CloudEye hidden={demoEngaged} />
       </div>
 
       {/* Hero — dead centre, above the machine */}
@@ -99,6 +100,7 @@ function LandingPage() {
           powered={powered}
           onPowerToggle={togglePower}
           gameCanvas={gameActive ? gameCanvas : null}
+          onDemoEngagement={setDemoEngaged}
         />
       </div>
     </div>
