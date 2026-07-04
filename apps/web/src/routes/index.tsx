@@ -5,6 +5,7 @@ import { authClient } from "@tripwire/auth/client"
 import { LandingHeader } from "#/components/layout/landing/header"
 import { useSpaceInvaders } from "#/components/layout/landing/space-invaders"
 import FaultyTerminal from "#/components/layout/landing/faulty-terminal"
+import { RetroComputer } from "#/components/layout/landing/retro-computer"
 import {
   TRIPWIRE_EYE_OUTER_PATH,
   TRIPWIRE_EYE_OUTER_VIEWBOX,
@@ -117,7 +118,7 @@ function LandingPage() {
         }}
       >
         <LandingHeader session={session} />
-        <div className="flex w-full flex-1 flex-col items-center justify-center gap-3 px-4">
+        <div className="flex w-full flex-1 flex-col items-center justify-center gap-6 px-4 py-10">
           <h1 className="font-sans text-lg font-medium text-tw-text-primary">
             catch slop before it catches up with you
           </h1>
@@ -136,6 +137,7 @@ function LandingPage() {
               login
             </Link>
           )}
+          <RetroComputer />
         </div>
       </div>
     </div>
