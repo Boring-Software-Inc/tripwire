@@ -13,9 +13,20 @@ import {
   contributorRequests,
   repositories,
   whitelistEntries,
+  type AppealContentType,
   type RequestKind,
 } from "@tripwire/db"
-import { logEvent } from "@tripwire/core"
+import {
+  loadPrefsForInstallation,
+  logEvent,
+  renderDecisionComment,
+} from "@tripwire/core"
+import {
+  addComment,
+  getInstallationToken,
+  reopenIssue,
+  reopenPullRequest,
+} from "@tripwire/github"
 
 import type { TRPCRouterRecord } from "@trpc/server"
 
@@ -81,6 +92,8 @@ export const requestsRouter = {
         repoFullName: z.string().min(3),
         kind: kindEnum,
         reason: z.string().min(10).max(2000),
+        ref: z.number().int().positive().optional(),
+        contentType: z.enum(["pull_request", "issue"]).optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -148,6 +161,13 @@ export const requestsRouter = {
           githubUserId: ghUser.id,
           avatarUrl: ghUser.avatar_url,
           reason: input.reason,
+          // Only unblock appeals target a specific PR/issue to reopen.
+          githubRef:
+            input.kind === "unblock" && input.ref ? `#${input.ref}` : undefined,
+          contentType:
+            input.kind === "unblock"
+              ? (input.contentType ?? undefined)
+              : undefined,
         })
         .returning()
 
@@ -194,10 +214,11 @@ export const requestsRouter = {
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const { request: req } = await assertRequestBelongsToOrg(
-        input.requestId,
-        ctx.activeOrgId
-      )
+      const {
+        request: req,
+        repo,
+        org,
+      } = await assertRequestBelongsToOrg(input.requestId, ctx.activeOrgId)
 
       const nextStatus = input.decision === "approve" ? "approved" : "denied"
 
@@ -259,9 +280,114 @@ export const requestsRouter = {
         },
       })
 
+      // Reopen the appealed PR/issue (on approve) and notify the contributor of
+      // the outcome via a GitHub comment. Best-effort and outside the DB
+      // transaction: the decision is already committed, so a GitHub hiccup must
+      // not fail the mutation.
+      await notifyDecisionOnGithub(
+        req,
+        repo.fullName,
+        org.githubInstallationId,
+        input.decision
+      ).catch((err) =>
+        console.error(
+          `[requests] Failed to notify/reopen for request ${req.id}:`,
+          err
+        )
+      )
+
       return { status: nextStatus }
     }),
 } satisfies TRPCRouterRecord
+
+interface DecidedRequest {
+  id: string
+  repoId: string
+  kind: RequestKind
+  githubUsername: string
+  githubUserId: number | null
+  githubRef: string | null
+  contentType: AppealContentType | null
+}
+
+async function notifyDecisionOnGithub(
+  req: DecidedRequest,
+  repoFullName: string,
+  installationId: number,
+  decision: "approve" | "deny"
+) {
+  // Only unblock appeals are tied to a reopenable PR/issue. Legacy links and
+  // access requests carry no ref, so there's nothing to reopen or comment on.
+  if (req.kind !== "unblock" || !req.githubRef || !req.contentType) return
+
+  const [owner, repo] = repoFullName.split("/")
+  const number = Number(req.githubRef.replace(/^#/, ""))
+  if (!owner || !repo || !Number.isFinite(number)) return
+
+  const kind = req.contentType
+  const token = await getInstallationToken(installationId)
+  const prefs = await loadPrefsForInstallation(installationId)
+
+  if (decision === "deny") {
+    await addComment(
+      token,
+      owner,
+      repo,
+      number,
+      renderDecisionComment({
+        prefs,
+        decision,
+        username: req.githubUsername,
+        kind,
+      })
+    )
+    return
+  }
+
+  // Approve: reopen the content, then notify. If the head branch was deleted
+  // GitHub rejects the reopen — still notify, but don't claim it reopened.
+  let reopened = false
+  try {
+    if (kind === "pull_request") {
+      await reopenPullRequest(token, owner, repo, number)
+    } else {
+      await reopenIssue(token, owner, repo, number)
+    }
+    reopened = true
+  } catch (err) {
+    console.error(`[requests] Failed to reopen ${req.githubRef}:`, err)
+  }
+
+  await addComment(
+    token,
+    owner,
+    repo,
+    number,
+    renderDecisionComment({
+      prefs,
+      decision,
+      username: req.githubUsername,
+      kind,
+      reopened,
+    })
+  )
+
+  if (reopened) {
+    await logEvent({
+      repoId: req.repoId,
+      action:
+        kind === "pull_request"
+          ? "github_pr_reopened"
+          : "github_issue_reopened",
+      severity: "success",
+      contentType: kind,
+      description: `Reopened ${kind === "pull_request" ? "PR" : "issue"} ${req.githubRef} after approving @${req.githubUsername}'s appeal`,
+      targetGithubUsername: req.githubUsername,
+      targetGithubUserId: req.githubUserId ?? undefined,
+      githubRef: req.githubRef,
+    })
+  }
+}
 
 type DbOrTx = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db
 

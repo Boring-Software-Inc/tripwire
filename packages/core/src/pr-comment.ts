@@ -25,6 +25,12 @@ export interface RenderCommentInput {
   username: string
   outcome: RenderOutcome
   kind: CommentKind
+  /**
+   * PR/issue number the appeal is for. Threaded into the appeal URL so an
+   * approval can reopen the exact content. Omitted for comment blocks (not
+   * reopenable).
+   */
+  contentNumber?: number
   /** Base URL for appeal links. Server: env.BETTER_AUTH_URL. Preview: placeholder. */
   appBaseUrl: string
 }
@@ -71,18 +77,31 @@ function warnedLeadingLine(prefs: ResolvedPrefs): string {
 export function buildAppealUrl(
   appBaseUrl: string,
   repoFullName: string,
-  username: string
+  username: string,
+  ref?: number,
+  contentType?: "pull_request" | "issue"
 ): string {
   const base = (appBaseUrl ?? "").replace(/\/$/, "")
-  const path = `/request/${repoFullName}?kind=unblock&u=${encodeURIComponent(username)}`
+  let path = `/request/${repoFullName}?kind=unblock&u=${encodeURIComponent(username)}`
+  if (ref && contentType) path += `&ref=${ref}&ct=${contentType}`
   return base ? `${base}${path}` : path
+}
+
+function appealContentType(
+  kind: CommentKind
+): "pull_request" | "issue" | undefined {
+  if (kind === "pull_request") return "pull_request"
+  if (kind === "issue") return "issue"
+  return undefined
 }
 
 function appealLineFor(input: RenderCommentInput): string {
   const url = buildAppealUrl(
     input.appBaseUrl,
     input.repoFullName,
-    input.username
+    input.username,
+    input.contentNumber,
+    appealContentType(input.kind)
   )
   if (input.outcome === "blacklist_blocked") {
     return `> **Blacklisted from this repository.** [Appeal this block as @${input.username}](${url}) if you think it was a mistake.`
@@ -142,4 +161,39 @@ export function renderWarnedComment(input: RenderCommentInput): string {
   appendCustomFooter(lines, prefs)
 
   return lines.join("\n")
+}
+
+export interface RenderDecisionInput {
+  /** Org-scoped prefs, or null to use defaults. */
+  prefs: OrgPrCommentPreferences | null
+  decision: "approve" | "deny"
+  /** Requester's GitHub login (no @ prefix). */
+  username: string
+  /** "pull_request" or "issue" — what was appealed. */
+  kind: CommentKind
+  /**
+   * Whether the content was actually reopened (approve only). When false —
+   * e.g. the head branch was deleted — the copy avoids claiming a reopen.
+   */
+  reopened?: boolean
+}
+
+/**
+ * Comment posted back to the requester when a maintainer decides their unblock
+ * request. Approvals reopen the content; denials leave it closed. Either way
+ * the requester — an external contributor with no in-app inbox — is notified.
+ */
+export function renderDecisionComment(input: RenderDecisionInput): string {
+  const prefs = resolvePrefs(input.prefs)
+  const bot = botName(prefs)
+  const subject = subjectNoun(input.kind)
+  const mention = `@${input.username}`
+
+  if (input.decision === "approve") {
+    if (input.reopened === false) {
+      return `**${bot}**: ${mention} — a maintainer approved your review request, but this ${subject} couldn't be reopened automatically (its branch may have been deleted). You can reopen it manually.`
+    }
+    return `**${bot}**: ${mention} — a maintainer approved your review request. Reopening this ${subject}.`
+  }
+  return `**${bot}**: ${mention} — a maintainer reviewed your request and it was not approved. This ${subject} stays closed.`
 }

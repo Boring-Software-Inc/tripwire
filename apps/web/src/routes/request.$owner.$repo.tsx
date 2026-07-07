@@ -1,7 +1,12 @@
 import { useState } from "react"
 import { createFileRoute } from "@tanstack/react-router"
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { parseAsString, parseAsStringEnum, useQueryStates } from "nuqs"
+import {
+  parseAsInteger,
+  parseAsString,
+  parseAsStringEnum,
+  useQueryStates,
+} from "nuqs"
 import { authClient } from "@tripwire/auth/client"
 import { useTRPC } from "#/integrations/trpc/react"
 import { Button } from "@tripwire/ui/button"
@@ -24,11 +29,15 @@ export const Route = createFileRoute("/request/$owner/$repo")({
 
 function RequestPage() {
   const { owner, repo } = Route.useParams()
-  const [{ kind, u: intendedUser }, setSearch] = useQueryStates({
+  const [{ kind, u: intendedUser, ref, ct }, setSearch] = useQueryStates({
     kind: parseAsStringEnum(["unblock", "access"] as const).withDefault(
       "unblock"
     ),
     u: parseAsString,
+    // The closed PR/issue this appeal is for, carried from the block comment's
+    // appeal link so an approval can reopen the exact content.
+    ref: parseAsInteger,
+    ct: parseAsStringEnum(["pull_request", "issue"] as const),
   })
   const trpc = useTRPC()
   const { data: session, isPending } = authClient.useSession()
@@ -80,7 +89,15 @@ function RequestPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    submit.mutate({ repoFullName, kind, reason })
+    submit.mutate({
+      repoFullName,
+      kind,
+      reason,
+      // Only send the ref for unblock appeals — access requests aren't tied to
+      // a specific PR/issue.
+      ref: kind === "unblock" && ref ? ref : undefined,
+      contentType: kind === "unblock" && ct ? ct : undefined,
+    })
   }
 
   const canSubmit = reason.trim().length >= 10 && !submit.isPending

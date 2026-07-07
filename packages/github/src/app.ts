@@ -244,6 +244,34 @@ export async function closePullRequest(
   })
 }
 
+/** Reopen a pull request */
+export async function reopenPullRequest(
+  token: string,
+  owner: string,
+  repo: string,
+  prNumber: number
+) {
+  console.log(`[GitHub] Reopening PR #${prNumber}...`)
+  return githubApi(`/repos/${owner}/${repo}/pulls/${prNumber}`, token, {
+    method: "PATCH",
+    body: JSON.stringify({ state: "open" }),
+  })
+}
+
+/** Reopen an issue */
+export async function reopenIssue(
+  token: string,
+  owner: string,
+  repo: string,
+  issueNumber: number
+) {
+  console.log(`[GitHub] Reopening issue #${issueNumber}...`)
+  return githubApi(`/repos/${owner}/${repo}/issues/${issueNumber}`, token, {
+    method: "PATCH",
+    body: JSON.stringify({ state: "open", state_reason: "reopened" }),
+  })
+}
+
 /** Add a comment to an issue or PR (without closing) */
 export async function addComment(
   token: string,

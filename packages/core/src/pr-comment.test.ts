@@ -5,6 +5,7 @@ import {
 } from "@tripwire/db"
 import {
   renderBlockedComment,
+  renderDecisionComment,
   renderWarnedComment,
   buildAppealUrl,
   type RenderCommentInput,
@@ -219,5 +220,97 @@ describe("buildAppealUrl", () => {
     expect(buildAppealUrl("", "acme/api", "octocat")).toBe(
       "/request/acme/api?kind=unblock&u=octocat"
     )
+  })
+
+  it("carries the PR/issue ref so an approval can reopen the exact content", () => {
+    expect(
+      buildAppealUrl(
+        "https://tripwire.app",
+        "acme/api",
+        "octocat",
+        42,
+        "pull_request"
+      )
+    ).toBe(
+      "https://tripwire.app/request/acme/api?kind=unblock&u=octocat&ref=42&ct=pull_request"
+    )
+  })
+
+  it("omits ref params unless both ref and contentType are given", () => {
+    expect(
+      buildAppealUrl("https://tripwire.app", "acme/api", "octocat", 42)
+    ).toBe("https://tripwire.app/request/acme/api?kind=unblock&u=octocat")
+  })
+})
+
+describe("renderBlockedComment appeal ref", () => {
+  it("threads contentNumber into the appeal link for a PR", () => {
+    const out = renderBlockedComment({
+      ...BASE,
+      prefs: null,
+      outcome: "blocked",
+      kind: "pull_request",
+      contentNumber: 42,
+    })
+    expect(out).toContain("&ref=42&ct=pull_request")
+  })
+
+  it("leaves the appeal link ref-less when no contentNumber is provided", () => {
+    const out = renderBlockedComment({
+      ...BASE,
+      prefs: null,
+      outcome: "blocked",
+      kind: "pull_request",
+    })
+    expect(out).not.toContain("&ref=")
+  })
+})
+
+describe("renderDecisionComment", () => {
+  it("notifies + announces a reopen on approval", () => {
+    const out = renderDecisionComment({
+      prefs: null,
+      decision: "approve",
+      username: "octocat",
+      kind: "pull_request",
+      reopened: true,
+    })
+    expect(out).toContain("@octocat")
+    expect(out).toContain("approved your review request")
+    expect(out).toContain("Reopening this PR")
+  })
+
+  it("notifies without claiming a reopen when the reopen failed", () => {
+    const out = renderDecisionComment({
+      prefs: null,
+      decision: "approve",
+      username: "octocat",
+      kind: "pull_request",
+      reopened: false,
+    })
+    expect(out).toContain("couldn't be reopened automatically")
+  })
+
+  it("notifies the requester on denial", () => {
+    const out = renderDecisionComment({
+      prefs: null,
+      decision: "deny",
+      username: "octocat",
+      kind: "issue",
+    })
+    expect(out).toContain("@octocat")
+    expect(out).toContain("not approved")
+    expect(out).toContain("This issue stays closed")
+  })
+
+  it("respects the custom bot display name", () => {
+    const out = renderDecisionComment({
+      prefs: prefs({ botDisplayName: "Acme Bot" }),
+      decision: "approve",
+      username: "octocat",
+      kind: "pull_request",
+      reopened: true,
+    })
+    expect(out).toContain("**Acme Bot**:")
   })
 })

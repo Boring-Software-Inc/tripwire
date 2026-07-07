@@ -20,6 +20,8 @@ import { repositories } from "./installations"
  */
 export type RequestKind = "unblock" | "access"
 export type RequestStatus = "pending" | "approved" | "denied"
+/** The kind of content an unblock appeal is tied to (reopenable). */
+export type AppealContentType = "pull_request" | "issue"
 
 export const contributorRequests = pgTable(
   "contributor_requests",
@@ -33,6 +35,10 @@ export const contributorRequests = pgTable(
     githubUserId: integer("github_user_id"),
     avatarUrl: text("avatar_url"),
     reason: text("reason").notNull(),
+    // The PR/issue that was closed and appealed. Null for `access` requests
+    // and for legacy appeal links that predate ref-carrying URLs.
+    githubRef: text("github_ref"),
+    contentType: text("content_type").$type<AppealContentType>(),
     status: text("status").$type<RequestStatus>().notNull().default("pending"),
     decidedById: text("decided_by_id").references(() => user.id, {
       onDelete: "set null",

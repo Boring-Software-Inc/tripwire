@@ -1443,6 +1443,7 @@ export async function handlePullRequest(
       username: ctx.senderLogin,
       outcome: result.outcome,
       kind: "pull_request",
+      contentNumber: prNumber,
       appBaseUrl: APP_BASE_URL,
     })
     await closePullRequest(token, owner, repo, prNumber, comment)
@@ -1537,6 +1538,7 @@ export async function handleIssue(
       username: ctx.senderLogin,
       outcome: result.outcome,
       kind: "issue",
+      contentNumber: issueNumber,
       appBaseUrl: APP_BASE_URL,
     })
     await closeIssue(token, owner, repo, issueNumber, comment)
