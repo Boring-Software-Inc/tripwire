@@ -46,6 +46,7 @@ export const EVENT_ACTION_LABELS: Record<EventAction, string> = {
   // Contributor / unblock requests
   request_submitted: "Request submitted",
   request_decided: "Request decided",
+  request_notify_failed: "Reopen / notify failed",
   // Legacy
   user_blocked: "User blocked",
   bot_blacklisted: "Bot blacklisted",

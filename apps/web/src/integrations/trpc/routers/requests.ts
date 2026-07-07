@@ -325,10 +325,60 @@ async function notifyDecisionOnGithub(
   if (!owner || !repo || !Number.isFinite(number)) return
 
   const kind = req.contentType
-  const token = await getInstallationToken(installationId)
-  const prefs = await loadPrefsForInstallation(installationId)
 
-  if (decision === "deny") {
+  try {
+    const token = await getInstallationToken(installationId)
+    const prefs = await loadPrefsForInstallation(installationId)
+
+    if (decision === "deny") {
+      await addComment(
+        token,
+        owner,
+        repo,
+        number,
+        renderDecisionComment({
+          prefs,
+          decision,
+          username: req.githubUsername,
+          kind,
+        })
+      )
+      return
+    }
+
+    // Approve: reopen the content, then notify. If the head branch was deleted
+    // GitHub rejects the reopen — still notify, but don't claim it reopened.
+    let reopened = false
+    try {
+      if (kind === "pull_request") {
+        await reopenPullRequest(token, owner, repo, number)
+      } else {
+        await reopenIssue(token, owner, repo, number)
+      }
+      reopened = true
+    } catch (err) {
+      console.error(`[requests] Failed to reopen ${req.githubRef}:`, err)
+    }
+
+    // Log the reopen before the best-effort comment so a comment failure
+    // (network, rate limit) can't drop the audit trail for a reopen that
+    // actually happened on GitHub.
+    if (reopened) {
+      await logEvent({
+        repoId: req.repoId,
+        action:
+          kind === "pull_request"
+            ? "github_pr_reopened"
+            : "github_issue_reopened",
+        severity: "success",
+        contentType: kind,
+        description: `Reopened ${kind === "pull_request" ? "PR" : "issue"} ${req.githubRef} after approving @${req.githubUsername}'s appeal`,
+        targetGithubUsername: req.githubUsername,
+        targetGithubUserId: req.githubUserId ?? undefined,
+        githubRef: req.githubRef,
+      })
+    }
+
     await addComment(
       token,
       owner,
@@ -339,57 +389,32 @@ async function notifyDecisionOnGithub(
         decision,
         username: req.githubUsername,
         kind,
+        reopened,
       })
     )
-    return
-  }
-
-  // Approve: reopen the content, then notify. If the head branch was deleted
-  // GitHub rejects the reopen — still notify, but don't claim it reopened.
-  let reopened = false
-  try {
-    if (kind === "pull_request") {
-      await reopenPullRequest(token, owner, repo, number)
-    } else {
-      await reopenIssue(token, owner, repo, number)
-    }
-    reopened = true
   } catch (err) {
-    console.error(`[requests] Failed to reopen ${req.githubRef}:`, err)
-  }
-
-  // Log the reopen before the best-effort comment so a comment failure
-  // (network, rate limit) can't drop the audit trail for a reopen that
-  // actually happened on GitHub.
-  if (reopened) {
+    // Hard failure (e.g. the org's installation token no longer resolves —
+    // its install id doesn't match the running app — or GitHub is down). The
+    // decision is already committed, so record the miss in the ledger instead
+    // of failing silently: a maintainer can see the reopen/notify didn't land
+    // and re-run it, rather than assuming "approved" reopened the PR.
+    console.error(
+      `[requests] notify/reopen failed for ${req.githubRef}:`,
+      err
+    )
     await logEvent({
       repoId: req.repoId,
-      action:
-        kind === "pull_request"
-          ? "github_pr_reopened"
-          : "github_issue_reopened",
-      severity: "success",
+      action: "request_notify_failed",
+      severity: "error",
       contentType: kind,
-      description: `Reopened ${kind === "pull_request" ? "PR" : "issue"} ${req.githubRef} after approving @${req.githubUsername}'s appeal`,
+      description: `Couldn't ${decision === "approve" ? "reopen + notify" : "notify"} @${req.githubUsername} on ${req.githubRef} after the request was ${decision === "approve" ? "approved" : "denied"}: ${err instanceof Error ? err.message : String(err)}`,
       targetGithubUsername: req.githubUsername,
       targetGithubUserId: req.githubUserId ?? undefined,
       githubRef: req.githubRef,
-    })
+    }).catch((logErr) =>
+      console.error("[requests] failed to log notify failure:", logErr)
+    )
   }
-
-  await addComment(
-    token,
-    owner,
-    repo,
-    number,
-    renderDecisionComment({
-      prefs,
-      decision,
-      username: req.githubUsername,
-      kind,
-      reopened,
-    })
-  )
 }
 
 type DbOrTx = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db

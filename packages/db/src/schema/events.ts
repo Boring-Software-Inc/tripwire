@@ -51,6 +51,7 @@ export type EventAction =
   // Contributor / unblock requests
   | "request_submitted" // a user submitted an unblock/access request
   | "request_decided" // a reviewer approved or denied a request
+  | "request_notify_failed" // couldn't reopen/notify on GitHub after a decision
   // Legacy (kept for backward compat with insights)
   | "user_blocked"
   | "bot_blacklisted"
