@@ -287,6 +287,18 @@ describe("renderDecisionComment", () => {
       reopened: false,
     })
     expect(out).toContain("couldn't reopen this PR automatically")
+    expect(out).toContain("its branch may have been deleted")
+  })
+
+  it("omits the branch hint for issues (they have no branch)", () => {
+    const out = renderDecisionComment({
+      decision: "approve",
+      username: "octocat",
+      kind: "issue",
+      reopened: false,
+    })
+    expect(out).toContain("couldn't reopen this issue automatically")
+    expect(out).not.toContain("branch")
   })
 
   it("notifies the requester kindly on denial", () => {

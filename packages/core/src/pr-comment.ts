@@ -187,7 +187,9 @@ export function renderDecisionComment(input: RenderDecisionInput): string {
 
   if (input.decision === "approve") {
     if (input.reopened === false) {
-      return `Good news, ${mention}! A maintainer approved your review request. We couldn't reopen this ${subject} automatically (its branch may have been deleted), but you're welcome to reopen it yourself.`
+      const branchHint =
+        input.kind === "pull_request" ? " (its branch may have been deleted)" : ""
+      return `Good news, ${mention}! A maintainer approved your review request. We couldn't reopen this ${subject} automatically${branchHint}, but you're welcome to reopen it yourself.`
     }
     return `Good news, ${mention}! A maintainer approved your review request — this ${subject} is back open. Thanks for your patience 🎉`
   }
