@@ -71,7 +71,7 @@ function warnedLeadingLine(prefs: ResolvedPrefs): string {
   const bot = botName(prefs)
   if (prefs.tone === "formal") return `**${bot}**: Policy advisory.`
   if (prefs.tone === "casual") return `**${bot}**: Hey, a quick note.`
-  return `**${bot}**: Warning.`
+  return `**${bot}**: Just a heads up.`
 }
 
 export function buildAppealUrl(
@@ -106,7 +106,7 @@ function appealLineFor(input: RenderCommentInput): string {
   if (input.outcome === "blacklist_blocked") {
     return `> **Blacklisted from this repository.** [Appeal this block as @${input.username}](${url}) if you think it was a mistake.`
   }
-  return `> Think this was a mistake? [Request a review as @${input.username}](${url})`
+  return `> Think this was a mistake? No worries — [request a review as @${input.username}](${url}) and a maintainer will take another look.`
 }
 
 function appendCustomFooter(lines: string[], prefs: ResolvedPrefs) {

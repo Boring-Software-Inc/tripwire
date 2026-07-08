@@ -42,7 +42,7 @@ describe("renderBlockedComment (defaults)", () => {
     expect(out).toContain("> **Tripwire**: This PR was automatically closed.")
     expect(out).toContain("> Reason: Account is 3 days old (minimum: 30 days).")
     expect(out).toContain(
-      "> Think this was a mistake? [Request a review as @octocat](https://tripwire.app/request/acme/api?kind=unblock&u=octocat)"
+      "> Think this was a mistake? No worries — [request a review as @octocat](https://tripwire.app/request/acme/api?kind=unblock&u=octocat) and a maintainer will take another look."
     )
     // showRuleName defaults to false
     expect(out).not.toContain("Rule:")
@@ -98,7 +98,7 @@ describe("renderBlockedComment toggles", () => {
       outcome: "blocked",
       kind: "pull_request",
     })
-    expect(out).not.toContain("Request a review")
+    expect(out).not.toContain("request a review")
   })
 
   it("uses blacklist-specific appeal wording on blacklist_blocked", () => {
@@ -159,7 +159,7 @@ describe("renderWarnedComment", () => {
       outcome: "warned",
       kind: "pull_request",
     })
-    expect(out).toContain("> **Tripwire**: Warning.")
+    expect(out).toContain("> **Tripwire**: Just a heads up.")
     expect(out).toContain("> Reason: Account is 3 days old (minimum: 30 days).")
     expect(out).toContain("> _This is a warning. No action was taken._")
   })
@@ -171,7 +171,7 @@ describe("renderWarnedComment", () => {
       outcome: "warned",
       kind: "pull_request",
     })
-    expect(out).not.toContain("Request a review")
+    expect(out).not.toContain("request a review")
     expect(out).not.toContain("Request vouched access")
     expect(out).not.toContain("Appeal this block")
   })
@@ -193,7 +193,7 @@ describe("renderWarnedComment", () => {
       outcome: "unable_to_verify",
       kind: "pull_request",
     })
-    expect(out).toContain("> **Tripwire**: Warning.")
+    expect(out).toContain("> **Tripwire**: Just a heads up.")
   })
 })
 
