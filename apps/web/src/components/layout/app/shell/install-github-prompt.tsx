@@ -33,8 +33,9 @@ export function InstallGitHubPrompt() {
             Install the GitHub App
           </h2>
           <p className="text-[13px] leading-relaxed text-tw-text-secondary">
-            Connect a repository to start using Tripwire. You'll be able to
-            configure rules, run automations, and monitor contributions.
+            Connect a repository to start using Tripwire. We only ask for write
+            access to your pull requests, so we can post reviews and signal
+            comments on them.
           </p>
         </div>
         <Button
