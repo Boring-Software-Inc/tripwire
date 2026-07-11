@@ -205,7 +205,7 @@ function UserCardInner({
 
 export const { registry } = defineRegistry(catalog, {
   components: {
-    // ─── User Profile Card ────────────────────────────────────────
+    // User Profile Card
     UserCard: ({ props }) => <UserCardInner props={props} />,
 
     LookupUsersCarousel: ({ props }) => {
@@ -312,7 +312,7 @@ export const { registry } = defineRegistry(catalog, {
       )
     },
 
-    // ─── Events List ──────────────────────────────────────────────
+    // Events List
     EventsList: ({ props }) => {
       if (props.events.length === 0) {
         return (
@@ -359,7 +359,7 @@ export const { registry } = defineRegistry(catalog, {
       )
     },
 
-    // ─── Single Event Card ────────────────────────────────────────
+    // Single Event Card
     EventCard: ({ props }) => {
       const severityColor =
         props.severity === "error"
@@ -400,7 +400,7 @@ export const { registry } = defineRegistry(catalog, {
       )
     },
 
-    // ─── Action Result ────────────────────────────────────────────
+    // Action Result
     ActionResult: ({ props }) => {
       const bgColor = props.success
         ? "bg-[#4ADE801A] border-tw-success/20"
@@ -424,7 +424,7 @@ export const { registry } = defineRegistry(catalog, {
       )
     },
 
-    // ─── Lists Overview ───────────────────────────────────────────
+    // Lists Overview
     ListsOverview: ({ props }) => {
       const hasBlacklist = props.blacklist.length > 0
       const hasWhitelist = props.whitelist.length > 0
@@ -508,7 +508,7 @@ export const { registry } = defineRegistry(catalog, {
       )
     },
 
-    // ─── Score Breakdown ──────────────────────────────────────────
+    // Score Breakdown
     ScoreBreakdown: ({ props }) => {
       return (
         <div className="flex flex-col gap-3 rounded-lg bg-tw-card p-2.5">
@@ -580,7 +580,7 @@ export const { registry } = defineRegistry(catalog, {
       )
     },
 
-    // ─── Reputation Leaderboard ───────────────────────────────────
+    // Reputation Leaderboard
     ReputationLeaderboard: ({ props }) => {
       if (props.users.length === 0) {
         return (
@@ -631,7 +631,7 @@ export const { registry } = defineRegistry(catalog, {
       )
     },
 
-    // ─── Lists Status ─────────────────────────────────────────────
+    // Lists Status
     ListsStatus: ({ props }) => {
       const status = props.isBlacklisted
         ? "blacklisted"
@@ -676,7 +676,7 @@ export const { registry } = defineRegistry(catalog, {
       )
     },
 
-    // ─── Rule Config Card ─────────────────────────────────────────
+    // Rule Config Card
     RuleConfigCard: ({ props }) => {
       return (
         <div className="flex flex-col gap-2 rounded-xl bg-tw-card p-3">
@@ -735,7 +735,7 @@ export const { registry } = defineRegistry(catalog, {
       )
     },
 
-    // ─── Pull Request List ────────────────────────────────────────
+    // Pull Request List
     PullRequestList: ({ props }) => {
       const [expanded, setExpanded] = useState<number | null>(null)
 
@@ -896,7 +896,7 @@ export const { registry } = defineRegistry(catalog, {
       )
     },
 
-    // ─── Single PR Detail ─────────────────────────────────────────
+    // Single PR Detail
     PullRequestDetail: ({ props }) => {
       const [showFiles, setShowFiles] = useState(false)
       const [showCommits, setShowCommits] = useState(false)
@@ -1190,7 +1190,7 @@ export const { registry } = defineRegistry(catalog, {
       )
     },
 
-    // ─── Comment Thread ───────────────────────────────────────────
+    // Comment Thread
     CommentThread: ({ props }) => {
       function relDate(iso: string) {
         const d = Date.now() - new Date(iso).getTime()
@@ -1245,7 +1245,7 @@ export const { registry } = defineRegistry(catalog, {
       )
     },
 
-    // ─── Repository List ──────────────────────────────────────────
+    // Repository List
     RepoList: ({ props }) => {
       const [expanded, setExpanded] = useState<number | null>(null)
 
@@ -1408,7 +1408,7 @@ export const { registry } = defineRegistry(catalog, {
       )
     },
 
-    // ─── Activity Summary ─────────────────────────────────────────
+    // Activity Summary
     ActivitySummary: ({ props }) => {
       return (
         <div className="flex flex-col gap-2.5 rounded-xl bg-tw-card p-3">
@@ -1488,7 +1488,7 @@ export const { registry } = defineRegistry(catalog, {
       )
     },
 
-    // ─── Text Block ───────────────────────────────────────────────
+    // Text Block
     Text: ({ props }) => {
       const colorClass =
         props.variant === "muted"
@@ -1502,7 +1502,7 @@ export const { registry } = defineRegistry(catalog, {
       return <div className={`text-[13px] ${colorClass}`}>{props.content}</div>
     },
 
-    // ─── Info Row ─────────────────────────────────────────────────
+    // Info Row
     InfoRow: ({ props }) => (
       <div className="flex items-center justify-between text-[12px]">
         <span className="text-tw-text-muted">{props.label}</span>
@@ -1510,7 +1510,7 @@ export const { registry } = defineRegistry(catalog, {
       </div>
     ),
 
-    // ─── Container Card ───────────────────────────────────────────
+    // Container Card
     Card: ({ props, children }) => (
       <div className="flex flex-col gap-2 rounded-xl bg-tw-card p-3">
         {props.title && (
@@ -1522,7 +1522,7 @@ export const { registry } = defineRegistry(catalog, {
       </div>
     ),
 
-    // ─── Stack Layout ─────────────────────────────────────────────
+    // Stack Layout
     Stack: ({ props, children }) => {
       const gapClass =
         props.gap === "sm" ? "gap-1" : props.gap === "lg" ? "gap-4" : "gap-2"

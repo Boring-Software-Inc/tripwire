@@ -16,7 +16,7 @@ import {
   cleanForLanguageDetection,
 } from "./language-detection"
 
-// ─── Crypto Patterns (exact copy from filter-pipeline.ts) ──────
+// Crypto Patterns (exact copy from filter-pipeline.ts)
 
 const CRYPTO_PATTERNS: { name: string; pattern: RegExp }[] = [
   { name: "Bitcoin", pattern: /\b(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,39}\b/ },
@@ -36,7 +36,7 @@ function detectCryptoAddress(
   return null
 }
 
-// ─── Near-miss helpers (exact copy from filter-pipeline.ts) ────
+// Near-miss helpers (exact copy from filter-pipeline.ts)
 
 const NEAR_MISS_RATIO = 0.2
 

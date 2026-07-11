@@ -5,7 +5,7 @@ import { createEnv } from "@t3-oss/env-core"
 import { config as loadDotenv } from "dotenv"
 import { z } from "zod"
 
-// ─── Root .env autoload ──────────────────────────────────────────
+// Root .env autoload
 // Walk up from this file to the monorepo root (marked by pnpm-workspace.yaml)
 // and load .env from there. dotenv is idempotent — vars already in
 // process.env (e.g. injected by Vite / Nitro / CI) win.

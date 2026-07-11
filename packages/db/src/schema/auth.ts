@@ -1,7 +1,7 @@
 import { boolean, pgTable, text, timestamp } from "drizzle-orm/pg-core"
 import { relations } from "drizzle-orm"
 
-// ─── Better Auth core tables ─────────────────────────────────────
+// Better Auth core tables
 // Managed by better-auth. We define them here so Drizzle is aware of
 // them for relations / migrations.
 

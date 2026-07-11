@@ -2,7 +2,7 @@ import { pgTable, text, timestamp } from "drizzle-orm/pg-core"
 import { relations } from "drizzle-orm"
 import { user } from "./auth"
 
-// ─── Better Auth organization plugin tables ──────────────────────
+// Better Auth organization plugin tables
 
 export const organization = pgTable("organization", {
   id: text("id").primaryKey(),

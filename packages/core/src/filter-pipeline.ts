@@ -40,7 +40,7 @@ import { loadPrefsForInstallation } from "./pr-comment-loader"
 
 const APP_BASE_URL = env.BETTER_AUTH_URL ?? ""
 
-// ─── Scope helper ──────────────────────────────────────────────
+// Scope helper
 
 type ScopeKey = "pullRequests" | "issues" | "comments"
 
@@ -81,7 +81,7 @@ function ruleApplies(
   return scope[key]
 }
 
-// ─── Types ─────────────────────────────────────────────────────
+// Types
 
 export interface WebhookContext {
   installationId: number
@@ -189,7 +189,7 @@ function resolveOutcome(
   return "logged"
 }
 
-// ─── Near-miss threshold ───────────────────────────────────────
+// Near-miss threshold
 // A user is "near miss" if their value is within 20% of triggering.
 const NEAR_MISS_RATIO = 0.2
 
@@ -207,7 +207,7 @@ function isNearMissMax(actual: number, limit: number): boolean {
   return actual >= limit * (1 - NEAR_MISS_RATIO)
 }
 
-// ─── Content analysis helpers ──────────────────────────────────
+// Content analysis helpers
 
 /**
  * Detect the dominant script/language of text using Unicode code-point ranges.
@@ -355,7 +355,7 @@ function isLikelyLanguage(text: string, language: string): boolean {
   return detection.dominant === expected && detection.confidence > 0.3
 }
 
-// ─── Crypto address detection ──────────────────────────────────
+// Crypto address detection
 
 const CRYPTO_PATTERNS: { name: string; pattern: RegExp }[] = [
   // Bitcoin (legacy P2PKH/P2SH + SegWit bech32)
@@ -386,7 +386,7 @@ function detectCryptoAddress(
   return null
 }
 
-// ─── Pipeline ──────────────────────────────────────────────────
+// Pipeline
 
 /**
  * Run all enabled rules against a GitHub user, collecting detailed
@@ -569,7 +569,7 @@ export async function runFilterPipeline(
     contentScope: scope,
   }
 
-  // ─── autoWhitelistGlobalVouches ───────────────────────────
+  // autoWhitelistGlobalVouches
   if (config.autoWhitelistGlobalVouches.enabled) {
     const minVouches = config.autoWhitelistGlobalVouches.minVouches
     const vouchRows = await db
@@ -597,7 +597,7 @@ export async function runFilterPipeline(
     }
   }
 
-  // ─── vouchedUsersOnly ──────────────────────────────────────
+  // vouchedUsersOnly
   // Non-vouched users are rejected before any per-user GitHub lookups.
   // Whitelisted users already returned above (covers "repo" scope).
   // When vouchScope is "global" or "both", also check global vouches.
@@ -765,7 +765,7 @@ export async function runFilterPipeline(
     }
   }
 
-  // ─── accountAge ────────────────────────────────────────────
+  // accountAge
   if (ruleApplies(config.accountAge, contentType, scope) && ghUser) {
     rulesChecked++
     const createdAt = new Date(ghUser.created_at as string)
@@ -797,7 +797,7 @@ export async function runFilterPipeline(
     }
   }
 
-  // ─── minMergedPrs ──────────────────────────────────────────
+  // minMergedPrs
   if (ruleApplies(config.minMergedPrs, contentType, scope)) {
     rulesChecked++
     try {
@@ -830,7 +830,7 @@ export async function runFilterPipeline(
     }
   }
 
-  // ─── languageRequirement ───────────────────────────────────
+  // languageRequirement
   if (
     ruleApplies(config.languageRequirement, contentType, scope) &&
     contentText &&
@@ -860,7 +860,7 @@ export async function runFilterPipeline(
     }
   }
 
-  // ─── maxPrsPerDay ──────────────────────────────────────────
+  // maxPrsPerDay
   if (ruleApplies(config.maxPrsPerDay, contentType, scope)) {
     rulesChecked++
     try {
@@ -897,7 +897,7 @@ export async function runFilterPipeline(
     }
   }
 
-  // ─── maxFilesChanged ───────────────────────────────────────
+  // maxFilesChanged
   if (ruleApplies(config.maxFilesChanged, contentType, scope) && ctx.prNumber) {
     rulesChecked++
     try {
@@ -940,7 +940,7 @@ export async function runFilterPipeline(
     }
   }
 
-  // ─── repoActivityMinimum ───────────────────────────────────
+  // repoActivityMinimum
   if (ruleApplies(config.repoActivityMinimum, contentType, scope)) {
     rulesChecked++
     try {
@@ -977,7 +977,7 @@ export async function runFilterPipeline(
     }
   }
 
-  // ─── requireProfileReadme ──────────────────────────────────
+  // requireProfileReadme
   if (ruleApplies(config.requireProfileReadme, contentType, scope)) {
     rulesChecked++
     try {
@@ -1010,7 +1010,7 @@ export async function runFilterPipeline(
     }
   }
 
-  // ─── cryptoAddressDetection ────────────────────────────────
+  // cryptoAddressDetection
   if (
     ruleApplies(config.cryptoAddressDetection, contentType, scope) &&
     contentText
@@ -1124,7 +1124,7 @@ export async function runFilterPipeline(
   }
 }
 
-// ─── Pipeline event logging ────────────────────────────────────
+// Pipeline event logging
 
 /**
  * Generate a unique pipeline ID for grouping events from the same evaluation.
@@ -1292,7 +1292,7 @@ async function logPipelineEvents(
   await logEvents(eventBatch)
 }
 
-// ─── Webhook action handlers ───────────────────────────────────
+// Webhook action handlers
 
 /**
  * Execute the resolved action on a PR/issue/comment based on the pipeline result.

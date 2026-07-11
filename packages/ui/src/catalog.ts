@@ -68,7 +68,7 @@ export const catalog = defineCatalog(schema, {
         "Carousel of contributor lookup cards plus optional per-user error rows.",
     },
 
-    // ─── Events List ──────────────────────────────────────────────
+    // Events List
     EventsList: {
       props: z.object({
         events: z.array(
@@ -87,7 +87,7 @@ export const catalog = defineCatalog(schema, {
         "Displays a list of Tripwire events with severity indicators",
     },
 
-    // ─── Single Event Card ────────────────────────────────────────
+    // Single Event Card
     EventCard: {
       props: z.object({
         id: z.string(),
@@ -100,7 +100,7 @@ export const catalog = defineCatalog(schema, {
       description: "Displays a single event with full details",
     },
 
-    // ─── Action Result ────────────────────────────────────────────
+    // Action Result
     ActionResult: {
       props: z.object({
         success: z.boolean(),
@@ -111,7 +111,7 @@ export const catalog = defineCatalog(schema, {
         "Shows the result of an action (blacklist/whitelist add/remove)",
     },
 
-    // ─── Lists Status ─────────────────────────────────────────────
+    // Lists Status
     ListsStatus: {
       props: z.object({
         username: z.string(),
@@ -123,7 +123,7 @@ export const catalog = defineCatalog(schema, {
       description: "Shows a user's blacklist/whitelist status",
     },
 
-    // ─── Lists Overview ───────────────────────────────────────────
+    // Lists Overview
     ListsOverview: {
       props: z.object({
         blacklist: z.array(
@@ -144,7 +144,7 @@ export const catalog = defineCatalog(schema, {
       description: "Shows all users on the blacklist and whitelist",
     },
 
-    // ─── Rule Config Card ─────────────────────────────────────────
+    // Rule Config Card
     RuleConfigCard: {
       props: z.object({
         rules: z.array(
@@ -163,7 +163,7 @@ export const catalog = defineCatalog(schema, {
         "Displays the rule configuration for a repository with enabled/disabled states and action levels",
     },
 
-    // ─── Reputation Leaderboard ───────────────────────────────────
+    // Reputation Leaderboard
     ReputationLeaderboard: {
       props: z.object({
         users: z.array(
@@ -180,7 +180,7 @@ export const catalog = defineCatalog(schema, {
       description: "Shows the most blocked GitHub users ranked by total blocks",
     },
 
-    // ─── Score Breakdown ──────────────────────────────────────────
+    // Score Breakdown
     ScoreBreakdown: {
       props: z.object({
         username: z.string(),
@@ -210,7 +210,7 @@ export const catalog = defineCatalog(schema, {
         "Explains a contributor score by listing every factor and its point delta, grouped by category",
     },
 
-    // ─── Pull Request List ────────────────────────────────────────
+    // Pull Request List
     PullRequestList: {
       props: z.object({
         username: z.string(),
@@ -238,7 +238,7 @@ export const catalog = defineCatalog(schema, {
         "Displays a list of GitHub pull requests with diff stats, timing, and metadata",
     },
 
-    // ─── Single PR Detail ─────────────────────────────────────────
+    // Single PR Detail
     PullRequestDetail: {
       props: z.object({
         title: z.string(),
@@ -290,7 +290,7 @@ export const catalog = defineCatalog(schema, {
         "Full detail view of a single pull request with files, reviewers, commits, comments, and diff stats",
     },
 
-    // ─── Comment Thread ───────────────────────────────────────────
+    // Comment Thread
     CommentThread: {
       props: z.object({
         repo: z.string(),
@@ -310,7 +310,7 @@ export const catalog = defineCatalog(schema, {
         "Displays a comment thread from a GitHub issue or pull request, with markdown rendering",
     },
 
-    // ─── Repository List ──────────────────────────────────────────
+    // Repository List
     RepoList: {
       props: z.object({
         username: z.string(),
@@ -340,7 +340,7 @@ export const catalog = defineCatalog(schema, {
         "Displays a list of GitHub repositories with stars, language, timestamps, and metadata",
     },
 
-    // ─── Activity Summary ─────────────────────────────────────────
+    // Activity Summary
     ActivitySummary: {
       props: z.object({
         totalContributions: z.number(),
@@ -359,7 +359,7 @@ export const catalog = defineCatalog(schema, {
       description: "Shows a GitHub user's contribution activity summary",
     },
 
-    // ─── Text Block ───────────────────────────────────────────────
+    // Text Block
     Text: {
       props: z.object({
         content: z.string(),
@@ -368,7 +368,7 @@ export const catalog = defineCatalog(schema, {
       description: "Simple text block for messages",
     },
 
-    // ─── Info Row ─────────────────────────────────────────────────
+    // Info Row
     InfoRow: {
       props: z.object({
         label: z.string(),
@@ -377,7 +377,7 @@ export const catalog = defineCatalog(schema, {
       description: "Label-value pair for displaying data",
     },
 
-    // ─── Container ────────────────────────────────────────────────
+    // Container
     Card: {
       props: z.object({
         title: z.string().optional(),
@@ -385,7 +385,7 @@ export const catalog = defineCatalog(schema, {
       description: "Container card that can hold other components",
     },
 
-    // ─── Stack ────────────────────────────────────────────────────
+    // Stack
     Stack: {
       props: z.object({
         gap: z.enum(["sm", "md", "lg"]).optional(),

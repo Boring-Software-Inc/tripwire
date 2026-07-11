@@ -717,7 +717,7 @@ export const workflowsRouter = {
       }
     }),
 
-  // ─── Admin endpoints (internal data collection) ────────────
+  // Admin endpoints (internal data collection)
 
   /** Scan an entire repo's contributors — admin only, no repo ownership check */
   adminScanRepo: adminProcedure

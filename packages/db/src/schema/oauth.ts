@@ -1,7 +1,7 @@
 import { boolean, pgTable, text, timestamp } from "drizzle-orm/pg-core"
 import { user } from "./auth"
 
-// ─── Better Auth MCP plugin (OIDC provider schema) ───────────────
+// Better Auth MCP plugin (OIDC provider schema)
 
 export const oauthApplication = pgTable("oauth_application", {
   id: text("id").primaryKey(),

@@ -1,6 +1,6 @@
 import { feature, item, plan } from "atmn"
 
-// ─── Features ───────────────────────────────────────────────
+// Features
 
 // Tracks AI spend in cents. With 1.25x markup on gpt-4o-mini:
 
@@ -19,7 +19,7 @@ export const custom_rules = feature({
   consumable: false,
 })
 
-// ─── Plans ──────────────────────────────────────────────────
+// Plans
 
 // Free: 100¢ = $1.00 of AI spend/month
 

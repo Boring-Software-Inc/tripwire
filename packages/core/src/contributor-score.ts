@@ -42,7 +42,7 @@ export interface ScoreInput {
   allowedCount: number
   nearMissCount: number
 
-  // ─── Change 1: PR substance (split volume from quality) ─────
+  // Change 1: PR substance (split volume from quality)
   /** Summary of merged PRs with quality weighting. Null = use flat mergedPrCount. */
   mergedPrSummary?: {
     total: number
@@ -50,7 +50,7 @@ export interface ScoreInput {
     qualityWeightedCount: number
   } | null
 
-  // ─── Change 2: Spray detection temporal data ────────────────
+  // Change 2: Spray detection temporal data
   /** Temporal PR data for spray pattern detection. Null = skip spray checks. */
   prTemporalData?: {
     /** Intervals in seconds between consecutive PR creation timestamps */
@@ -65,7 +65,7 @@ export interface ScoreInput {
     reposInDensestWindow: number
   } | null
 
-  // ─── Change 3: Repo history with timestamps for decay ───────
+  // Change 3: Repo history with timestamps for decay
   /** Timestamped events for time-decay scoring. Null = fall back to flat counts. */
   repoEvents?: Array<{
     type: "allowed" | "blocked" | "near-miss" | "cleared"
@@ -546,7 +546,7 @@ function scoreRedFlags(input: ScoreInput, sink: ScoreLineItem[]): number {
     )
   }
 
-  // ─── Spray detection (requires prTemporalData) ──────────────
+  // Spray detection (requires prTemporalData)
   if (input.prTemporalData) {
     const td = input.prTemporalData
 
