@@ -416,7 +416,7 @@ export function DocsFooter() {
       <span className="font-mono">
         built on the shoulders of{" "}
         <a
-          href="https://www.evilcharts.com"
+          href="https://evilcharts.com/"
           target="_blank"
           rel="noreferrer"
           className="text-foreground underline underline-offset-2"
