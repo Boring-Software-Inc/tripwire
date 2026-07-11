@@ -212,7 +212,7 @@ export function IntegrationsPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter variant="bare" className="px-6 pt-3 pb-6">
-            <DialogClose className="flex h-8 items-center rounded-lg border border-[#27272A] px-3 text-[13px] font-medium text-tw-text-secondary transition-colors hover:bg-tw-hover">
+            <DialogClose className="flex h-8 items-center rounded-lg border border-tw-border px-3 text-[13px] font-medium text-tw-text-secondary transition-colors hover:bg-tw-hover">
               Cancel
             </DialogClose>
             <Button
@@ -253,7 +253,7 @@ export function IntegrationsPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter variant="bare" className="px-6 pt-3 pb-6">
-            <DialogClose className="flex h-8 items-center rounded-lg border border-[#27272A] px-3 text-[13px] font-medium text-tw-text-secondary transition-colors hover:bg-tw-hover">
+            <DialogClose className="flex h-8 items-center rounded-lg border border-tw-border px-3 text-[13px] font-medium text-tw-text-secondary transition-colors hover:bg-tw-hover">
               Cancel
             </DialogClose>
             <Button

@@ -94,25 +94,34 @@ async function fetchInstallationRepos(
   installationId: number
 ): Promise<GitHubRepo[] | null> {
   const token = await getInstallationToken(installationId)
-  const reposRes = await fetch(
-    "https://api.github.com/installation/repositories?per_page=100",
-    {
-      headers: {
-        Authorization: `token ${token}`,
-        Accept: "application/vnd.github.v3+json",
-      },
+  const all: GitHubRepo[] = []
+  const perPage = 100
+
+  for (let page = 1; ; page++) {
+    const reposRes = await fetch(
+      `https://api.github.com/installation/repositories?per_page=${perPage}&page=${page}`,
+      {
+        headers: {
+          Authorization: `token ${token}`,
+          Accept: "application/vnd.github.v3+json",
+        },
+      }
+    )
+
+    if (!reposRes.ok) {
+      console.error("[Callback] Failed to fetch repos:", reposRes.status)
+      return null
     }
-  )
 
-  if (!reposRes.ok) {
-    console.error("[Callback] Failed to fetch repos:", reposRes.status)
-    return null
+    const { repositories: repos } = (await reposRes.json()) as {
+      repositories: GitHubRepo[]
+    }
+    if (!repos?.length) break
+    all.push(...repos)
+    if (repos.length < perPage) break
   }
 
-  const { repositories: repos } = (await reposRes.json()) as {
-    repositories: GitHubRepo[]
-  }
-  return repos ?? null
+  return all
 }
 
 async function applyRepoSync(
