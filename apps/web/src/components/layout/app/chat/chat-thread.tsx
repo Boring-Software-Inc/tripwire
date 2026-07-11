@@ -116,7 +116,7 @@ function ChatEmptyState() {
   return (
     <div className="flex flex-col items-center justify-center py-8 text-center">
       <div className="mb-3 flex size-12 items-center justify-center">
-        <TripwireLogo size={20} fill="#B4B4B4" />
+        <TripwireLogo size={40} fill="#B4B4B4" />
       </div>
       <p className="mb-1 text-[14px] text-tw-text-secondary">Ask me anything</p>
       <p className="max-w-[240px] text-[12px] text-tw-text-muted">

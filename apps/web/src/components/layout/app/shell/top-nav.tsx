@@ -11,7 +11,6 @@ import {
   EventsNavIcon,
   IntegrationsNavIcon,
   VisibilityNavIcon,
-  TripwireSparkIcon,
 } from "@tripwire/ui/icons/nav-icons"
 import {
   Menu,
@@ -293,7 +292,6 @@ export function TopNav({ askOpen, onToggleAsk }: TopNavProps) {
             }`}
             aria-label="Ask Tripwire"
           >
-            <TripwireSparkIcon className="text-tw-text-secondary" />
             <span className="text-[13px] leading-none font-medium">Ask</span>
           </Button>
         ) : null}

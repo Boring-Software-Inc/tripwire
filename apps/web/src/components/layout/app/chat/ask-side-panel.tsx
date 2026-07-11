@@ -115,7 +115,7 @@ export function AskSidePanel() {
 
       <div className="relative z-10 flex shrink-0 items-center justify-between pt-3 pr-2 pb-2 pl-3">
         <div className="flex min-w-0 items-center gap-2">
-          <TripwireAskGlyphIcon18 />
+          <TripwireAskGlyphIcon18 className="size-6" />
           <span className="text-[14px] leading-none font-medium text-tw-text-primary">
             Ask Tripwire
           </span>

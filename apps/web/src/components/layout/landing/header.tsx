@@ -20,7 +20,7 @@ export function LandingHeader({ session }: { session: AuthClientSession }) {
           transformOrigin: "right center",
         }}
       >
-        <TripwireLogo className="h-5 w-5 text-white" />
+        <TripwireLogo className="h-7 w-7 text-white" />
         <span className="text-md font-['Geist',system-ui,sans-serif] font-medium text-tw-text-secondary">
           tripwire
         </span>
