@@ -102,6 +102,49 @@ export function CopyLine({ text }: { text: string }) {
   )
 }
 
+/** A dithered "or" divider between two install paths. */
+export function OrDivider({ label = "or" }: { label?: string }) {
+  return (
+    <div className="flex items-center gap-3">
+      <DitherStrip className="h-1.5 flex-1" />
+      <span className="font-mono text-[11px] text-muted-foreground uppercase select-none">
+        {label}
+      </span>
+      <DitherStrip className="h-1.5 flex-1" />
+    </div>
+  )
+}
+
+/** A full-width button that copies a longer payload (e.g. an AI setup prompt),
+ * with its own label and icon rather than the `$`-prefixed terminal styling. */
+export function CopyButton({
+  text,
+  label,
+  icon,
+}: {
+  text: string
+  label: string
+  icon?: ReactNode
+}) {
+  const { copied, copy } = useCopy()
+  return (
+    <button
+      type="button"
+      onClick={() => copy(text)}
+      className="group flex w-full items-center justify-center gap-2 rounded-lg border border-dashed bg-card/40 px-4 py-2.5 font-mono text-xs text-muted-foreground transition-colors hover:border-foreground/25 hover:bg-card hover:text-foreground"
+    >
+      <span className="shrink-0 transition-colors group-hover:text-foreground">
+        {copied ? (
+          <CheckIcon className="size-3.5" />
+        ) : (
+          (icon ?? <CopyIcon className="size-3.5" />)
+        )}
+      </span>
+      {copied ? "copied to clipboard" : label}
+    </button>
+  )
+}
+
 /* --------------------------------------------------- syntax highlighting */
 
 type TokenType = "comment" | "string" | "tag" | "attr" | "number" | "punct"

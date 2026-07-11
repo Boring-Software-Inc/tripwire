@@ -1,6 +1,6 @@
 "use client"
 
-import { MoonIcon, SunIcon } from "lucide-react"
+import { MoonIcon, SparklesIcon, SunIcon } from "lucide-react"
 import {
   ActiveDot,
   Area,
@@ -36,14 +36,17 @@ import {
   radarCode,
   radarData,
   series,
+  SETUP_PROMPT,
   SPARKLINE_CODE,
   type Tweaks,
 } from "./content"
 import {
   Code,
   CodeBlock,
+  CopyButton,
   CopyLine,
   DitherStrip,
+  OrDivider,
   Pill,
   ReplayButton,
   Showcase,
@@ -189,6 +192,19 @@ export function InstallSection({
           <CopyLine text={addCmd(pm, `${REPO}/pie-chart`)} />
           <CopyLine text={addCmd(pm, `${REPO}/dither-kit`)} />
         </div>
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <OrDivider />
+        <CopyButton
+          text={SETUP_PROMPT}
+          label="copy setup prompt"
+          icon={<SparklesIcon className="size-3.5" />}
+        />
+        <span className="text-center font-mono text-[11px] text-muted-foreground">
+          paste into Claude Code, Cursor, or any agent to install + wire up a
+          chart
+        </span>
       </div>
 
       <p className="font-mono text-[11px] leading-relaxed text-muted-foreground">

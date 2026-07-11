@@ -11,7 +11,7 @@ import type {
 export const HOST = "https://tripwire.sh"
 
 /** GitHub repo backing the zero-config shadcn shorthand (`add <REPO>/<item>`). */
-export const REPO = "bountydotnew/tripwire"
+export const REPO = "Boring-Software-Inc/tripwire"
 
 /* ------------------------------------------------------- package manager */
 
@@ -28,6 +28,36 @@ const PM_RUNNER: Record<Pm, string> = {
 
 export const addCmd = (pm: Pm, item: string): string =>
   `${PM_RUNNER[pm]} shadcn@latest add ${item}`
+
+/** Paste-into-your-AI setup prompt — install command + the non-obvious API
+ * shape (the config label/color object) + one worked example. Deliberately
+ * tells the assistant not to scaffold a whole page. */
+export const SETUP_PROMPT = `Set up dither-kit — composable dithered charts for shadcn/ui — in this project.
+
+Install with the shadcn CLI (this also pulls the shared \`core\` engine + its deps like motion and d3):
+  npx shadcn@latest add ${REPO}/area-chart
+
+Files land in components/dither-kit/. The API is recharts-style / children-as-config — a data array plus a config object that maps each series to a label and colour:
+
+  import { AreaChart, Area, XAxis, YAxis, Legend, Tooltip } from "@/components/dither-kit/area-chart"
+
+  const data = [{ month: "Jan", desktop: 186 }, { month: "Feb", desktop: 240 }]
+  const config = { desktop: { label: "Desktop", color: "blue" } }
+
+  <AreaChart data={data} config={config} bloom="aura">
+    <XAxis dataKey="month" />
+    <YAxis />
+    <Legend isClickable />
+    <Tooltip labelKey="month" />
+    <Area dataKey="desktop" variant="gradient" />
+  </AreaChart>
+
+Other charts install the same way: bar-chart, pie-chart, radar-chart (or ${REPO}/dither-kit for all of them).
+- variant: gradient | dotted | hatched | solid
+- color: green blue purple pink orange red grey
+- bloom: off | low | high | aura
+
+Add one chart where it fits what I'm building. Keep it minimal — don't scaffold a new page or demo unless I ask.`
 
 /* ------------------------------------------------------------------ data */
 
