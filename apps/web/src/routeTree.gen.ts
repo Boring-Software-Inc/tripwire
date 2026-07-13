@@ -16,6 +16,7 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as AdminRouteImport } from './routes/_admin'
 import { Route as OnboardingRouteRouteImport } from './routes/onboarding/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as RCliEventRouteImport } from './routes/r/cli-event'
 import { Route as RNameRouteImport } from './routes/r/$name'
 import { Route as OauthConsentRouteImport } from './routes/oauth/consent'
 import { Route as ApiMcpRouteImport } from './routes/api/mcp'
@@ -113,6 +114,11 @@ const OnboardingRouteRoute = OnboardingRouteRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RCliEventRoute = RCliEventRouteImport.update({
+  id: '/r/cli-event',
+  path: '/r/cli-event',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RNameRoute = RNameRouteImport.update({
@@ -478,6 +484,7 @@ export interface FileRoutesByFullPath {
   '/api/mcp': typeof ApiMcpRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/r/$name': typeof RNameRoute
+  '/r/cli-event': typeof RCliEventRoute
   '/$orgHandle/rules': typeof AppOrgHandleRulesRouteRouteWithChildren
   '/.well-known/oauth-authorization-server/$': typeof Char91DotwellKnownChar93OauthAuthorizationServerSplatRoute
   '/.well-known/oauth-protected-resource/$': typeof Char91DotwellKnownChar93OauthProtectedResourceSplatRoute
@@ -550,6 +557,7 @@ export interface FileRoutesByTo {
   '/api/mcp': typeof ApiMcpRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/r/$name': typeof RNameRoute
+  '/r/cli-event': typeof RCliEventRoute
   '/.well-known/oauth-authorization-server/$': typeof Char91DotwellKnownChar93OauthAuthorizationServerSplatRoute
   '/.well-known/oauth-protected-resource/$': typeof Char91DotwellKnownChar93OauthProtectedResourceSplatRoute
   '/admin/reputation': typeof AdminAdminReputationRoute
@@ -624,6 +632,7 @@ export interface FileRoutesById {
   '/api/mcp': typeof ApiMcpRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/r/$name': typeof RNameRoute
+  '/r/cli-event': typeof RCliEventRoute
   '/_app/$orgHandle/rules': typeof AppOrgHandleRulesRouteRouteWithChildren
   '/.well-known/oauth-authorization-server/$': typeof Char91DotwellKnownChar93OauthAuthorizationServerSplatRoute
   '/.well-known/oauth-protected-resource/$': typeof Char91DotwellKnownChar93OauthProtectedResourceSplatRoute
@@ -698,6 +707,7 @@ export interface FileRouteTypes {
     | '/api/mcp'
     | '/oauth/consent'
     | '/r/$name'
+    | '/r/cli-event'
     | '/$orgHandle/rules'
     | '/.well-known/oauth-authorization-server/$'
     | '/.well-known/oauth-protected-resource/$'
@@ -770,6 +780,7 @@ export interface FileRouteTypes {
     | '/api/mcp'
     | '/oauth/consent'
     | '/r/$name'
+    | '/r/cli-event'
     | '/.well-known/oauth-authorization-server/$'
     | '/.well-known/oauth-protected-resource/$'
     | '/admin/reputation'
@@ -843,6 +854,7 @@ export interface FileRouteTypes {
     | '/api/mcp'
     | '/oauth/consent'
     | '/r/$name'
+    | '/r/cli-event'
     | '/_app/$orgHandle/rules'
     | '/.well-known/oauth-authorization-server/$'
     | '/.well-known/oauth-protected-resource/$'
@@ -910,6 +922,7 @@ export interface RootRouteChildren {
   ApiMcpRoute: typeof ApiMcpRoute
   OauthConsentRoute: typeof OauthConsentRoute
   RNameRoute: typeof RNameRoute
+  RCliEventRoute: typeof RCliEventRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiGithubCallbackRoute: typeof ApiGithubCallbackRoute
   ApiGithubInstallRoute: typeof ApiGithubInstallRoute
@@ -971,6 +984,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/r/cli-event': {
+      id: '/r/cli-event'
+      path: '/r/cli-event'
+      fullPath: '/r/cli-event'
+      preLoaderRoute: typeof RCliEventRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/r/$name': {
@@ -1628,6 +1648,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiMcpRoute: ApiMcpRoute,
   OauthConsentRoute: OauthConsentRoute,
   RNameRoute: RNameRoute,
+  RCliEventRoute: RCliEventRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiGithubCallbackRoute: ApiGithubCallbackRoute,
   ApiGithubInstallRoute: ApiGithubInstallRoute,
