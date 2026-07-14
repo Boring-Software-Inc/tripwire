@@ -133,7 +133,7 @@ function LandingPage() {
               to="/login"
               className="flex h-7 items-center rounded-lg bg-white px-2.5 text-[14px] font-medium text-black shadow-sm transition-colors hover:bg-white/90"
             >
-              login
+              sign in with GitHub to request access
             </Link>
           )}
         </div>

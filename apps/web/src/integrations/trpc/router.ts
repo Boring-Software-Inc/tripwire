@@ -22,6 +22,7 @@ import { moderationRouter } from "./routers/moderation"
 import { onboardingRouter } from "./routers/onboarding"
 import { authRouter } from "./routers/auth"
 import { githubSignalsRouter } from "./routers/github-signals"
+import { accessRequestsRouter } from "./routers/access-requests"
 
 export const trpcRouter = createTRPCRouter({
   orgs: orgsRouter,
@@ -47,6 +48,7 @@ export const trpcRouter = createTRPCRouter({
   onboarding: onboardingRouter,
   auth: authRouter,
   githubSignals: githubSignalsRouter,
+  accessRequests: accessRequestsRouter,
 })
 
 export type TRPCRouter = typeof trpcRouter

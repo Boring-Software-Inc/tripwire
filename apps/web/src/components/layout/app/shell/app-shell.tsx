@@ -9,6 +9,7 @@ import { WorkspaceProvider, useWorkspace } from "#/providers/workspace-context"
 import { ChatProvider, useAIChat } from "#/providers/chat-context"
 import { useRequestNotifications } from "#/hooks/use-request-notifications"
 import { useOnboardingRedirect } from "#/hooks/use-onboarding-redirect"
+import { useAccessGate } from "#/hooks/use-access-gate"
 
 export function AppShell() {
   return (
@@ -24,6 +25,8 @@ export function AppShell() {
 
 function AppShellInner() {
   useRequestNotifications()
+  // Access gate first: a pending user belongs on /queue, not in onboarding.
+  useAccessGate()
   useOnboardingRedirect()
 
   const { isOpen, toggle } = useAIChat()

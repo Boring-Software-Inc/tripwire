@@ -7,7 +7,12 @@ import {
   useRouterState,
 } from "@tanstack/react-router"
 import { useQuery } from "@tanstack/react-query"
-import { FlaskConical, LayoutDashboard, ShieldUser } from "lucide-react"
+import {
+  FlaskConical,
+  LayoutDashboard,
+  ShieldUser,
+  UserRoundCheck,
+} from "lucide-react"
 import { AuthProvider } from "@tripwire/auth/components"
 import { useTRPC } from "#/integrations/trpc/react"
 import { TripwireLogo } from "@tripwire/ui/icons/tripwire-logo"
@@ -89,6 +94,25 @@ function AdminTopNav() {
             <LayoutDashboard className={iconClass(currentPath === "/admin")} />
             <span className={labelClass(currentPath === "/admin")}>
               Overview
+            </span>
+          </Link>
+          <Link
+            to="/admin/access-requests"
+            className={tabClass(
+              currentPath.startsWith("/admin/access-requests")
+            )}
+          >
+            <UserRoundCheck
+              className={iconClass(
+                currentPath.startsWith("/admin/access-requests")
+              )}
+            />
+            <span
+              className={labelClass(
+                currentPath.startsWith("/admin/access-requests")
+              )}
+            >
+              Access
             </span>
           </Link>
           <Link

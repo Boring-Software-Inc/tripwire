@@ -2,7 +2,11 @@ import { authedProcedure, publicProcedure } from "../init"
 import { db } from "@tripwire/db/client"
 import { eq } from "drizzle-orm"
 import { user as userTable } from "@tripwire/db"
+import { env } from "@tripwire/env/server"
+import { isTruthy } from "@tripwire/env/boolean"
 import type { TRPCRouterRecord } from "@trpc/server"
+
+const accessGateEnabled = isTruthy(env.ACCESS_GATE_ENABLED)
 
 export const authRouter = {
   /**
@@ -19,6 +23,7 @@ export const authRouter = {
         image: userTable.image,
         role: userTable.role,
         githubId: userTable.githubId,
+        accessStatus: userTable.accessStatus,
       })
       .from(userTable)
       .where(eq(userTable.id, ctx.user.id))
@@ -32,6 +37,8 @@ export const authRouter = {
       role: row.role ?? null,
       isAdmin: row.role === "admin",
       githubId: parseGithubId(row.githubId),
+      accessStatus: row.accessStatus,
+      accessGateEnabled,
     }
   }),
 
@@ -45,6 +52,7 @@ export const authRouter = {
         image: userTable.image,
         role: userTable.role,
         githubId: userTable.githubId,
+        accessStatus: userTable.accessStatus,
       })
       .from(userTable)
       .where(eq(userTable.id, ctx.user.id))
@@ -57,6 +65,8 @@ export const authRouter = {
       role: row.role ?? null,
       isAdmin: row.role === "admin",
       githubId: parseGithubId(row.githubId),
+      accessStatus: row.accessStatus,
+      accessGateEnabled,
     }
   }),
 } satisfies TRPCRouterRecord
