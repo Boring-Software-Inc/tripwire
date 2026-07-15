@@ -6,8 +6,11 @@ import { auth } from "@tripwire/auth"
 import { db } from "@tripwire/db/client"
 import { member, user as userTable } from "@tripwire/db"
 import type { AccessStatus } from "@tripwire/db"
-import { env } from "@tripwire/env/server"
-import { isTruthy } from "@tripwire/env/boolean"
+import {
+  accessDenialFor,
+  resolveEffectiveStatus,
+} from "@tripwire/auth/access"
+import { isAccessGateEnabled } from "#/lib/access-gate-flag"
 
 // Repo/event/request/org ownership checks live in @tripwire/core so the
 // tool registry can use them without importing tRPC. They throw EvlogError;
@@ -113,14 +116,15 @@ export const authedProcedure = t.procedure.use(authMiddleware)
 // Otherwise re-reads from the DB so a user approved mid-session isn't blocked
 // while their cookie-cached session is still stale (see PRD "session
 // staleness" risk).
-async function resolveAccessStatus(userId: string, sessionStatus: AccessStatus | null | undefined): Promise<AccessStatus> {
-  if (sessionStatus === "approved") return "approved"
-  const [row] = await db
-    .select({ accessStatus: userTable.accessStatus })
-    .from(userTable)
-    .where(eq(userTable.id, userId))
-    .limit(1)
-  return row?.accessStatus ?? "pending"
+function resolveAccessStatus(userId: string, sessionStatus: AccessStatus | null | undefined): Promise<AccessStatus> {
+  return resolveEffectiveStatus(sessionStatus, async () => {
+    const [row] = await db
+      .select({ accessStatus: userTable.accessStatus })
+      .from(userTable)
+      .where(eq(userTable.id, userId))
+      .limit(1)
+    return row?.accessStatus ?? null
+  })
 }
 
 // Gate: blocks pending/rejected users. No-op when the feature flag is off, so
@@ -132,16 +136,11 @@ const accessMiddleware = t.middleware(async ({ ctx, next }) => {
       message: "You must be logged in to perform this action",
     })
   }
-  if (isTruthy(env.ACCESS_GATE_ENABLED)) {
+  if (await isAccessGateEnabled({ userId: ctx.user.id, email: ctx.user.email })) {
     const status = await resolveAccessStatus(ctx.user.id, ctx.user.accessStatus)
-    if (status !== "approved") {
-      throw new TRPCError({
-        code: "FORBIDDEN",
-        message:
-          status === "rejected"
-            ? "Your access request was not approved."
-            : "Your access request is still pending review.",
-      })
+    const denial = accessDenialFor(status)
+    if (denial) {
+      throw new TRPCError(denial)
     }
   }
   return next({ ctx: { ...ctx, user: ctx.user } })

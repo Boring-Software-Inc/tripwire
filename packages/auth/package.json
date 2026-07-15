@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./access": "./src/access.ts",
     "./autumn": "./src/autumn.ts",
     "./client": "./src/client/index.ts",
     "./components": "./src/components/index.ts"

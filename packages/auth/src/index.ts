@@ -12,6 +12,7 @@ import { organizations, member, waitlist } from "@tripwire/db"
 import { env } from "@tripwire/env/server"
 import { eq, and, ne, count } from "drizzle-orm"
 import { deleteInstallation } from "@tripwire/github"
+import { applySignupAccessDefaults } from "./access"
 
 export const auth = betterAuth({
   baseURL: env.BETTER_AUTH_URL,
@@ -237,13 +238,7 @@ export const auth = betterAuth({
             console.error("[Tripwire] waitlist lookup failed:", err)
           }
 
-          return {
-            data: {
-              ...user,
-              accessStatus: "pending",
-              waitlistedAt,
-            },
-          }
+          return { data: applySignupAccessDefaults(user, waitlistedAt) }
         },
         after: async (user) => {
           // Auto-create a personal Better Auth org for new users

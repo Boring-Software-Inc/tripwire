@@ -15,6 +15,7 @@ import { useEffect, useState } from "react"
 import { isReactGrabEnabled, isReactScanEnabled } from "#/lib/feature-flags"
 import { FeedbackProvider, FeedbackOverlay } from "@tripwire/feedback"
 import { FeedbackDialog } from "#/components/shared/feedback-dialog"
+import { DATABUDDY_CLIENT_ID } from "#/lib/databuddy"
 import appCss from "../styles.css?url"
 
 function ClientOnlyDevtools() {
@@ -82,7 +83,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
                     <FeedbackDialog />
                     {children}
                     <Databuddy
-                      clientId="09661145-7249-45d9-a9e3-f1a93e9c7266"
+                      clientId={DATABUDDY_CLIENT_ID}
                       trackHashChanges={true}
                       trackAttributes={true}
                       trackOutgoingLinks={true}
