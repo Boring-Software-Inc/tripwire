@@ -16,8 +16,9 @@ export const Route = createFileRoute("/oauth/waitlist")({
   headers: () => PRIVATE_ROUTE_HEADERS,
   validateSearch: (
     search: Record<string, unknown>
-  ): { opener?: string } => ({
+  ): { opener?: string; mode?: string } => ({
     opener: typeof search.opener === "string" ? search.opener : undefined,
+    mode: typeof search.mode === "string" ? search.mode : undefined,
   }),
   head: ({ match }) =>
     buildSeo({
@@ -28,17 +29,24 @@ export const Route = createFileRoute("/oauth/waitlist")({
     }),
 })
 
-function callbackPath(opener: string | undefined, extra?: string): string {
+function callbackPath(
+  opener: string | undefined,
+  mode: string | undefined,
+  error?: string
+): string {
   const params = new URLSearchParams()
   if (opener) params.set("opener", opener)
-  if (extra) params.set("error", extra)
+  // Thread the popup marker through OAuth so the closer knows it's a popup even
+  // if window.opener is later severed (COOP). See the closer's inPopup logic.
+  if (mode) params.set("mode", mode)
+  if (error) params.set("error", error)
   const qs = params.toString()
   return `/oauth/popup-callback${qs ? `?${qs}` : ""}`
 }
 
 function WaitlistEntryPage() {
   const navigate = useNavigate()
-  const { opener } = Route.useSearch()
+  const { opener, mode } = Route.useSearch()
   const { data: session, isPending } = authClient.useSession()
   const started = useRef(false)
 
@@ -49,7 +57,7 @@ function WaitlistEntryPage() {
     // Returning user with a live session: no need to re-auth — hand straight
     // to the closer so it reads their current status and notifies the opener.
     if (session) {
-      navigate({ to: "/oauth/popup-callback", search: { opener } })
+      navigate({ to: "/oauth/popup-callback", search: { opener, mode } })
       return
     }
 
@@ -57,10 +65,10 @@ function WaitlistEntryPage() {
     // access-queue default ("pending") is assigned server-side on user create.
     void authClient.signIn.social({
       provider: "github",
-      callbackURL: callbackPath(opener),
-      errorCallbackURL: callbackPath(opener, "oauth_failed"),
+      callbackURL: callbackPath(opener, mode),
+      errorCallbackURL: callbackPath(opener, mode, "oauth_failed"),
     })
-  }, [isPending, session, opener, navigate])
+  }, [isPending, session, opener, mode, navigate])
 
   return (
     <div className="flex h-screen w-full flex-col items-center justify-center gap-6 bg-[#191919] antialiased [font-synthesis:none]">

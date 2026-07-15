@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useQuery } from "@tanstack/react-query"
 import { authClient } from "@tripwire/auth/client"
+import { track } from "@databuddy/sdk"
 import { env } from "@tripwire/env/client"
 import { Button } from "@tripwire/ui/button"
 import { TripwireLogo } from "@tripwire/ui/icons/tripwire-logo"
@@ -23,9 +24,10 @@ export const Route = createFileRoute("/oauth/popup-callback")({
   headers: () => PRIVATE_ROUTE_HEADERS,
   validateSearch: (
     search: Record<string, unknown>
-  ): { opener?: string; error?: string } => ({
+  ): { opener?: string; error?: string; mode?: string } => ({
     opener: typeof search.opener === "string" ? search.opener : undefined,
     error: typeof search.error === "string" ? search.error : undefined,
+    mode: typeof search.mode === "string" ? search.mode : undefined,
   }),
   head: ({ match }) =>
     buildSeo({
@@ -71,7 +73,7 @@ type View =
 function PopupCallbackPage() {
   const navigate = useNavigate()
   const trpc = useTRPC()
-  const { opener, error } = Route.useSearch()
+  const { opener, error, mode } = Route.useSearch()
   const { data: session, isPending } = authClient.useSession()
   const me = useQuery(trpc.auth.me.queryOptions(undefined, { staleTime: 0 }))
   const done = useRef(false)
@@ -80,11 +82,27 @@ function PopupCallbackPage() {
   useEffect(() => {
     if (done.current) return
     const targetOrigin = resolveTargetOrigin(opener)
+    // `mode=popup` (stamped by the landing, threaded through OAuth) is the popup
+    // detector — NOT window.opener, which a COOP header could sever silently and
+    // recreate the dash-in-popup bug. window.opener is the delivery check only.
+    const inPopup = mode === "popup"
+
+    // In a popup but couldn't deliver → allowlist drift or a severed opener.
+    // Report it so the next misconfig is a dashboard blip, not a user complaint.
+    const report = (posted: boolean) => {
+      if (inPopup && !posted) {
+        track("waitlist_notify_failed", {
+          opener: opener ?? "unknown",
+          reason: targetOrigin ? "opener_unreachable" : "origin_not_allowlisted",
+        })
+      }
+    }
 
     // OAuth reported an error (e.g. user cancelled on GitHub's consent screen).
     if (error) {
       done.current = true
-      if (postToOpener({ type: MESSAGE_TYPE, status: "error" }, targetOrigin)) {
+      report(postToOpener({ type: MESSAGE_TYPE, status: "error" }, targetOrigin))
+      if (inPopup) {
         setView({ kind: "error" })
       } else {
         navigate({ to: "/login", search: { error } })
@@ -97,7 +115,8 @@ function PopupCallbackPage() {
     done.current = true
 
     if (!session || !me.data) {
-      if (postToOpener({ type: MESSAGE_TYPE, status: "error" }, targetOrigin)) {
+      report(postToOpener({ type: MESSAGE_TYPE, status: "error" }, targetOrigin))
+      if (inPopup) {
         setView({ kind: "error" })
       } else {
         navigate({ to: "/login" })
@@ -106,12 +125,15 @@ function PopupCallbackPage() {
     }
 
     const status = me.data.accessStatus
-    const posted = postToOpener(
-      { type: MESSAGE_TYPE, status, name: session.user.name ?? null },
-      targetOrigin
+    report(
+      postToOpener(
+        { type: MESSAGE_TYPE, status, name: session.user.name ?? null },
+        targetOrigin
+      )
     )
-    if (posted) {
-      // Notified the opener. Leave the window open and let the user close it.
+    if (inPopup) {
+      // In a popup: ALWAYS show the confirmation + Close, even if the opener
+      // couldn't be notified. NEVER render the dashboard inside the popup.
       setView(
         status === "approved"
           ? { kind: "approved" }
@@ -119,10 +141,9 @@ function PopupCallbackPage() {
       )
       return
     }
-    // No reachable opener: this is a full-page flow (no popup to close).
-    // Continue where the route gate would take them.
+    // True full-page flow (popup blocked → redirect): continue in place.
     navigate({ to: status === "approved" ? "/home" : "/queue" })
-  }, [error, isPending, me.isLoading, me.data, session, opener, navigate])
+  }, [error, isPending, me.isLoading, me.data, session, opener, mode, navigate])
 
   if (view.kind === "working") {
     return (

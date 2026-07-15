@@ -37,8 +37,21 @@ the gate is off. To test the block *before* wiring the dashboard flag, set
 
 Both sides must agree: the app's `VITE_WAITLIST_OPENER_ORIGINS` must contain the
 exact origin the landing serves from, and the landing's `NEXT_PUBLIC_APP_URL`
-must be the exact app origin. A mismatch = the popup completes but the opener is
-never notified (it silently falls back to in-place `/queue`).
+must be the exact app origin.
+
+**`www` is canonical — include BOTH forms.** `tripwire.sh` 308-redirects to
+`https://www.tripwire.sh`, so visitors end up on `www` and the popup's
+`?opener=` is `https://www.tripwire.sh`. `VITE_WAITLIST_OPENER_ORIGINS` must list
+**both** `https://tripwire.sh` and `https://www.tripwire.sh` (apex covers the
+pre-redirect edge; www is what actually matches). Do NOT "tidy" this to the apex
+alone — that reintroduces the dash-in-popup bug (origin mismatch → closer can't
+notify → for an approved user it would fall to `/home` inside the popup).
+
+The closer no longer depends on `window.opener` to know it's a popup — the
+landing stamps `?mode=popup` and it's threaded through OAuth, so a mismatch (or a
+future COOP header) degrades to a clean confirmation screen, never the dashboard.
+A `waitlist_notify_failed` Databuddy event fires whenever a popup can't reach its
+opener, so allowlist drift shows up as a dashboard blip, not a user report.
 
 ## COOP headers (Cross-Origin-Opener-Policy)
 
