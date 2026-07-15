@@ -89,6 +89,17 @@ export const env = createEnv({
     INNGEST_EVENT_KEY: z.string().min(1).optional(),
     INNGEST_SIGNING_KEY: z.string().min(1).optional(),
     INNGEST_ENV: z.string().min(1).optional(),
+    RESEND_API_KEY: z.string().min(1).optional(),
+    EMAIL_FROM: z
+      .string()
+      .min(1)
+      .optional()
+      .default("Tripwire <hello@tripwire.sh>"),
+    APP_URL: z.string().url().optional().default("https://tripwire.sh"),
+    // Enforces the GitHub approval queue: pending/rejected users are blocked
+    // from _app and _admin. Ships off so schema + backfill land before the
+    // gate turns on (see PRD rollout).
+    ACCESS_GATE_ENABLED: z.string().optional(),
     RESEARCH_GH_TOKEN: z.string().min(1).optional(),
     NODE_ENV: z.enum(["development", "production", "test"]).optional(),
   },

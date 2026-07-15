@@ -33,8 +33,16 @@ export type VisibilityScoreUserRequestedEvent = {
   }
 }
 
+export type AccessApprovedEvent = {
+  name: "access/approved"
+  data: {
+    userId: string
+  }
+}
+
 export type Events = {
   "research/run.requested": ResearchRunRequestedEvent
   "visibility/sync.requested": VisibilitySyncRequestedEvent
   "visibility/score-user.requested": VisibilityScoreUserRequestedEvent
+  "access/approved": AccessApprovedEvent
 }

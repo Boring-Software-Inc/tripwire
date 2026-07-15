@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as VouchedRouteImport } from './routes/vouched'
+import { Route as QueueRouteImport } from './routes/queue'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DitherKitRouteImport } from './routes/dither-kit'
 import { Route as AppRouteImport } from './routes/_app'
@@ -18,6 +19,8 @@ import { Route as OnboardingRouteRouteImport } from './routes/onboarding/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as RCliEventRouteImport } from './routes/r/cli-event'
 import { Route as RNameRouteImport } from './routes/r/$name'
+import { Route as OauthWaitlistRouteImport } from './routes/oauth/waitlist'
+import { Route as OauthPopupCallbackRouteImport } from './routes/oauth/popup-callback'
 import { Route as OauthConsentRouteImport } from './routes/oauth/consent'
 import { Route as ApiMcpRouteImport } from './routes/api/mcp'
 import { Route as ApiInngestRouteImport } from './routes/api/inngest'
@@ -61,6 +64,7 @@ import { Route as AppOrgHandleIntegrationsRouteImport } from './routes/_app/$org
 import { Route as AppOrgHandleInsightsRouteImport } from './routes/_app/$orgHandle/insights'
 import { Route as AppOrgHandleHomeRouteImport } from './routes/_app/$orgHandle/home'
 import { Route as AdminAdminReputationRouteImport } from './routes/_admin/admin/reputation'
+import { Route as AdminAdminAccessRequestsRouteImport } from './routes/_admin/admin/access-requests'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceSplatRouteImport } from './routes/[.well-known]/oauth-protected-resource/$'
 import { Route as Char91DotwellKnownChar93OauthAuthorizationServerSplatRouteImport } from './routes/[.well-known]/oauth-authorization-server/$'
 import { Route as AppOrgHandleRulesRouteRouteImport } from './routes/_app/$orgHandle/rules/route'
@@ -86,6 +90,11 @@ import { Route as AppOrgHandleRulesCustomRuleIdRouteImport } from './routes/_app
 const VouchedRoute = VouchedRouteImport.update({
   id: '/vouched',
   path: '/vouched',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const QueueRoute = QueueRouteImport.update({
+  id: '/queue',
+  path: '/queue',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -124,6 +133,16 @@ const RCliEventRoute = RCliEventRouteImport.update({
 const RNameRoute = RNameRouteImport.update({
   id: '/r/$name',
   path: '/r/$name',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OauthWaitlistRoute = OauthWaitlistRouteImport.update({
+  id: '/oauth/waitlist',
+  path: '/oauth/waitlist',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OauthPopupCallbackRoute = OauthPopupCallbackRouteImport.update({
+  id: '/oauth/popup-callback',
+  path: '/oauth/popup-callback',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OauthConsentRoute = OauthConsentRouteImport.update({
@@ -344,6 +363,12 @@ const AdminAdminReputationRoute = AdminAdminReputationRouteImport.update({
   path: '/admin/reputation',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminAdminAccessRequestsRoute =
+  AdminAdminAccessRequestsRouteImport.update({
+    id: '/admin/access-requests',
+    path: '/admin/access-requests',
+    getParentRoute: () => AdminRoute,
+  } as any)
 const Char91DotwellKnownChar93OauthProtectedResourceSplatRoute =
   Char91DotwellKnownChar93OauthProtectedResourceSplatRouteImport.update({
     id: '/$',
@@ -467,6 +492,7 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof OnboardingRouteRouteWithChildren
   '/dither-kit': typeof DitherKitRoute
   '/login': typeof LoginRoute
+  '/queue': typeof QueueRoute
   '/vouched': typeof VouchedRoute
   '/.well-known/oauth-authorization-server': typeof Char91DotwellKnownChar93OauthAuthorizationServerRouteWithChildren
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRouteWithChildren
@@ -483,11 +509,14 @@ export interface FileRoutesByFullPath {
   '/api/inngest': typeof ApiInngestRoute
   '/api/mcp': typeof ApiMcpRoute
   '/oauth/consent': typeof OauthConsentRoute
+  '/oauth/popup-callback': typeof OauthPopupCallbackRoute
+  '/oauth/waitlist': typeof OauthWaitlistRoute
   '/r/$name': typeof RNameRoute
   '/r/cli-event': typeof RCliEventRoute
   '/$orgHandle/rules': typeof AppOrgHandleRulesRouteRouteWithChildren
   '/.well-known/oauth-authorization-server/$': typeof Char91DotwellKnownChar93OauthAuthorizationServerSplatRoute
   '/.well-known/oauth-protected-resource/$': typeof Char91DotwellKnownChar93OauthProtectedResourceSplatRoute
+  '/admin/access-requests': typeof AdminAdminAccessRequestsRoute
   '/admin/reputation': typeof AdminAdminReputationRoute
   '/$orgHandle/home': typeof AppOrgHandleHomeRoute
   '/$orgHandle/insights': typeof AppOrgHandleInsightsRoute
@@ -540,6 +569,7 @@ export interface FileRoutesByTo {
   '/onboarding': typeof OnboardingRouteRouteWithChildren
   '/dither-kit': typeof DitherKitRoute
   '/login': typeof LoginRoute
+  '/queue': typeof QueueRoute
   '/vouched': typeof VouchedRoute
   '/.well-known/oauth-authorization-server': typeof Char91DotwellKnownChar93OauthAuthorizationServerRouteWithChildren
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRouteWithChildren
@@ -556,10 +586,13 @@ export interface FileRoutesByTo {
   '/api/inngest': typeof ApiInngestRoute
   '/api/mcp': typeof ApiMcpRoute
   '/oauth/consent': typeof OauthConsentRoute
+  '/oauth/popup-callback': typeof OauthPopupCallbackRoute
+  '/oauth/waitlist': typeof OauthWaitlistRoute
   '/r/$name': typeof RNameRoute
   '/r/cli-event': typeof RCliEventRoute
   '/.well-known/oauth-authorization-server/$': typeof Char91DotwellKnownChar93OauthAuthorizationServerSplatRoute
   '/.well-known/oauth-protected-resource/$': typeof Char91DotwellKnownChar93OauthProtectedResourceSplatRoute
+  '/admin/access-requests': typeof AdminAdminAccessRequestsRoute
   '/admin/reputation': typeof AdminAdminReputationRoute
   '/$orgHandle/home': typeof AppOrgHandleHomeRoute
   '/$orgHandle/insights': typeof AppOrgHandleInsightsRoute
@@ -615,6 +648,7 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/dither-kit': typeof DitherKitRoute
   '/login': typeof LoginRoute
+  '/queue': typeof QueueRoute
   '/vouched': typeof VouchedRoute
   '/.well-known/oauth-authorization-server': typeof Char91DotwellKnownChar93OauthAuthorizationServerRouteWithChildren
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRouteWithChildren
@@ -631,11 +665,14 @@ export interface FileRoutesById {
   '/api/inngest': typeof ApiInngestRoute
   '/api/mcp': typeof ApiMcpRoute
   '/oauth/consent': typeof OauthConsentRoute
+  '/oauth/popup-callback': typeof OauthPopupCallbackRoute
+  '/oauth/waitlist': typeof OauthWaitlistRoute
   '/r/$name': typeof RNameRoute
   '/r/cli-event': typeof RCliEventRoute
   '/_app/$orgHandle/rules': typeof AppOrgHandleRulesRouteRouteWithChildren
   '/.well-known/oauth-authorization-server/$': typeof Char91DotwellKnownChar93OauthAuthorizationServerSplatRoute
   '/.well-known/oauth-protected-resource/$': typeof Char91DotwellKnownChar93OauthProtectedResourceSplatRoute
+  '/_admin/admin/access-requests': typeof AdminAdminAccessRequestsRoute
   '/_admin/admin/reputation': typeof AdminAdminReputationRoute
   '/_app/$orgHandle/home': typeof AppOrgHandleHomeRoute
   '/_app/$orgHandle/insights': typeof AppOrgHandleInsightsRoute
@@ -690,6 +727,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/dither-kit'
     | '/login'
+    | '/queue'
     | '/vouched'
     | '/.well-known/oauth-authorization-server'
     | '/.well-known/oauth-protected-resource'
@@ -706,11 +744,14 @@ export interface FileRouteTypes {
     | '/api/inngest'
     | '/api/mcp'
     | '/oauth/consent'
+    | '/oauth/popup-callback'
+    | '/oauth/waitlist'
     | '/r/$name'
     | '/r/cli-event'
     | '/$orgHandle/rules'
     | '/.well-known/oauth-authorization-server/$'
     | '/.well-known/oauth-protected-resource/$'
+    | '/admin/access-requests'
     | '/admin/reputation'
     | '/$orgHandle/home'
     | '/$orgHandle/insights'
@@ -763,6 +804,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/dither-kit'
     | '/login'
+    | '/queue'
     | '/vouched'
     | '/.well-known/oauth-authorization-server'
     | '/.well-known/oauth-protected-resource'
@@ -779,10 +821,13 @@ export interface FileRouteTypes {
     | '/api/inngest'
     | '/api/mcp'
     | '/oauth/consent'
+    | '/oauth/popup-callback'
+    | '/oauth/waitlist'
     | '/r/$name'
     | '/r/cli-event'
     | '/.well-known/oauth-authorization-server/$'
     | '/.well-known/oauth-protected-resource/$'
+    | '/admin/access-requests'
     | '/admin/reputation'
     | '/$orgHandle/home'
     | '/$orgHandle/insights'
@@ -837,6 +882,7 @@ export interface FileRouteTypes {
     | '/_app'
     | '/dither-kit'
     | '/login'
+    | '/queue'
     | '/vouched'
     | '/.well-known/oauth-authorization-server'
     | '/.well-known/oauth-protected-resource'
@@ -853,11 +899,14 @@ export interface FileRouteTypes {
     | '/api/inngest'
     | '/api/mcp'
     | '/oauth/consent'
+    | '/oauth/popup-callback'
+    | '/oauth/waitlist'
     | '/r/$name'
     | '/r/cli-event'
     | '/_app/$orgHandle/rules'
     | '/.well-known/oauth-authorization-server/$'
     | '/.well-known/oauth-protected-resource/$'
+    | '/_admin/admin/access-requests'
     | '/_admin/admin/reputation'
     | '/_app/$orgHandle/home'
     | '/_app/$orgHandle/insights'
@@ -913,6 +962,7 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   DitherKitRoute: typeof DitherKitRoute
   LoginRoute: typeof LoginRoute
+  QueueRoute: typeof QueueRoute
   VouchedRoute: typeof VouchedRoute
   Char91DotwellKnownChar93OauthAuthorizationServerRoute: typeof Char91DotwellKnownChar93OauthAuthorizationServerRouteWithChildren
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteWithChildren
@@ -921,6 +971,8 @@ export interface RootRouteChildren {
   ApiInngestRoute: typeof ApiInngestRoute
   ApiMcpRoute: typeof ApiMcpRoute
   OauthConsentRoute: typeof OauthConsentRoute
+  OauthPopupCallbackRoute: typeof OauthPopupCallbackRoute
+  OauthWaitlistRoute: typeof OauthWaitlistRoute
   RNameRoute: typeof RNameRoute
   RCliEventRoute: typeof RCliEventRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -942,6 +994,13 @@ declare module '@tanstack/react-router' {
       path: '/vouched'
       fullPath: '/vouched'
       preLoaderRoute: typeof VouchedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/queue': {
+      id: '/queue'
+      path: '/queue'
+      fullPath: '/queue'
+      preLoaderRoute: typeof QueueRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -998,6 +1057,20 @@ declare module '@tanstack/react-router' {
       path: '/r/$name'
       fullPath: '/r/$name'
       preLoaderRoute: typeof RNameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/oauth/waitlist': {
+      id: '/oauth/waitlist'
+      path: '/oauth/waitlist'
+      fullPath: '/oauth/waitlist'
+      preLoaderRoute: typeof OauthWaitlistRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/oauth/popup-callback': {
+      id: '/oauth/popup-callback'
+      path: '/oauth/popup-callback'
+      fullPath: '/oauth/popup-callback'
+      preLoaderRoute: typeof OauthPopupCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/oauth/consent': {
@@ -1301,6 +1374,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdminReputationRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/_admin/admin/access-requests': {
+      id: '/_admin/admin/access-requests'
+      path: '/admin/access-requests'
+      fullPath: '/admin/access-requests'
+      preLoaderRoute: typeof AdminAdminAccessRequestsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/.well-known/oauth-protected-resource/$': {
       id: '/.well-known/oauth-protected-resource/$'
       path: '/$'
@@ -1470,6 +1550,7 @@ const OnboardingRouteRouteWithChildren = OnboardingRouteRoute._addFileChildren(
 )
 
 interface AdminRouteChildren {
+  AdminAdminAccessRequestsRoute: typeof AdminAdminAccessRequestsRoute
   AdminAdminReputationRoute: typeof AdminAdminReputationRoute
   AdminAdminIndexRoute: typeof AdminAdminIndexRoute
   AdminAdminResearchRunIdRoute: typeof AdminAdminResearchRunIdRoute
@@ -1478,6 +1559,7 @@ interface AdminRouteChildren {
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminAdminAccessRequestsRoute: AdminAdminAccessRequestsRoute,
   AdminAdminReputationRoute: AdminAdminReputationRoute,
   AdminAdminIndexRoute: AdminAdminIndexRoute,
   AdminAdminResearchRunIdRoute: AdminAdminResearchRunIdRoute,
@@ -1637,6 +1719,7 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   DitherKitRoute: DitherKitRoute,
   LoginRoute: LoginRoute,
+  QueueRoute: QueueRoute,
   VouchedRoute: VouchedRoute,
   Char91DotwellKnownChar93OauthAuthorizationServerRoute:
     Char91DotwellKnownChar93OauthAuthorizationServerRouteWithChildren,
@@ -1647,6 +1730,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiInngestRoute: ApiInngestRoute,
   ApiMcpRoute: ApiMcpRoute,
   OauthConsentRoute: OauthConsentRoute,
+  OauthPopupCallbackRoute: OauthPopupCallbackRoute,
+  OauthWaitlistRoute: OauthWaitlistRoute,
   RNameRoute: RNameRoute,
   RCliEventRoute: RCliEventRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,

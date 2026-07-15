@@ -4,7 +4,13 @@ import { EvlogError } from "evlog"
 import { and, eq } from "drizzle-orm"
 import { auth } from "@tripwire/auth"
 import { db } from "@tripwire/db/client"
-import { member } from "@tripwire/db"
+import { member, user as userTable } from "@tripwire/db"
+import type { AccessStatus } from "@tripwire/db"
+import {
+  accessDenialFor,
+  resolveEffectiveStatus,
+} from "@tripwire/auth/access"
+import { isAccessGateEnabled } from "#/lib/access-gate-flag"
 
 // Repo/event/request/org ownership checks live in @tripwire/core so the
 // tool registry can use them without importing tRPC. They throw EvlogError;
@@ -21,7 +27,13 @@ export {
 
 export interface TRPCContext {
   headers: Headers
-  user: { id: string; name: string; email: string; role?: string | null } | null
+  user: {
+    id: string
+    name: string
+    email: string
+    role?: string | null
+    accessStatus?: AccessStatus | null
+  } | null
   /**
    * The Better Auth active organization id from `session.activeOrganizationId`.
    * Null when the user has no active org set, or when there's no session at
@@ -43,7 +55,14 @@ export async function createContext(opts: {
 
   return {
     headers: opts.headers,
-    user: session?.user ?? null,
+    user: session?.user
+      ? {
+          ...session.user,
+          accessStatus:
+            (session.user as { accessStatus?: AccessStatus | null })
+              .accessStatus ?? null,
+        }
+      : null,
     activeOrgId: session?.session?.activeOrganizationId ?? null,
   }
 }
@@ -92,6 +111,49 @@ const authMiddleware = t.middleware(async ({ ctx, next }) => {
 
 export const authedProcedure = t.procedure.use(authMiddleware)
 
+// Resolve the authoritative access status for a logged-in user. Trusts the
+// session copy when it already reads "approved" (the common path, no query).
+// Otherwise re-reads from the DB so a user approved mid-session isn't blocked
+// while their cookie-cached session is still stale (see PRD "session
+// staleness" risk).
+function resolveAccessStatus(userId: string, sessionStatus: AccessStatus | null | undefined): Promise<AccessStatus> {
+  return resolveEffectiveStatus(sessionStatus, async () => {
+    const [row] = await db
+      .select({ accessStatus: userTable.accessStatus })
+      .from(userTable)
+      .where(eq(userTable.id, userId))
+      .limit(1)
+    return row?.accessStatus ?? null
+  })
+}
+
+// Gate: blocks pending/rejected users. No-op when the feature flag is off, so
+// the schema + backfill can ship before the queue is enforced.
+const accessMiddleware = t.middleware(async ({ ctx, next }) => {
+  if (!ctx.user) {
+    throw new TRPCError({
+      code: "UNAUTHORIZED",
+      message: "You must be logged in to perform this action",
+    })
+  }
+  if (await isAccessGateEnabled({ userId: ctx.user.id, email: ctx.user.email })) {
+    const status = await resolveAccessStatus(ctx.user.id, ctx.user.accessStatus)
+    const denial = accessDenialFor(status)
+    if (denial) {
+      throw new TRPCError(denial)
+    }
+  }
+  return next({ ctx: { ...ctx, user: ctx.user } })
+})
+
+/**
+ * Authenticated AND access-approved. Use for any `_app` data. When the
+ * access gate flag is off this behaves exactly like `authedProcedure`.
+ */
+export const approvedProcedure = t.procedure
+  .use(authMiddleware)
+  .use(accessMiddleware)
+
 // Middleware that requires admin role
 const adminMiddleware = t.middleware(async ({ ctx, next }) => {
   if (!ctx.user) {
@@ -114,7 +176,11 @@ const adminMiddleware = t.middleware(async ({ ctx, next }) => {
   })
 })
 
-export const adminProcedure = t.procedure.use(adminMiddleware)
+// Admin routes are also gated by access status (defense-in-depth: a pending
+// user should never reach _admin even if role somehow said otherwise).
+export const adminProcedure = t.procedure
+  .use(accessMiddleware)
+  .use(adminMiddleware)
 
 // Middleware that requires an active organization. Wraps authedProcedure's
 // auth check with two more guarantees:
@@ -181,4 +247,4 @@ const orgMiddleware = t.middleware(async ({ ctx, next }) => {
  * rules, events, billing, etc.) — `ctx.activeOrgId` is guaranteed
  * non-null inside the resolver.
  */
-export const orgProcedure = t.procedure.use(orgMiddleware)
+export const orgProcedure = t.procedure.use(accessMiddleware).use(orgMiddleware)

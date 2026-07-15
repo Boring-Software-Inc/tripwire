@@ -53,6 +53,7 @@
     "@tripwire/auth": "workspace:*",
     "@tripwire/core": "workspace:*",
     "@tripwire/db": "workspace:*",
+    "@tripwire/email": "workspace:*",
     "@tripwire/env": "workspace:*",
     "@tripwire/feedback": "workspace:*",
     "@tripwire/github": "workspace:*",

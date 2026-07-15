@@ -2,6 +2,7 @@ import { authedProcedure, publicProcedure } from "../init"
 import { db } from "@tripwire/db/client"
 import { eq } from "drizzle-orm"
 import { user as userTable } from "@tripwire/db"
+import { isAccessGateEnabled } from "#/lib/access-gate-flag"
 import type { TRPCRouterRecord } from "@trpc/server"
 
 export const authRouter = {
@@ -19,11 +20,18 @@ export const authRouter = {
         image: userTable.image,
         role: userTable.role,
         githubId: userTable.githubId,
+        accessStatus: userTable.accessStatus,
       })
       .from(userTable)
       .where(eq(userTable.id, ctx.user.id))
       .limit(1)
     if (!row) return null
+    // Server-authoritative gate decision (Databuddy flag + env fallback) so the
+    // client boundary matches what the API actually enforces — no drift.
+    const gateEnabled = await isAccessGateEnabled({
+      userId: row.id,
+      email: row.email,
+    })
     return {
       id: row.id,
       name: row.name,
@@ -32,6 +40,8 @@ export const authRouter = {
       role: row.role ?? null,
       isAdmin: row.role === "admin",
       githubId: parseGithubId(row.githubId),
+      accessStatus: row.accessStatus,
+      gateEnabled,
     }
   }),
 
@@ -45,10 +55,15 @@ export const authRouter = {
         image: userTable.image,
         role: userTable.role,
         githubId: userTable.githubId,
+        accessStatus: userTable.accessStatus,
       })
       .from(userTable)
       .where(eq(userTable.id, ctx.user.id))
       .limit(1)
+    const gateEnabled = await isAccessGateEnabled({
+      userId: row.id,
+      email: row.email,
+    })
     return {
       id: row.id,
       name: row.name,
@@ -57,6 +72,8 @@ export const authRouter = {
       role: row.role ?? null,
       isAdmin: row.role === "admin",
       githubId: parseGithubId(row.githubId),
+      accessStatus: row.accessStatus,
+      gateEnabled,
     }
   }),
 } satisfies TRPCRouterRecord

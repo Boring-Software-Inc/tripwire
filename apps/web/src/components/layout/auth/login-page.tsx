@@ -26,9 +26,9 @@ export function LoginPage() {
     queryFn: async () => {
       const { data } = await authClient.signIn.social({
         provider: "github",
-        callbackURL: "/rules",
-        // New-user creation is blocked server-side; failures land back here
-        // so we can show the "sign-ups paused" note instead of a raw error.
+        // Both new and returning users land here; the access gate routes
+        // pending/rejected users to /queue and approved users onward.
+        callbackURL: "/home",
         errorCallbackURL: "/login",
         disableRedirect: true,
       })
@@ -52,12 +52,11 @@ export function LoginPage() {
       <div className="flex flex-col items-center gap-3">
         {error ? (
           <p className="max-w-xs text-center text-[13px] leading-relaxed text-tw-text-secondary">
-            We're not taking new sign-ups right now. If you already have access,
-            log in below.
+            Something went wrong signing you in. Try again below.
           </p>
         ) : (
-          <span className="text-[14px] text-tw-text-secondary">
-            Already have access?
+          <span className="max-w-xs text-center text-[14px] text-tw-text-secondary">
+            Sign in with GitHub to request access
           </span>
         )}
         <Button
@@ -67,11 +66,12 @@ export function LoginPage() {
           size="sm"
           className="border-[#CDCDCD] bg-white text-black hover:bg-white/90"
         >
-          Log in
+          Continue with GitHub
         </Button>
         {error ? null : (
           <p className="max-w-xs text-center text-[12px] leading-relaxed text-tw-text-muted">
-            New sign-ups are paused for now — check back soon.
+            New here? Access is manually approved — we'll email you once you're
+            in.
           </p>
         )}
       </div>

@@ -8,10 +8,11 @@ import { autumn as autumnPlugin } from "autumn-js/better-auth"
 import { autumn as autumnClient } from "./autumn"
 import { db } from "@tripwire/db/client"
 import * as schema from "@tripwire/db"
-import { organizations, member } from "@tripwire/db"
+import { organizations, member, waitlist } from "@tripwire/db"
 import { env } from "@tripwire/env/server"
 import { eq, and, ne, count } from "drizzle-orm"
 import { deleteInstallation } from "@tripwire/github"
+import { applySignupAccessDefaults } from "./access"
 
 export const auth = betterAuth({
   baseURL: env.BETTER_AUTH_URL,
@@ -43,6 +44,21 @@ export const auth = betterAuth({
     },
   },
   user: {
+    additionalFields: {
+      // Approval-queue status. `input: false` means a client can never set it
+      // through the signup/update payload — only our server code (the create
+      // hook and the admin router) writes it. The DB column also defaults to
+      // "pending", so both layers agree.
+      accessStatus: {
+        type: "string",
+        required: false,
+        defaultValue: "pending",
+        input: false,
+      },
+      accessReviewedAt: { type: "date", required: false, input: false },
+      accessReviewedBy: { type: "string", required: false, input: false },
+      waitlistedAt: { type: "date", required: false, input: false },
+    },
     deleteUser: {
       enabled: true,
       beforeDelete: async (user) => {
@@ -205,13 +221,24 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
-        // Signups are paused while Tripwire is being reworked — block new-user
-        // creation. Existing users are unaffected (signing into an existing
-        // account never triggers a create).
-        before: async () => {
-          throw new APIError("FORBIDDEN", {
-            message: "Sign-ups are paused right now — check back soon.",
-          })
+        // New GitHub signups land in the approval queue. Force accessStatus
+        // to "pending" server-side (never trust client input), and stamp
+        // waitlistedAt if this email was already on the pre-launch email
+        // waitlist so admins can prioritise early signups.
+        before: async (user) => {
+          let waitlistedAt: Date | null = null
+          try {
+            const [row] = await db
+              .select({ createdAt: waitlist.createdAt })
+              .from(waitlist)
+              .where(eq(waitlist.email, user.email))
+              .limit(1)
+            waitlistedAt = row?.createdAt ?? null
+          } catch (err) {
+            console.error("[Tripwire] waitlist lookup failed:", err)
+          }
+
+          return { data: applySignupAccessDefaults(user, waitlistedAt) }
         },
         after: async (user) => {
           // Auto-create a personal Better Auth org for new users
