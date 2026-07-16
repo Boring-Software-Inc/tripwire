@@ -156,10 +156,10 @@ export function InsightsPage() {
     <div className="flex flex-col items-center px-4 py-6 md:px-[120px] md:py-8">
       {/* Header */}
       <div className="mt-3 mb-6 flex w-full flex-col gap-2 md:mt-5 md:mb-11">
-        <h1 className="m-0 font-['Inter',system-ui,sans-serif] text-2xl leading-7 font-semibold text-[#FFFFFFEB] md:text-[28px]">
+        <h1 className="m-0 font-sans text-2xl leading-7 font-semibold text-[#FFFFFFEB] md:text-[28px]">
           Insights
         </h1>
-        <p className="m-0 font-['Inter',system-ui,sans-serif] text-sm leading-5 text-tw-text-secondary">
+        <p className="m-0 font-sans text-sm leading-5 text-tw-text-secondary">
           Track the effectiveness of Tripwire within your repo
         </p>
       </div>
@@ -185,7 +185,7 @@ export function InsightsPage() {
         {/* Total bots */}
         <div className="flex w-full flex-col overflow-clip rounded-2xl border border-[#0000000F] bg-tw-card p-1 shadow-[#0000000A_0px_0px_2px,#0000000A_0px_0px_1px]">
           <div className="flex items-center px-4 py-2">
-            <span className="font-['Inter',system-ui,sans-serif] text-[13px] leading-4 font-[520] tracking-[-0.2px] text-white">
+            <span className="font-sans text-[13px] leading-4 font-[520] tracking-[-0.2px] text-white">
               Total bots
             </span>
           </div>
@@ -208,7 +208,7 @@ export function InsightsPage() {
                   tick={{
                     fill: "#FFFFFF66",
                     fontSize: 11,
-                    fontFamily: "Inter, system-ui, sans-serif",
+                    fontFamily: "Geist, system-ui, sans-serif",
                   }}
                   axisLine={false}
                   tickLine={false}

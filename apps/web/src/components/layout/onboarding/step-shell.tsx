@@ -32,10 +32,10 @@ export function StepShell({
       <StepDots step={step} totalSteps={totalSteps} />
 
       <div className="flex flex-col gap-1.5">
-        <h1 className="m-0 font-['Inter',system-ui,sans-serif] text-2xl leading-7 font-semibold text-[#FFFFFFEB] md:text-[28px]">
+        <h1 className="m-0 font-sans text-2xl leading-7 font-semibold text-[#FFFFFFEB] md:text-[28px]">
           {title}
         </h1>
-        <p className="m-0 font-['Inter',system-ui,sans-serif] text-sm leading-5 text-tw-text-secondary">
+        <p className="m-0 font-sans text-sm leading-5 text-tw-text-secondary">
           {subtitle}
         </p>
       </div>

@@ -120,13 +120,7 @@ export function HomePage() {
       <div className="mx-auto mt-20 flex w-[672px] max-w-2xl flex-col items-start gap-2 px-4">
         {/* Hero section */}
         <div className="flex w-full flex-col items-start gap-2 rounded-xl px-2 py-1">
-          <h1
-            className="m-0 text-[28px] leading-[36px] text-tw-text-primary"
-            style={{
-              fontFamily: "'Playfair Display', serif",
-              fontWeight: 500,
-            }}
-          >
+          <h1 className="m-0 font-display text-[28px] leading-[36px] font-medium text-tw-text-primary">
             Welcome back, {userName}!
           </h1>
           <p className="m-0 w-full text-[16px] leading-[22px] font-normal whitespace-nowrap text-[#EEEEEE80]">

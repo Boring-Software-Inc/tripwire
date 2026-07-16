@@ -20,17 +20,17 @@ export function StatCard({
       }`}
     >
       <div className="flex items-center pb-1">
-        <span className="font-['Inter',system-ui,sans-serif] text-[13px] leading-4 font-[520] tracking-[-0.2px] text-tw-text-secondary">
+        <span className="font-sans text-[13px] leading-4 font-[520] tracking-[-0.2px] text-tw-text-secondary">
           {label}
         </span>
       </div>
       <div className="flex items-end gap-1">
-        <span className="font-['Inter',system-ui,sans-serif] text-xl leading-7 font-semibold text-[#FFFFFFCC]">
+        <span className="font-sans text-xl leading-7 font-semibold text-[#FFFFFFCC]">
           {value}
         </span>
         <div className="mb-0.5 flex items-center gap-0.5">
           <TrendArrow />
-          <span className="font-['Inter',system-ui,sans-serif] text-[13px] leading-4 font-[520] tracking-[-0.2px] text-tw-success">
+          <span className="font-sans text-[13px] leading-4 font-[520] tracking-[-0.2px] text-tw-success">
             {trend}%
           </span>
         </div>

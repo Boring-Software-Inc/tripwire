@@ -149,10 +149,10 @@ export function VisibilityPage() {
   return (
     <div className="flex flex-col items-center px-4 py-6 md:px-[120px] md:py-8">
       <div className="mt-3 mb-6 flex w-full flex-col gap-2 md:mt-5 md:mb-11">
-        <h1 className="m-0 font-['Inter',system-ui,sans-serif] text-2xl leading-7 font-semibold text-[#FFFFFFEB] md:text-[28px]">
+        <h1 className="m-0 font-sans text-2xl leading-7 font-semibold text-[#FFFFFFEB] md:text-[28px]">
           Visibility
         </h1>
-        <p className="m-0 font-['Inter',system-ui,sans-serif] text-sm leading-5 text-tw-text-secondary">
+        <p className="m-0 font-sans text-sm leading-5 text-tw-text-secondary">
           Contributors, scores, and whitelist controls for{" "}
           {repo?.fullName ? (
             <span className="text-tw-text-primary">{repo.fullName}</span>
