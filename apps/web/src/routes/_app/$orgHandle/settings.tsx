@@ -99,10 +99,10 @@ function OrgSettingsPage() {
   return (
     <div className="mx-auto flex w-full max-w-[760px] flex-col gap-10 px-4 py-10 md:px-8">
       <div className="flex flex-col gap-1.5">
-        <h1 className="m-0 font-['Inter',system-ui,sans-serif] text-2xl leading-7 font-semibold text-[#FFFFFFEB] md:text-[28px]">
+        <h1 className="m-0 font-sans text-2xl leading-7 font-semibold text-[#FFFFFFEB] md:text-[28px]">
           Organization
         </h1>
-        <p className="m-0 font-['Inter',system-ui,sans-serif] text-sm leading-5 text-tw-text-secondary">
+        <p className="m-0 font-sans text-sm leading-5 text-tw-text-secondary">
           Settings for <span className="text-tw-text-primary">{org.name}</span>.
         </p>
       </div>

@@ -25,7 +25,7 @@ export const siteConfig: SiteConfig = {
   themeColor: "#000000",
   socialImagePath: "/og.jpg",
   defaultTitle:
-    "Tripwire | Spam, abuse, and AI-slop protection for GitHub repos",
+    "Tripwire | Spam, abuse, and AI-noise protection for GitHub repos",
   defaultDescription:
     "Tripwire protects open-source maintainers from spam PRs, abusive accounts, and AI-generated noise with rules that run on every webhook.",
   manifestName: "Tripwire",

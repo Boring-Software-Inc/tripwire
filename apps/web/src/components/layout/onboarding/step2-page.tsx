@@ -124,10 +124,10 @@ function NoReposState() {
   return (
     <div className="flex w-full flex-col gap-6">
       <div className="flex flex-col gap-1.5">
-        <h1 className="m-0 font-['Inter',system-ui,sans-serif] text-2xl leading-7 font-semibold text-[#FFFFFFEB] md:text-[28px]">
+        <h1 className="m-0 font-sans text-2xl leading-7 font-semibold text-[#FFFFFFEB] md:text-[28px]">
           Install Tripwire on a repo
         </h1>
-        <p className="m-0 font-['Inter',system-ui,sans-serif] text-sm leading-5 text-tw-text-secondary">
+        <p className="m-0 font-sans text-sm leading-5 text-tw-text-secondary">
           You haven't connected a GitHub repository yet. Install the GitHub App
           to get started.
         </p>

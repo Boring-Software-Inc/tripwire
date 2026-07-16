@@ -8,7 +8,7 @@ const PAGE_CONTEXT: Record<string, string> = {
   "/events":
     "The events log. Lists all webhook events, rule triggers, and actions taken.",
   "/rules":
-    "The rules page, where rule configurations are managed (age checks, slop detection, etc.).",
+    "The rules page, where rule configurations are managed (age checks, noise detection, etc.).",
   "/insights":
     "The insights page. Charts and analytics about contributor activity and rule performance.",
   "/integrations":
