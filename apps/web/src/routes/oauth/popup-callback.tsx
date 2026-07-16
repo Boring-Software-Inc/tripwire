@@ -50,6 +50,25 @@ function resolveTargetOrigin(opener: string | undefined): string | null {
   return opener && allowed.includes(opener) ? opener : null
 }
 
+/**
+ * Approved users: send the opener (the main tab) into the app home, then close
+ * the popup. Navigating a cross-origin opener is allowed (it's navigation, not
+ * a read). No reachable opener → navigate this window instead.
+ */
+function launchApp(): void {
+  const home = `${window.location.origin}/home`
+  try {
+    if (window.opener && !window.opener.closed) {
+      window.opener.location.href = home
+      window.close()
+      return
+    }
+  } catch {
+    // Opener not navigable — fall through to navigating this window.
+  }
+  window.location.href = home
+}
+
 /** Post to the opener at an exact origin. Returns false if unreachable. */
 function postToOpener(payload: unknown, targetOrigin: string | null): boolean {
   if (!targetOrigin) return false
@@ -167,8 +186,24 @@ function PopupCallbackPage() {
     return (
       <Shell>
         <Heading>You&apos;re in</Heading>
-        <Body>Your account has access. You can close this window.</Body>
-        <CloseButton />
+        <Body>Your account already has access.</Body>
+        <div className="flex flex-col items-center gap-2.5">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={launchApp}
+            className="border-[#CDCDCD] bg-white text-black hover:bg-white/90"
+          >
+            Launch app
+          </Button>
+          <button
+            type="button"
+            onClick={() => window.close()}
+            className="text-[12px] text-tw-text-tertiary underline-offset-2 hover:text-tw-text-secondary hover:underline"
+          >
+            Close window
+          </button>
+        </div>
       </Shell>
     )
   }
