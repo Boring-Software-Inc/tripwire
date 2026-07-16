@@ -9,7 +9,7 @@ export function HeroStat({ value }: HeroStatProps) {
     <div className="relative w-full overflow-clip rounded-2xl border border-[#0000000F] bg-tw-card px-4 pt-2.5 pb-2 shadow-[#0000000A_0px_0px_2px,#0000000A_0px_0px_1px]">
       <div className="flex items-center gap-0.5 pb-1">
         <span className="font-sans text-[13px] leading-4 font-[520] tracking-[-0.2px] text-tw-text-secondary">
-          Slop prevented
+          Noise prevented
         </span>
       </div>
       <div className="flex flex-wrap items-end gap-1">
